@@ -1,0 +1,20 @@
+SMIB/smib.xiidm
+SMIB/__pycache__/
+.ipynb_checkpoints/
+__pycache__/
+dynawo_17*
+dynawo_59*
+dynawo_34*
+dynaswing.par
+dynaswingWithTfo.par
+recollement.par
+recollementWithTfo.par
+Fiche/PCS_RTE-I2/
+Fiche/ThreePhaseFault/
+Fiche/fiche.xiidm
+Fiche/fiche2.xiidm
+Fiche/fiche2_intermediate.xiidm
+Fiche/fiche3.xiidm
+Fiche/image.png
+.idea
+Fiche/DTR_15022024\ 1.pdf
