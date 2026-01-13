@@ -1,136 +1,229 @@
 #!/bin/bash
 
 # ==============================================================================
-# AIA Project Setup Script: Dynawo-Notebooks Environment
+# HYBRID SIMULATION ENVIRONMENT SETUP
 # ==============================================================================
-# This script sets up a complete environment for hybrid Python/Julia simulation.
-# It performs the following actions:
-# 1. Installs system dependencies (Java, Python dev tools, curl).
-# 2. Installs Julia (LTS version).
-# 3. Creates a Python Virtual Environment (venv) and installs pypowsybl stack.
-# 4. Configures the link between Pypowsybl and Dynawo.
-# 5. Installs required Julia packages for Modelica interaction.
+#
+# SCHEMATIC SUMMARY:
+#
+#   [START]
+#      |
+#      v
+#   [1. CHECKS] --> Verify Python, Java, OpenModelica, wget.
+#      |            (Julia is optional here)
+#      v
+#   [2. JULIA] ---> Check for System Julia.
+#      |            IF MISSING: Download & Install to local folder.
+#      v
+#   [3. VENV] ----> Create Python Virtual Env (venv_powsybl).
+#      |            *Magic Step*: Link Julia binary into this venv.
+#      |            Install: pypowsybl, pandas, lxml, jupyter.
+#      v
+#   [4. LINK] ----> Locate Dynawo Binary (C++ Engine).
+#      |            Create ~/.itools/config.yml.
+#      v
+#   [5. PKGS] ----> Install Julia Libraries (OMJulia, Plots...).
+#      |
+#   [END]
+#
 # ==============================================================================
 
-# --- Configuration Variables ---
-# Update this path to your actual Dynawo installation folder!
-DYNAWO_HOME="/opt/dynawo" 
-PROJECT_DIR=$(pwd)
+# --- Configuration ---
 VENV_NAME="venv_powsybl"
-JULIA_VERSION="1.10.0" # LTS or Stable version recommended for compatibility
+JULIA_VER_MAJOR="1.10"
+JULIA_VER_FULL="1.10.0" # Current LTS recommended
+DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
 
-# Colors for output
+# Colors
+BOLD='\033[1m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}>>> Starting AIA Project Environment Setup...${NC}"
+echo -e "${BLUE}${BOLD}>>> Starting Hybrid Simulation Project Setup...${NC}"
 
-# ------------------------------------------------------------------------------
-# 1. System Dependencies
-# ------------------------------------------------------------------------------
-echo -e "${GREEN}[1/5] Installing System Dependencies (Java JDK 17, Python tools)...${NC}"
-sudo apt-get update
-# JDK 17 is required for Powsybl backend. wget/curl for downloading Julia.
-sudo apt-get install -y openjdk-17-jdk python3-pip python3-venv curl wget build-essential
+# ==============================================================================
+# 1. PRE-FLIGHT CHECKS
+# ==============================================================================
+echo -e "\n${BLUE}[1/5] Validating Core System Dependencies...${NC}"
 
-# Verify Java installation
-java -version
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Error: Java installation failed.${NC}"
+# Function to check version and existence
+check_tool() {
+    local cmd=$1
+    local name=$2
+    
+    if ! command -v "$cmd" &> /dev/null; then
+        echo -e "${RED}  [X] $name is MISSING.${NC}"
+        return 1
+    else
+        local ver=""
+        if [ "$cmd" == "java" ]; then
+             ver=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
+        elif [ "$cmd" == "python3" ]; then
+             ver=$(python3 --version | awk '{print $2}')
+        elif [ "$cmd" == "omc" ]; then
+             ver=$(omc --version | head -n 1)
+        else
+             ver="Detected"
+        fi
+        echo -e "${GREEN}  [OK] $name found ($ver)${NC}"
+        return 0
+    fi
+}
+
+EXIT_FLAG=0
+
+check_tool "python3" "Python 3" || EXIT_FLAG=1
+check_tool "java" "Java Runtime (Required for Powsybl)" || EXIT_FLAG=1
+check_tool "omc" "OpenModelica Compiler" || EXIT_FLAG=1
+check_tool "wget" "Wget (Downloader)" || EXIT_FLAG=1
+check_tool "tar" "Tar (Extractor)" || EXIT_FLAG=1
+
+if [ $EXIT_FLAG -eq 1 ]; then
+    echo -e "\n${RED}[CRITICAL] Missing core dependencies. Please install them (apt/yum) and retry.${NC}"
     exit 1
 fi
 
-# ------------------------------------------------------------------------------
-# 2. Install Julia
-# ------------------------------------------------------------------------------
-echo -e "${GREEN}[2/5] Installing Julia ${JULIA_VERSION}...${NC}"
+# ==============================================================================
+# 2. JULIA DETECTION OR INSTALLATION
+# ==============================================================================
+echo -e "\n${BLUE}[2/5] Checking Julia Environment...${NC}"
 
-# Check if Julia is already installed
-if ! command -v julia &> /dev/null; then
-    cd /tmp
-    wget https://julialang-s3.julialang.org/bin/linux/x64/1.10/julia-${JULIA_VERSION}-linux-x86_64.tar.gz
-    tar zxvf julia-${JULIA_VERSION}-linux-x86_64.tar.gz
-    
-    # Move to global location (optional, you can keep it local)
-    sudo mv julia-${JULIA_VERSION} /opt/julia
-    sudo ln -s /opt/julia/bin/julia /usr/local/bin/julia
-    
-    rm julia-${JULIA_VERSION}-linux-x86_64.tar.gz
+JULIA_CMD="julia"
+INSTALL_JULIA=false
+
+if command -v julia &> /dev/null; then
+    echo -e "${GREEN}  [OK] System Julia found.$(julia -v)${NC}"
 else
-    echo "Julia is already installed."
+    echo -e "${YELLOW}  [!] Julia not found on system.${NC}"
+    echo -e "  > Initiating automatic installation (Local user only, no sudo needed)..."
+    INSTALL_JULIA=true
 fi
 
-julia --version
+# ==============================================================================
+# 3. PYTHON VENV (And Julia Integration)
+# ==============================================================================
+echo -e "\n${BLUE}[3/5] Setting up Python Virtual Environment...${NC}"
 
-# ------------------------------------------------------------------------------
-# 3. Python Environment Setup
-# ------------------------------------------------------------------------------
-echo -e "${GREEN}[3/5] Setting up Python Virtual Environment...${NC}"
-
-cd "$PROJECT_DIR"
-
-# Create clean venv
-if [ -d "$VENV_NAME" ]; then
-    echo "Removing existing virtual environment..."
-    rm -rf "$VENV_NAME"
+if [ ! -d "$VENV_NAME" ]; then
+    echo -e "  Creating venv: $VENV_NAME..."
+    python3 -m venv "$VENV_NAME"
 fi
 
-python3 -m venv "$VENV_NAME"
-source "$VENV_NAME"/bin/activate
+# Activate
+source "$VENV_NAME/bin/activate"
 
-# Upgrade pip
-pip install --upgrade pip
-
-# Install project libraries
-echo "Installing Python libraries..."
-# Note: Using public PyPI. If using RTE internal repo, add --index-url here.
-pip install pypowsybl pandas lxml pyyaml matplotlib jupyter jupyterlab ipykernel
-
-# Register this venv as a kernel for Jupyter
-python -m ipykernel install --user --name="$VENV_NAME" --display-name "Python (Powsybl)"
-
-# ------------------------------------------------------------------------------
-# 4. Configure Pypowsybl -> Dynawo Link
-# ------------------------------------------------------------------------------
-echo -e "${GREEN}[4/5] Configuring Pypowsybl connection to Dynawo...${NC}"
-
-if [ ! -d "$DYNAWO_HOME" ]; then
-    echo -e "${RED}WARNING: Dynawo directory $DYNAWO_HOME not found!${NC}"
-    echo -e "${RED}Please edit ~/.itools/config.yml manually after installation.${NC}"
+# --- SMART JULIA INSTALLATION LOGIC ---
+if [ "$INSTALL_JULIA" = true ]; then
+    # Define install path inside user home
+    JULIA_INSTALL_DIR="$HOME/.local/julia-${JULIA_VER_FULL}"
+    
+    if [ -d "$JULIA_INSTALL_DIR" ]; then
+        echo -e "  (Found existing local install at $JULIA_INSTALL_DIR)"
+    else
+        echo -e "  Downloading Julia ${JULIA_VER_FULL}..."
+        # URL for Linux x64
+        JULIA_URL="https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VER_MAJOR}/julia-${JULIA_VER_FULL}-linux-x86_64.tar.gz"
+        
+        wget -q --show-progress -O julia_tmp.tar.gz "$JULIA_URL"
+        
+        echo -e "  Extracting..."
+        mkdir -p "$JULIA_INSTALL_DIR"
+        tar -xzf julia_tmp.tar.gz -C "$JULIA_INSTALL_DIR" --strip-components=1
+        rm julia_tmp.tar.gz
+    fi
+    
+    # MAGIC STEP: Symlink Julia into the VENV bin directory
+    # This means when user does 'source activate', they get 'julia' too.
+    echo -e "  Linking Julia to Virtual Environment..."
+    ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$VENV_NAME/bin/julia"
+    
+    JULIA_CMD="$VENV_NAME/bin/julia"
+    echo -e "${GREEN}  [OK] Julia installed and linked into venv.${NC}"
 fi
 
-# Create config directory
-mkdir -p ~/.itools
+# Check Python Deps
+echo -e "  Installing Project Libraries (Python)..."
+pip install --upgrade pip --quiet
+pip install pypowsybl pandas lxml pyyaml matplotlib jupyter jupyterlab --quiet
 
-# Create config.yml
-cat <<EOF > ~/.itools/config.yml
+if [ $? -ne 0 ]; then
+    echo -e "${RED}  [ERROR] Pip install failed.${NC}"
+    exit 1
+fi
+
+# ==============================================================================
+# 4. CONFIGURE DYNAWO LINK
+# ==============================================================================
+echo -e "\n${BLUE}[4/5] Configuring Dynawo-Powsybl Link...${NC}"
+
+DYNAWO_HOME=""
+# A. Auto-detection
+for path in "${DEFAULT_DYNAWO_PATHS[@]}"; do
+    # Check for shell wrapper (.sh) OR raw binary (dynawo)
+    if [ -f "$path/bin/dynawo.sh" ] || [ -f "$path/myDynawo/bin/dynawo.sh" ] || [ -f "$path/bin/dynawo" ] || [ -f "$path/myDynawo/bin/dynawo" ]; then
+        DYNAWO_HOME="$path"
+        break
+    fi
+done
+
+# B. Interactive Fallback
+if [ -z "$DYNAWO_HOME" ]; then
+    echo -e "${YELLOW}  Could not auto-detect Dynawo.${NC}"
+    read -p "  Enter absolute path to Dynawo installation: " USER_INPUT
+    
+    # Updated validation logic
+    if [ -f "$USER_INPUT/bin/dynawo.sh" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo.sh" ] || [ -f "$USER_INPUT/bin/dynawo" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo" ]; then
+        DYNAWO_HOME="$USER_INPUT"
+    else
+        echo -e "${RED}  [ERROR] Invalid path. Neither 'bin/dynawo.sh' nor 'bin/dynawo' found.${NC}"
+        exit 1
+    fi
+fi
+
+# C. Write Configuration
+mkdir -p "$HOME/.itools"
+cat <<EOF > "$HOME/.itools/config.yml"
 dynawo:
   homeDir: ${DYNAWO_HOME}
-  debug: true
+  debug: false
 EOF
+echo -e "${GREEN}  [OK] Link established in ~/.itools/config.yml${NC}"
 
-echo "Configuration written to ~/.itools/config.yml"
+# ==============================================================================
+# 5. JULIA PACKAGES SETUP
+# ==============================================================================
+echo -e "\n${BLUE}[5/5] Setting up Julia Packages...${NC}"
+echo -e "  (Using: $(which julia))"
 
-# ------------------------------------------------------------------------------
-# 5. Julia Packages Installation
-# ------------------------------------------------------------------------------
-echo -e "${GREEN}[5/5] Installing Julia Packages (OMJulia, Plots, DataFrames)...${NC}"
-
-# We use a small Julia script to install packages non-interactively
+# Use the 'julia' command available in path (system or venv linked)
 julia -e '
 using Pkg
-Pkg.add("OMJulia")
-Pkg.add("Plots")
-Pkg.add("DataFrames")
-Pkg.add("CSV")
-Pkg.add("DifferentialEquations")
-Pkg.add("IJulia") # For Jupyter integration
+packages = ["OMJulia", "DataFrames", "CSV", "Plots", "DifferentialEquations", "IJulia"]
+println("  > Updating Registry...")
+try
+    Pkg.update()
+    for pkg in packages
+        println("  > Checking package: ", pkg)
+        Pkg.add(pkg)
+    end
+    println("  > Julia setup successful.")
+catch e
+    println("  > Error in Julia setup: ", e)
+    exit(1)
+end
 '
 
-echo -e "${BLUE}>>> Setup Complete!${NC}"
-echo -e "To start working:"
-echo -e "1. Activate Python env:  ${GREEN}source $VENV_NAME/bin/activate${NC}"
-echo -e "2. Launch Jupyter:       ${GREEN}jupyter lab${NC}"
-echo -e "3. Verify Dynawo path in ~/.itools/config.yml matches your installation."
+# ==============================================================================
+# FINISH
+# ==============================================================================
+echo -e "\n${GREEN}${BOLD}======================================================${NC}"
+echo -e "${GREEN}${BOLD}       SETUP COMPLETED SUCCESSFULLY                   ${NC}"
+echo -e "${GREEN}${BOLD}======================================================${NC}"
+echo -e "Final Instructions:"
+echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
+echo -e "   (This activates both Python and the local Julia installation)"
+echo -e "2. Run Jupyter Lab:       ${YELLOW}jupyter lab${NC}"
+echo -e ""
