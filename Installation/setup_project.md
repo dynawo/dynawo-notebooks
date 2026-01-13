@@ -46,7 +46,7 @@ The key feature of this installer is how it handles **Julia**.
 The script verifies the existence of external tools that it cannot install itself:
 * **Python 3.9+:** The base scripting language.
 * **Java (JRE):** Strictly required for the Powsybl backend (which runs on the JVM).
-* **OpenModelica (`omc`):** The compiler required for Julia to execute physical models (`.mo`).
+* **OpenModelica (`omc`):** The compiler required for Julia to execute physical models (`.mo`). *See important note in Section 5.*
 * **Wget/Tar:** Tools needed to download Julia if it's missing.
 
 ### Step 2: Python Virtual Environment (`venv_powsybl`)
@@ -86,3 +86,20 @@ It uses the available Julia executable (system or auto-installed) to setup the s
     source venv_powsybl/bin/activate
     ```
     *Now you can run `jupyter lab`, `python script.py`, or `julia script.jl` seamlessly.*
+
+---
+
+## 5. Important: OpenModelica Configuration
+
+**Compatibility Warning:**
+Dynawo relies on the **Modelica Standard Library (MSL) version 3.2.3**. However, recent versions of OpenModelica (OMEdit) often default to MSL version 4.0.0, which causes compatibility issues.
+
+**Required Action:**
+Upon first launch of OMEdit (the OpenModelica GUI), you must manually configure the libraries:
+
+1.  Open **OMEdit**.
+2.  Navigate to **Tools -> Options -> Libraries**.
+3.  **Uncheck** the option *"Load latest Modelica version"* at the bottom.
+4.  In the list of libraries, find `Modelica` and `ModelicaServices`.
+5.  Change their versions to **3.2.3+maint.om** (and `Complex` if available).
+6.  Click OK and restart OMEdit if prompted.

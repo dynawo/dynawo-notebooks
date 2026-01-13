@@ -217,13 +217,23 @@ end
 '
 
 # ==============================================================================
-# FINISH
+# FINISH & IMPORTANT WARNINGS
 # ==============================================================================
 echo -e "\n${GREEN}${BOLD}======================================================${NC}"
 echo -e "${GREEN}${BOLD}       SETUP COMPLETED SUCCESSFULLY                   ${NC}"
 echo -e "${GREEN}${BOLD}======================================================${NC}"
-echo -e "Final Instructions:"
+echo -e "Next steps:"
 echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
-echo -e "   (This activates both Python and the local Julia installation)"
 echo -e "2. Run Jupyter Lab:       ${YELLOW}jupyter lab${NC}"
+
+# --- DISCLAIMER ---
+echo -e "\n${RED}${BOLD}[IMPORTANT] OpenModelica Configuration Required:${NC}"
+echo -e "${YELLOW}Dynawo requires Modelica Standard Library (MSL) version 3.2.3.${NC}"
+echo -e "Recent OpenModelica versions default to MSL 4.0.0."
+echo -e "Please do the following manually if you use OMEdit:"
+echo -e "  1. Open OMEdit."
+echo -e "  2. Go to ${BOLD}Tools -> Options -> Libraries${NC}."
+echo -e "  3. Uncheck 'Load latest Modelica version'."
+echo -e "  4. Add/Select 'Modelica' version ${BOLD}3.2.3+maint.om${NC}."
+echo -e "  5. Add/Select 'ModelicaServices' version ${BOLD}3.2.3+maint.om${NC}."
 echo -e ""
