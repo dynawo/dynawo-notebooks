@@ -65,6 +65,8 @@ check_tool() {
              ver=$(python3 --version | awk '{print $2}')
         elif [ "$cmd" == "omc" ]; then
              ver=$(omc --version | head -n 1)
+        elif [ "$cmd" == "uv" ]; then
+             ver=$(uv --version | awk '{print $2}')
         else
              ver="Detected"
         fi
@@ -73,6 +75,18 @@ check_tool() {
     fi
 }
 
+# --- Auto-install uv if missing ---
+if ! command -v uv &> /dev/null; then
+    echo -e "${YELLOW}  [!] 'uv' not found. Installing automatically...${NC}"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # Source cargo env to make uv available in current session
+    if [ -f "$HOME/.cargo/env" ]; then
+        source "$HOME/.cargo/env"
+    elif [ -f "$HOME/.local/bin/env" ]; then # Fallback for some linux distros
+        source "$HOME/.local/bin/env"
+    fi
+fi
+
 EXIT_FLAG=0
 
 check_tool "python3" "Python 3" || EXIT_FLAG=1
@@ -80,6 +94,7 @@ check_tool "java" "Java Runtime (Required for Powsybl)" || EXIT_FLAG=1
 check_tool "omc" "OpenModelica Compiler" || EXIT_FLAG=1
 check_tool "wget" "Wget (Downloader)" || EXIT_FLAG=1
 check_tool "tar" "Tar (Extractor)" || EXIT_FLAG=1
+check_tool "uv" "uv (Package Manager)" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
     echo -e "\n${RED}[CRITICAL] Missing core dependencies. Please install them (apt/yum) and retry.${NC}"
@@ -103,13 +118,16 @@ else
 fi
 
 # ==============================================================================
-# 3. PYTHON VENV (And Julia Integration)
+# 3. PYTHON VENV & PROJECT INSTALL
 # ==============================================================================
-echo -e "\n${BLUE}[3/5] Setting up Python Virtual Environment...${NC}"
+echo -e "\n${BLUE}[3/5] Setting up Python Virtual Environment with uv...${NC}"
 
 if [ ! -d "$VENV_NAME" ]; then
     echo -e "  Creating venv: $VENV_NAME..."
-    python3 -m venv "$VENV_NAME"
+    # Using uv to create the virtual environment
+    uv venv "$VENV_NAME" --seed
+else
+    echo -e "  Using existing venv: $VENV_NAME"
 fi
 
 # Activate
@@ -135,8 +153,7 @@ if [ "$INSTALL_JULIA" = true ]; then
         rm julia_tmp.tar.gz
     fi
     
-    # MAGIC STEP: Symlink Julia into the VENV bin directory
-    # This means when user does 'source activate', they get 'julia' too.
+    # Symlink Julia into the VENV bin directory
     echo -e "  Linking Julia to Virtual Environment..."
     ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$VENV_NAME/bin/julia"
     
@@ -144,14 +161,45 @@ if [ "$INSTALL_JULIA" = true ]; then
     echo -e "${GREEN}  [OK] Julia installed and linked into venv.${NC}"
 fi
 
-# Check Python Deps
-echo -e "  Installing Project Libraries (Python)..."
-pip install --upgrade pip --quiet
-pip install pypowsybl pandas lxml pyyaml matplotlib jupyter jupyterlab numpy scipy ipywidgets OMPython --quiet
+# Check Python Deps using uv
+echo -e "  Installing external libraries (Python) using uv pip..."
+
+uv pip install \
+    pypowsybl \
+    pandas \
+    lxml \
+    pyyaml \
+    matplotlib \
+    jupyter \
+    jupyterlab \
+    numpy \
+    scipy \
+    ipywidgets \
+    OMPython \
+    --quiet
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}  [ERROR] Pip install failed.${NC}"
+    echo -e "${RED}  [ERROR] Pip install dependencies failed.${NC}"
     exit 1
+fi
+
+echo -e "${GREEN}  [OK] External dependencies installed.${NC}"
+
+echo -e "  Checking for project package..."
+if [ -f "../pyproject.toml" ] || [ -f "../setup.py" ]; then
+    echo -e "  > Installing parent directory as editable package..."
+    
+    # Install from parent directory (..)
+    uv pip install --upgrade -e ..
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}  [OK] Local project installed successfully from parent dir.${NC}"
+    else
+        echo -e "${RED}  [ERROR] Failed to install project from parent dir.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}  [!] No 'pyproject.toml' or 'setup.py' found in '../'. Skipping local project install.${NC}"
 fi
 
 # ==============================================================================
@@ -162,7 +210,6 @@ echo -e "\n${BLUE}[4/5] Configuring Dynawo-Powsybl Link...${NC}"
 DYNAWO_HOME=""
 # A. Auto-detection
 for path in "${DEFAULT_DYNAWO_PATHS[@]}"; do
-    # Check for shell wrapper (.sh) OR raw binary (dynawo)
     if [ -f "$path/bin/dynawo.sh" ] || [ -f "$path/myDynawo/bin/dynawo.sh" ] || [ -f "$path/bin/dynawo" ] || [ -f "$path/myDynawo/bin/dynawo" ]; then
         DYNAWO_HOME="$path"
         break
@@ -174,7 +221,6 @@ if [ -z "$DYNAWO_HOME" ]; then
     echo -e "${YELLOW}  Could not auto-detect Dynawo.${NC}"
     read -p "  Enter absolute path to Dynawo installation: " USER_INPUT
     
-    # Updated validation logic
     if [ -f "$USER_INPUT/bin/dynawo.sh" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo.sh" ] || [ -f "$USER_INPUT/bin/dynawo" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo" ]; then
         DYNAWO_HOME="$USER_INPUT"
     else
