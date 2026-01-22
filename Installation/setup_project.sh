@@ -147,7 +147,7 @@ fi
 # Check Python Deps
 echo -e "  Installing Project Libraries (Python)..."
 pip install --upgrade pip --quiet
-pip install pypowsybl pandas lxml pyyaml matplotlib jupyter jupyterlab --quiet
+pip install pypowsybl pandas lxml pyyaml matplotlib jupyter jupyterlab numpy scipy ipywidgets OMPython --quiet
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}  [ERROR] Pip install failed.${NC}"
