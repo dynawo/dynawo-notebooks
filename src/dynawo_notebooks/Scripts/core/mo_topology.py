@@ -51,11 +51,9 @@ class MoTopologyToolkit:
 
     def get_raw_topology(self):
         """
-        Retrieves raw component list and connection equations.
-        Uses parsed=False to avoid OMPython crashing on complex modifier dictionaries.
+        Retrieves raw component list. Uses parsed=False to avoid crashes.
         """
         logger.info("[INFO] Extracting Raw Topology...")
-
         components_raw = self.omc.sendExpression(f"getComponents({self.model_name})")
         components_dict = {}
 
@@ -65,19 +63,13 @@ class MoTopologyToolkit:
                 try:
                     c_type = comp[0]
                     c_name = comp[1]
-
-                    # parsed=False prevents crashes with complex graphical annotations
                     mods_str = self.omc.sendExpression(
                         f"getNthComponentModification({self.model_name}, {omc_index})",
                         parsed=False,
                     )
-
                     components_dict[c_name] = {"type": c_type, "modifiers": mods_str}
                 except IndexError:
                     continue
-            logger.info(f"   [OK] Found {len(components_dict)} components.")
-        else:
-            logger.warning(f"   [WARN] No components found.")
 
         connections = []
         try:
@@ -96,7 +88,6 @@ class MoTopologyToolkit:
         return {"components": components_dict, "connections": connections}
 
     def _recursive_search(self, data, target):
-        """Helper for dictionary traversal."""
         if isinstance(data, dict):
             for k, v in data.items():
                 k_clean = k.replace("(", "").replace(")", "").replace("'", "").strip()
@@ -112,32 +103,36 @@ class MoTopologyToolkit:
 
     def _extract_val_from_modifiers(self, modifiers_obj, parameter):
         """
-        Extracts parameter value. Handles raw strings and dicts.
+        Extracts the raw string value from modifiers.
+        Regex allows alphanumeric characters to capture references like 'GenPV.PGen0Pu'.
         """
         if not modifiers_obj:
             return None
-
         if isinstance(modifiers_obj, dict):
             return self._recursive_search(modifiers_obj, parameter)
 
         modifiers_str = str(modifiers_obj).strip().strip('"').strip("'")
 
-        # Regex looks for: Param = Value OR Param: Value
-        pattern = re.compile(rf"['\"\(]*{parameter}['\"\)]*\s*[:=]\s*['\"]?([0-9\.\-]+)")
+        pattern = re.compile(rf"['\"\(]*{parameter}['\"\)]*\s*[:=]\s*['\"]?([a-zA-Z0-9_\.\-]+)")
         match = pattern.search(modifiers_str)
         if match:
             return match.group(1)
         return None
 
     def _get_omc_param(self, component, parameter, modifiers_obj=None):
+        """
+        Gets parameter value. Prioritizes OMC evaluation for numbers, but falls back to modifiers.
+        """
         full_param = f"{component}.{parameter}" if component else parameter
-        val = self.omc.sendExpression(f'getParameterValue({self.model_name}, "{full_param}")')
 
+        # 1. Try OMC evaluation (good for calculated numbers)
+        val = self.omc.sendExpression(f'getParameterValue({self.model_name}, "{full_param}")')
         if val and "Error" not in str(val) and val != "":
             if isinstance(val, str):
                 val = val.strip().replace('"', "")
             return val
 
+        # 2. Try raw modifiers extraction
         if modifiers_obj:
             val_mod = self._extract_val_from_modifiers(modifiers_obj, parameter)
             if val_mod:
@@ -151,7 +146,6 @@ class MoTopologyToolkit:
             return float(value_str)
         except (ValueError, TypeError):
             pass
-
         if isinstance(value_str, str) and len(value_str) > 0:
             ref_name = value_str.strip().replace("'", "")
             resolved_val = self.omc.sendExpression(
@@ -165,6 +159,7 @@ class MoTopologyToolkit:
         return 0.0
 
     def _extract_reference_target(self, value_str):
+        """Helper to identify the host component (e.g., 'GenPV.PGen0Pu' -> 'GenPV')"""
         if isinstance(value_str, str) and "." in value_str:
             return value_str.split(".")[0]
         return None
@@ -203,7 +198,6 @@ class MoTopologyToolkit:
                         break
 
                 u_nom = self._resolve_if_reference(u_nom_val)
-                # If bus has no voltage, try global, else default to 225.0 later
                 if u_nom <= 0.0 and global_u_nom > 0.0:
                     u_nom = global_u_nom
 
@@ -231,9 +225,13 @@ class MoTopologyToolkit:
             # --- GENERATOR Parsing ---
             elif "Electrical.Machines" in c_type or "Generator" in c_type:
                 p_pu = self._resolve_if_reference(self._get_omc_param(c_name, "PGen0Pu", c_mods))
+                q_pu = self._resolve_if_reference(self._get_omc_param(c_name, "QGen0Pu", c_mods))
+
                 topology_data["generators"][c_name] = {
                     "p_mw": p_pu * global_sn_ref,
+                    "q_mvar": q_pu * global_sn_ref,
                     "s_nom": global_sn_ref,
+                    "type": "Generator",
                 }
                 processed_count += 1
 
@@ -259,44 +257,34 @@ class MoTopologyToolkit:
                 if s_nom <= 0:
                     s_nom = global_sn_ref
 
-                # Fetch raw values to resolve references later
-                p_pu_raw = self._get_omc_param(c_name, "P0Pu", c_mods)
-                p_pu = self._resolve_if_reference(p_pu_raw)
-                host_ref = self._extract_reference_target(p_pu_raw)
-
-                u_pu = self._resolve_if_reference(self._get_omc_param(c_name, "U0Pu", c_mods))
+                # EXTRACT RAW string to catch "GenPV.PGen0Pu"
+                p_pu_raw_str = self._extract_val_from_modifiers(c_mods, "P0Pu")
+                host_ref = self._extract_reference_target(p_pu_raw_str)
 
                 topology_data["generators"][c_name] = {
-                    "p_mw": p_pu * s_nom,
-                    "target_v": u_pu,
                     "s_nom": s_nom,
                     "type": short_type,
-                    "host_ref": host_ref,
+                    "host_ref": host_ref,  # e.g. "GenPV"
+                    "is_init_block": True,
                 }
                 processed_count += 1
-            else:
-                logger.info(f"   [ERROR] Component '{c_name}' of type '{c_type}' not processed")
 
         logger.info(f"   [OK] Processed {processed_count} components.")
-        data_connected = self._resolve_connectivity(topology_data, raw_data["connections"])
-        return self._finalize_connectivity_for_init(data_connected)
+
+        # 1. Resolve basic connectivity
+        data = self._resolve_connectivity(topology_data, raw_data["connections"])
+
+        # 2. MERGE INIT blocks into their Host generators
+        data = self._merge_init_blocks(data)
+
+        return data
 
     def _resolve_connectivity(self, data, connections):
-        """
-        Advanced connectivity resolution.
-        Handles:
-        1. Explicit Bus connections (Line <-> Bus)
-        2. Implicit Bus creation (Line <-> Generator) -> Creates a 'Virtual Bus'
-        3. Line terminal mapping (bus1/bus2)
-        """
         logger.info("[INFO] Resolving Node/Bus Connectivity...")
 
-        # Helper to create an implicit bus if a line connects to a non-bus component
         def ensure_bus_exists(comp_id, default_v=225.0):
             if comp_id in data["buses"]:
                 return comp_id
-
-            # Create a virtual bus
             virtual_bus_id = f"Bus_{comp_id}"
             if virtual_bus_id not in data["buses"]:
                 data["buses"][virtual_bus_id] = {
@@ -304,55 +292,37 @@ class MoTopologyToolkit:
                     "is_slack": False,
                     "is_virtual": True,
                 }
-                logger.info(
-                    f"   [INFO] Created Virtual Bus '{virtual_bus_id}' for component '{comp_id}'"
-                )
             return virtual_bus_id
 
         for conn in connections:
             term1, term2 = conn[0], conn[1]
             try:
-                # Extract component names from "Comp.Terminal"
-                if "." in term1:
-                    c1 = term1.split(".", 1)[0]
-                else:
-                    c1 = term1
-                if "." in term2:
-                    c2 = term2.split(".", 1)[0]
-                else:
-                    c2 = term2
+                c1 = term1.split(".", 1)[0] if "." in term1 else term1
+                c2 = term2.split(".", 1)[0] if "." in term2 else term2
             except ValueError:
                 continue
 
-            # CASE A: Connection involves a LINE
             line_id = None
             other_id = None
-
             if c1 in data["lines"]:
                 line_id, other_id = c1, c2
             elif c2 in data["lines"]:
                 line_id, other_id = c2, c1
 
             if line_id:
-                # Ensure 'other_id' maps to a valid Bus ID (Explicit or Virtual)
                 target_bus_id = ensure_bus_exists(other_id)
-
-                # Assign to the other component if it's not a bus itself
                 if other_id not in data["buses"] and other_id != target_bus_id:
                     for cat in ["generators", "loads"]:
                         if other_id in data[cat]:
                             data[cat][other_id]["connected_to"] = target_bus_id
 
-                # Assign to Line
                 l_info = data["lines"][line_id]
                 if l_info["bus1"] is None:
                     l_info["bus1"] = target_bus_id
                 elif l_info["bus2"] is None and l_info["bus1"] != target_bus_id:
                     l_info["bus2"] = target_bus_id
-
                 continue
 
-            # CASE B: Direct connection (Gen <-> Load, or Gen <-> Bus)
             if c1 in data["buses"]:
                 for cat in ["generators", "loads"]:
                     if c2 in data[cat]:
@@ -361,8 +331,6 @@ class MoTopologyToolkit:
                 for cat in ["generators", "loads"]:
                     if c1 in data[cat]:
                         data[cat][c1]["connected_to"] = c2
-
-            # If neither is a Bus, use a shared virtual bus
             else:
                 shared_bus = ensure_bus_exists(c1)
                 for cat in ["generators", "loads"]:
@@ -370,26 +338,39 @@ class MoTopologyToolkit:
                         data[cat][c1]["connected_to"] = shared_bus
                     if c2 in data[cat]:
                         data[cat][c2]["connected_to"] = shared_bus
-
         return data
 
-    def _finalize_connectivity_for_init(self, data):
-        comp_to_bus = {}
-        for cat in ["generators", "loads", "lines"]:
-            for c_id, c_info in data[cat].items():
-                if cat == "lines":
-                    pass
-                elif "connected_to" in c_info:
-                    comp_to_bus[c_id] = c_info["connected_to"]
+    def _merge_init_blocks(self, data):
+        """
+        Merges INIT blocks into their physical Host generators.
+        """
+        gens = data["generators"]
+        to_remove = []
 
-        for g_id, g_info in data["generators"].items():
-            if "connected_to" not in g_info and "host_ref" in g_info:
-                host = g_info["host_ref"]
-                if host and host in comp_to_bus:
-                    g_info["connected_to"] = comp_to_bus[host]
+        for init_id, init_info in gens.items():
+            if init_info.get("is_init_block"):
+                host_id = init_info.get("host_ref")
+
+                if host_id and host_id in gens:
+                    host_info = gens[host_id]
+
+                    if "s_nom" in init_info:
+                        host_info["s_nom"] = init_info["s_nom"]
+                    if "type" in init_info:
+                        host_info["type"] = init_info["type"]
+
                     logger.info(
-                        f"   [INFO] Linked orphan '{g_id}' to bus '{comp_to_bus[host]}' (via {host})"
+                        f"   [INFO] Merged INIT block '{init_id}' into Physical Generator '{host_id}'."
                     )
+                    to_remove.append(init_id)
+                else:
+                    logger.warning(
+                        f"   [WARN] INIT block '{init_id}' skipped (Host '{host_id}' not found)."
+                    )
+
+        for rid in to_remove:
+            del gens[rid]
+
         return data
 
     def export_to_standard_json(self, data, filename="topology.json"):
@@ -403,7 +384,6 @@ class MoTopologyToolkit:
             network = pp.network.create_empty()
             bus_nominal_v = {}
 
-            # 1. Create Buses
             for b_id, b_info in data["buses"].items():
                 sub_id = f"Sub_{b_id}"
                 vl_id = f"VL_{b_id}"
@@ -411,27 +391,22 @@ class MoTopologyToolkit:
                 if nom_v is None or nom_v <= 0.0:
                     nom_v = 225.0
                 bus_nominal_v[b_id] = nom_v
-
                 network.create_substations(id=sub_id)
                 network.create_voltage_levels(
                     id=vl_id, substation_id=sub_id, nominal_v=nom_v, topology_kind="BUS_BREAKER"
                 )
                 network.create_buses(id=b_id, voltage_level_id=vl_id)
 
-            # 2. Create Lines
             for l_id, l_info in data["lines"].items():
                 b1 = l_info.get("bus1")
                 b2 = l_info.get("bus2")
-
                 if b1 and b2 and b1 in bus_nominal_v and b2 in bus_nominal_v:
                     un_kv = bus_nominal_v[b1]
                     sn_mva = l_info.get("sn_ref", 100.0)
                     z_base = (un_kv**2) / sn_mva
-
                     r_ohm = l_info.get("r_pu", 0.0) * z_base
                     x_ohm = l_info.get("x_pu", 1e-6) * z_base
                     b_s = l_info.get("b_pu", 0.0) / z_base
-
                     network.create_lines(
                         id=l_id,
                         voltage_level1_id=f"VL_{b1}",
@@ -445,20 +420,19 @@ class MoTopologyToolkit:
                         g2=0.0,
                         b2=b_s / 2,
                     )
-                else:
-                    logger.warning(
-                        f"   [WARN] Line '{l_id}' incomplete (Bus1: {b1}, Bus2: {b2}). Skipped."
-                    )
 
-            # 3. Create Generators
             for g_id, g_info in data["generators"].items():
+                if g_info.get("is_init_block"):
+                    continue
+
                 bus_id = g_info.get("connected_to")
                 if not bus_id or bus_id not in bus_nominal_v:
                     logger.warning(f"   [WARN] Generator '{g_id}' not connected. Skipped.")
                     continue
 
                 p_mw = g_info.get("p_mw", 0.0)
-                s_nom = g_info.get("s_nom", 100.0)  # Retrieve nominal power for limits
+                q_mvar = g_info.get("q_mvar", 0.0)
+                s_nom = g_info.get("s_nom", 100.0)
                 target_v_pu = g_info.get("target_v")
 
                 regulator_on = False
@@ -467,14 +441,12 @@ class MoTopologyToolkit:
                     regulator_on = True
                     target_v_kv = target_v_pu * bus_nominal_v[bus_id]
 
-                print(f"VL_{bus_id}")
-                print(target_v_pu)
-
                 network.create_generators(
                     id=g_id,
                     voltage_level_id=f"VL_{bus_id}",
                     bus_id=bus_id,
                     target_p=p_mw,
+                    target_q=q_mvar,
                     voltage_regulator_on=regulator_on,
                     target_v=target_v_kv if regulator_on else None,
                     min_p=-s_nom,
