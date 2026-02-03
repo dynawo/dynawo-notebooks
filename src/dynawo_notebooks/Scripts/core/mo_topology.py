@@ -4,7 +4,6 @@ import logging
 import re
 from OMPython import OMCSessionZMQ
 import pypowsybl as pp
-from IPython.display import SVG, display
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -53,6 +52,7 @@ class MoTopologyToolkit:
     def get_raw_topology(self):
         """
         Retrieves raw component list and connection equations.
+        Uses parsed=False to avoid OMPython crashing on complex modifier dictionaries.
         """
         logger.info("[INFO] Extracting Raw Topology...")
 
@@ -66,7 +66,7 @@ class MoTopologyToolkit:
                     c_type = comp[0]
                     c_name = comp[1]
 
-                    # CRITICAL FIX: Use parsed=False to prevent OMPython crash on complex modifiers
+                    # parsed=False prevents crashes with complex graphical annotations
                     mods_str = self.omc.sendExpression(
                         f"getNthComponentModification({self.model_name}, {omc_index})",
                         parsed=False,
@@ -96,7 +96,7 @@ class MoTopologyToolkit:
         return {"components": components_dict, "connections": connections}
 
     def _recursive_search(self, data, target):
-        """Helper for dictionary traversal (if OMPython returns dicts in future)"""
+        """Helper for dictionary traversal."""
         if isinstance(data, dict):
             for k, v in data.items():
                 k_clean = k.replace("(", "").replace(")", "").replace("'", "").strip()
@@ -112,17 +112,14 @@ class MoTopologyToolkit:
 
     def _extract_val_from_modifiers(self, modifiers_obj, parameter):
         """
-        Extracts parameter value. Handles raw strings (from parsed=False) and dicts.
+        Extracts parameter value. Handles raw strings and dicts.
         """
         if not modifiers_obj:
             return None
 
-        # If it happens to be a dict (backward compatibility)
         if isinstance(modifiers_obj, dict):
             return self._recursive_search(modifiers_obj, parameter)
 
-        # Regex on string representation
-        # Clean up the raw string first (OMC raw strings might have outer quotes)
         modifiers_str = str(modifiers_obj).strip().strip('"').strip("'")
 
         # Regex looks for: Param = Value OR Param: Value
@@ -206,6 +203,7 @@ class MoTopologyToolkit:
                         break
 
                 u_nom = self._resolve_if_reference(u_nom_val)
+                # If bus has no voltage, try global, else default to 225.0 later
                 if u_nom <= 0.0 and global_u_nom > 0.0:
                     u_nom = global_u_nom
 
@@ -220,11 +218,14 @@ class MoTopologyToolkit:
                 r_pu = self._resolve_if_reference(self._get_omc_param(c_name, "RPu", c_mods))
                 x_pu = self._resolve_if_reference(self._get_omc_param(c_name, "XPu", c_mods))
                 b_pu = self._resolve_if_reference(self._get_omc_param(c_name, "BPu", c_mods))
+                # Note: 'bus1' and 'bus2' will be filled in connectivity resolution
                 topology_data["lines"][c_name] = {
                     "r_pu": r_pu,
                     "x_pu": x_pu,
                     "b_pu": b_pu,
                     "sn_ref": global_sn_ref,
+                    "bus1": None,
+                    "bus2": None,
                 }
                 processed_count += 1
 
@@ -256,7 +257,7 @@ class MoTopologyToolkit:
                 if s_nom <= 0:
                     s_nom = global_sn_ref
 
-                # Fetch raw values
+                # Fetch raw values to resolve references later
                 p_pu_raw = self._get_omc_param(c_name, "P0Pu", c_mods)
                 p_pu = self._resolve_if_reference(p_pu_raw)
                 host_ref = self._extract_reference_target(p_pu_raw)
@@ -279,9 +280,37 @@ class MoTopologyToolkit:
         return self._finalize_connectivity_for_init(data_connected)
 
     def _resolve_connectivity(self, data, connections):
+        """
+        Advanced connectivity resolution.
+        Handles:
+        1. Explicit Bus connections (Line <-> Bus)
+        2. Implicit Bus creation (Line <-> Generator) -> Creates a 'Virtual Bus'
+        3. Line terminal mapping (bus1/bus2)
+        """
+        logger.info("[INFO] Resolving Node/Bus Connectivity...")
+
+        # Helper to create an implicit bus if a line connects to a non-bus component
+        def ensure_bus_exists(comp_id, default_v=225.0):
+            if comp_id in data["buses"]:
+                return comp_id
+
+            # Create a virtual bus
+            virtual_bus_id = f"Bus_{comp_id}"
+            if virtual_bus_id not in data["buses"]:
+                data["buses"][virtual_bus_id] = {
+                    "nominal_v": default_v,
+                    "is_slack": False,
+                    "is_virtual": True,
+                }
+                logger.info(
+                    f"   [INFO] Created Virtual Bus '{virtual_bus_id}' for component '{comp_id}'"
+                )
+            return virtual_bus_id
+
         for conn in connections:
             term1, term2 = conn[0], conn[1]
             try:
+                # Extract component names from "Comp.Terminal"
                 if "." in term1:
                     c1 = term1.split(".", 1)[0]
                 else:
@@ -293,18 +322,69 @@ class MoTopologyToolkit:
             except ValueError:
                 continue
 
-            for cat in ["lines", "generators", "loads"]:
-                if c1 in data[cat]:
-                    data[cat][c1]["connected_to"] = c2
-                elif c2 in data[cat]:
-                    data[cat][c2]["connected_to"] = c1
+            # CASE A: Connection involves a LINE
+            line_id = None
+            other_id = None
+
+            if c1 in data["lines"]:
+                line_id, other_id = c1, c2
+            elif c2 in data["lines"]:
+                line_id, other_id = c2, c1
+
+            if line_id:
+                # We have a Line connected to 'other_id'
+                # Ensure 'other_id' maps to a valid Bus ID (Explicit or Virtual)
+                target_bus_id = ensure_bus_exists(other_id)
+
+                # Assign to the other component if it's not a bus itself
+                if other_id not in data["buses"] and other_id != target_bus_id:
+                    # e.g. GenPV connected to Bus_GenPV
+                    for cat in ["generators", "loads"]:
+                        if other_id in data[cat]:
+                            data[cat][other_id]["connected_to"] = target_bus_id
+
+                # Assign to Line (fill bus1 first, then bus2)
+                l_info = data["lines"][line_id]
+                if l_info["bus1"] is None:
+                    l_info["bus1"] = target_bus_id
+                elif l_info["bus2"] is None and l_info["bus1"] != target_bus_id:
+                    l_info["bus2"] = target_bus_id
+
+                continue  # Move to next connection
+
+            # CASE B: Direct connection (Gen <-> Load, or Gen <-> Bus)
+            # If one is a Bus, connect the other to it.
+            if c1 in data["buses"]:
+                for cat in ["generators", "loads"]:
+                    if c2 in data[cat]:
+                        data[cat][c2]["connected_to"] = c1
+            elif c2 in data["buses"]:
+                for cat in ["generators", "loads"]:
+                    if c1 in data[cat]:
+                        data[cat][c1]["connected_to"] = c2
+
+            # If neither is a Bus (Gen <-> Load), we need a virtual bus for them
+            else:
+                shared_bus = ensure_bus_exists(c1)
+                for cat in ["generators", "loads"]:
+                    if c1 in data[cat]:
+                        data[cat][c1]["connected_to"] = shared_bus
+                    if c2 in data[cat]:
+                        data[cat][c2]["connected_to"] = shared_bus
+
         return data
 
     def _finalize_connectivity_for_init(self, data):
+        """
+        Links orphan INIT blocks to the bus of their 'host' component.
+        """
         comp_to_bus = {}
         for cat in ["generators", "loads", "lines"]:
             for c_id, c_info in data[cat].items():
-                if "connected_to" in c_info:
+                if cat == "lines":
+                    # Lines don't have 'connected_to', they connect buses, skip for mapping
+                    pass
+                elif "connected_to" in c_info:
                     comp_to_bus[c_id] = c_info["connected_to"]
 
         for g_id, g_info in data["generators"].items():
@@ -328,6 +408,7 @@ class MoTopologyToolkit:
             network = pp.network.create_empty()
             bus_nominal_v = {}
 
+            # 1. Create Buses
             for b_id, b_info in data["buses"].items():
                 sub_id = f"Sub_{b_id}"
                 vl_id = f"VL_{b_id}"
@@ -342,6 +423,46 @@ class MoTopologyToolkit:
                 )
                 network.create_buses(id=b_id, voltage_level_id=vl_id)
 
+            # 2. Create Lines (CRITICAL ADDITION)
+            for l_id, l_info in data["lines"].items():
+                b1 = l_info.get("bus1")
+                b2 = l_info.get("bus2")
+
+                if b1 and b2 and b1 in bus_nominal_v and b2 in bus_nominal_v:
+                    # Calculate Z/Y from pu
+                    # Base Impedance Zbase = Un^2 / Sn
+                    # Assuming same voltage base for simplification or taking V1
+                    un_kv = bus_nominal_v[b1]
+                    sn_mva = l_info.get("sn_ref", 100.0)
+                    z_base = (un_kv**2) / sn_mva
+
+                    r_ohm = l_info.get("r_pu", 0.0) * z_base
+                    x_ohm = l_info.get("x_pu", 1e-6) * z_base
+                    b_s = (
+                        l_info.get("b_pu", 0.0) / z_base
+                    )  # Susceptance in Siemens? (Verify PyPowSybl units)
+                    # PyPowSybl expects G/B in Siemens. BPu is usually per unit. Y_pu = 1/Z_base.
+                    # Actually B_sim = B_pu * (1/Z_base) = B_pu * Sn / Un^2
+
+                    network.create_lines(
+                        id=l_id,
+                        voltage_level1_id=f"VL_{b1}",
+                        bus1_id=b1,
+                        voltage_level2_id=f"VL_{b2}",
+                        bus2_id=b2,
+                        r=r_ohm,
+                        x=x_ohm,
+                        g1=0.0,
+                        b1=b_s / 2,
+                        g2=0.0,
+                        b2=b_s / 2,  # Pi model split
+                    )
+                else:
+                    logger.warning(
+                        f"   [WARN] Line '{l_id}' incomplete (Bus1: {b1}, Bus2: {b2}). Skipped."
+                    )
+
+            # 3. Create Generators
             for g_id, g_info in data["generators"].items():
                 bus_id = g_info.get("connected_to")
                 if not bus_id or bus_id not in bus_nominal_v:
