@@ -6,6 +6,7 @@ into a formal PyPowSybl Network object.
 """
 
 import logging
+import pandas as pd  # Added import
 import pypowsybl as pp
 from typing import Dict
 
@@ -150,13 +151,21 @@ class PowsyblConverter:
 
         g_siemens = info.get("g_pu", 0.0) * sn / (un**2)
 
-        net.create_shunt_compensators(
-            id=sid,
-            voltage_level_id=f"VL_{bid}",
-            bus_id=bid,
-            model_type="CONSTANT_IMPEDANCE",
-            maximum_section_count=1,
-            sections_in_service=1,
-            g_per_section=g_siemens,
-            b_per_section=b_siemens,
+        df_shunt = pd.DataFrame(
+            index=["id"],
+            columns=["id", "voltage_level_id", "bus_id", "model_type", "section_count"],
+            data=[(str(sid), f"VL_{bid}", str(bid), "LINEAR", 1)],
         )
+
+        df_linear_model = pd.DataFrame(
+            index=["id"],
+            columns=["id", "max_section_count", "g_per_section", "b_per_section"],
+            data=[(str(sid), 1, g_siemens, b_siemens)],
+        )
+
+        df_shunt["id"] = df_shunt["id"].astype(str)
+        df_shunt["voltage_level_id"] = df_shunt["voltage_level_id"].astype(str)
+        df_shunt["bus_id"] = df_shunt["bus_id"].astype(str)
+        df_linear_model["id"] = df_linear_model["id"].astype(str)
+
+        net.create_shunt_compensators(shunt_df=df_shunt, linear_model_df=df_linear_model)

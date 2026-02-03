@@ -7,7 +7,7 @@ via ZMQ. It abstracts the session management and ensures the environment is read
 
 import os
 import logging
-from typing import Optional, List
+from typing import Optional, List, Any
 from OMPython import OMCSessionZMQ
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,6 @@ class OMCConnector:
         """
         Loads user-defined Modelica files from a specific directory using Absolute Paths.
         """
-        # 1. Resolve Absolute Path in Python first
         abs_source_dir = os.path.abspath(source_dir).replace("\\", "/")
 
         if not os.path.exists(abs_source_dir):
@@ -58,14 +57,10 @@ class OMCConnector:
             raise FileNotFoundError(f"Directory not found: {abs_source_dir}")
 
         logger.info(f"Loading local models from: {abs_source_dir}")
-
-        # 2. Tell OMC to change directory (good for relative imports inside .mo files)
         self._omc.sendExpression(f'cd("{abs_source_dir}")')
 
-        # 3. Load each file using its full path
         for filename in files:
             full_path = os.path.join(abs_source_dir, filename).replace("\\", "/")
-
             if not os.path.exists(full_path):
                 logger.error(f"File not found on disk: {full_path}")
                 continue
@@ -74,8 +69,6 @@ class OMCConnector:
             if not self._omc.sendExpression(f'loadFile("{full_path}")'):
                 err_msg = self._omc.sendExpression("getErrorString()")
                 logger.error(f"Failed to load '{filename}'. OMC Error: {err_msg}")
-                # We don't raise here immediately to try loading other files,
-                # but checkModel will likely fail later if this was critical.
 
     def check_model(self, model_name: str) -> bool:
         """
@@ -86,19 +79,37 @@ class OMCConnector:
 
         result_str = str(result)
         if "Error" in result_str:
-            logger.warning(f"checkModel reported issues:\n{result_str}")
-            # If the class is not found, it's a critical failure usually
             if "Class" in result_str and "not found in scope" in result_str:
+                logger.critical(f"Model not found: {result_str}")
                 return False
-            # Warnings might allow proceeding, errors usually don't
+            logger.warning(f"checkModel reported issues:\n{result_str}")
             return False
 
         logger.info(f"Model '{model_name}' check passed successfully.")
         return True
 
     def get_components(self, model_name: str) -> list:
-        """Wraps getComponents()."""
+        """Wraps getComponents(). Returns list of [Type, Name, Comment]."""
         return self._omc.sendExpression(f"getComponents({model_name})")
+
+    def get_inherited_classes(self, model_name: str) -> List[str]:
+        """
+        Retrieves the list of classes that 'model_name' extends (inherits from).
+        Corrected to use the standard API 'getInheritedClasses'.
+        """
+        # API returns a tuple or list of strings directly: ('Parent1', 'Parent2')
+        result = self._omc.sendExpression(f"getInheritedClasses({model_name})")
+
+        if not result:
+            return []
+
+        # Ensure we return a clean python list of strings
+        if isinstance(result, (list, tuple)):
+            return [str(c) for c in result]
+        elif isinstance(result, str):
+            return [result]
+
+        return []
 
     def get_component_modification(self, model_name: str, index: int) -> str:
         """
@@ -115,13 +126,12 @@ class OMCConnector:
         if count_str:
             try:
                 count = int(count_str)
-                logger.debug(f"Found {count} connections in the model.")
                 for i in range(1, count + 1):
                     conn = self._omc.sendExpression(f"getNthConnection({model_name}, {i})")
                     if conn and len(conn) >= 2:
                         connections.append([conn[0], conn[1]])
             except ValueError:
-                logger.warning(f"Could not parse connection count: {count_str}")
+                pass
         return connections
 
     def get_parameter_value(self, model_name: str, parameter_path: str) -> Optional[str]:
