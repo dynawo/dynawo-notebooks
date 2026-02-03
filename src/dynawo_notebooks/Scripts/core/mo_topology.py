@@ -170,7 +170,7 @@ class MoTopologyToolkit:
         raw_data = self.get_raw_topology()
         comps_dict = raw_data["components"]
 
-        topology_data = {"buses": {}, "lines": {}, "generators": {}, "loads": {}}
+        topology_data = {"buses": {}, "lines": {}, "generators": {}, "loads": {}, "shunts": {}}
 
         # Global Defaults
         global_sn_ref = self._resolve_if_reference(self._get_omc_param("", "SnRef"))
@@ -245,6 +245,25 @@ class MoTopologyToolkit:
                 }
                 processed_count += 1
 
+            # --- SHUNT Parsing ---
+            elif (
+                "Electrical.Shunts" in c_type
+                or "Shunt" in c_type
+                or "Reactor" in c_type
+                or "Capacitor" in c_type
+            ):
+                q_pu = self._resolve_if_reference(self._get_omc_param(c_name, "Q0Pu", c_mods))
+                b_pu = self._resolve_if_reference(self._get_omc_param(c_name, "BPu", c_mods))
+                g_pu = self._resolve_if_reference(self._get_omc_param(c_name, "GPu", c_mods))
+
+                topology_data["shunts"][c_name] = {
+                    "q_mvar": q_pu * global_sn_ref,
+                    "b_pu": b_pu,
+                    "g_pu": g_pu,
+                    "sn_ref": global_sn_ref,
+                }
+                processed_count += 1
+
             # --- GENERIC INIT Parsing ---
             elif c_type.endswith("_INIT") or "_INIT" in c_type:
                 try:
@@ -264,7 +283,7 @@ class MoTopologyToolkit:
                 topology_data["generators"][c_name] = {
                     "s_nom": s_nom,
                     "type": short_type,
-                    "host_ref": host_ref,  # e.g. "GenPV"
+                    "host_ref": host_ref,
                     "is_init_block": True,
                 }
                 processed_count += 1
@@ -274,7 +293,7 @@ class MoTopologyToolkit:
         # 1. Resolve basic connectivity
         data = self._resolve_connectivity(topology_data, raw_data["connections"])
 
-        # 2. MERGE INIT blocks into their Host generators
+        # 2. MERGE INIT blocks
         data = self._merge_init_blocks(data)
 
         return data
@@ -311,8 +330,9 @@ class MoTopologyToolkit:
 
             if line_id:
                 target_bus_id = ensure_bus_exists(other_id)
+                # Check all categories that can connect to a line
                 if other_id not in data["buses"] and other_id != target_bus_id:
-                    for cat in ["generators", "loads"]:
+                    for cat in ["generators", "loads", "shunts"]:
                         if other_id in data[cat]:
                             data[cat][other_id]["connected_to"] = target_bus_id
 
@@ -324,16 +344,16 @@ class MoTopologyToolkit:
                 continue
 
             if c1 in data["buses"]:
-                for cat in ["generators", "loads"]:
+                for cat in ["generators", "loads", "shunts"]:
                     if c2 in data[cat]:
                         data[cat][c2]["connected_to"] = c1
             elif c2 in data["buses"]:
-                for cat in ["generators", "loads"]:
+                for cat in ["generators", "loads", "shunts"]:
                     if c1 in data[cat]:
                         data[cat][c1]["connected_to"] = c2
             else:
                 shared_bus = ensure_bus_exists(c1)
-                for cat in ["generators", "loads"]:
+                for cat in ["generators", "loads", "shunts"]:
                     if c1 in data[cat]:
                         data[cat][c1]["connected_to"] = shared_bus
                     if c2 in data[cat]:
@@ -341,24 +361,17 @@ class MoTopologyToolkit:
         return data
 
     def _merge_init_blocks(self, data):
-        """
-        Merges INIT blocks into their physical Host generators.
-        """
         gens = data["generators"]
         to_remove = []
-
         for init_id, init_info in gens.items():
             if init_info.get("is_init_block"):
                 host_id = init_info.get("host_ref")
-
                 if host_id and host_id in gens:
                     host_info = gens[host_id]
-
                     if "s_nom" in init_info:
                         host_info["s_nom"] = init_info["s_nom"]
                     if "type" in init_info:
                         host_info["type"] = init_info["type"]
-
                     logger.info(
                         f"   [INFO] Merged INIT block '{init_id}' into Physical Generator '{host_id}'."
                     )
@@ -367,10 +380,8 @@ class MoTopologyToolkit:
                     logger.warning(
                         f"   [WARN] INIT block '{init_id}' skipped (Host '{host_id}' not found)."
                     )
-
         for rid in to_remove:
             del gens[rid]
-
         return data
 
     def export_to_standard_json(self, data, filename="topology.json"):
@@ -384,6 +395,7 @@ class MoTopologyToolkit:
             network = pp.network.create_empty()
             bus_nominal_v = {}
 
+            # 1. Buses
             for b_id, b_info in data["buses"].items():
                 sub_id = f"Sub_{b_id}"
                 vl_id = f"VL_{b_id}"
@@ -397,6 +409,7 @@ class MoTopologyToolkit:
                 )
                 network.create_buses(id=b_id, voltage_level_id=vl_id)
 
+            # 2. Lines
             for l_id, l_info in data["lines"].items():
                 b1 = l_info.get("bus1")
                 b2 = l_info.get("bus2")
@@ -421,10 +434,10 @@ class MoTopologyToolkit:
                         b2=b_s / 2,
                     )
 
+            # 3. Generators
             for g_id, g_info in data["generators"].items():
                 if g_info.get("is_init_block"):
                     continue
-
                 bus_id = g_info.get("connected_to")
                 if not bus_id or bus_id not in bus_nominal_v:
                     logger.warning(f"   [WARN] Generator '{g_id}' not connected. Skipped.")
@@ -451,6 +464,59 @@ class MoTopologyToolkit:
                     target_v=target_v_kv if regulator_on else None,
                     min_p=-s_nom,
                     max_p=s_nom,
+                )
+
+            # 4. Loads
+            for l_id, l_info in data["loads"].items():
+                bus_id = l_info.get("connected_to")
+                if not bus_id or bus_id not in bus_nominal_v:
+                    logger.warning(f"   [WARN] Load '{l_id}' not connected. Skipped.")
+                    continue
+
+                p_mw = l_info.get("p_mw", 0.0)
+                q_mvar = l_info.get("q_mvar", 0.0)
+
+                network.create_loads(
+                    id=l_id, voltage_level_id=f"VL_{bus_id}", bus_id=bus_id, p0=p_mw, q0=q_mvar
+                )
+
+            # 5. Shunts
+            for s_id, s_info in data["shunts"].items():
+                bus_id = s_info.get("connected_to")
+                if not bus_id or bus_id not in bus_nominal_v:
+                    logger.warning(f"   [WARN] Shunt '{s_id}' not connected. Skipped.")
+                    continue
+
+                un_kv = bus_nominal_v[bus_id]
+                sn_mva = s_info.get("sn_ref", 100.0)
+
+                g_siemens = 0.0
+                b_siemens = 0.0
+
+                q_mvar = s_info.get("q_mvar", 0.0)
+                b_pu = s_info.get("b_pu", 0.0)
+                g_pu = s_info.get("g_pu", 0.0)
+
+                if abs(q_mvar) > 1e-9:
+                    b_siemens = q_mvar / (un_kv**2)
+                elif abs(b_pu) > 1e-9:
+                    b_siemens = b_pu * sn_mva / (un_kv**2)
+
+                if abs(g_pu) > 1e-9:
+                    g_siemens = g_pu * sn_mva / (un_kv**2)
+
+                network.create_shunt_compensators(
+                    id=s_id,
+                    voltage_level_id=f"VL_{bus_id}",
+                    bus_id=bus_id,
+                    model_type="CONSTANT_IMPEDANCE",
+                    maximum_section_count=1,
+                    sections_in_service=1,
+                    g_per_section=g_siemens,
+                    b_per_section=b_siemens,
+                )
+                logger.info(
+                    f"   [INFO] Created Shunt '{s_id}' (B={b_siemens:.2e} S) at Bus '{bus_id}'."
                 )
 
             logger.info("   [OK] Network build complete.")
