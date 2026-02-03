@@ -218,7 +218,6 @@ class MoTopologyToolkit:
                 r_pu = self._resolve_if_reference(self._get_omc_param(c_name, "RPu", c_mods))
                 x_pu = self._resolve_if_reference(self._get_omc_param(c_name, "XPu", c_mods))
                 b_pu = self._resolve_if_reference(self._get_omc_param(c_name, "BPu", c_mods))
-                # Note: 'bus1' and 'bus2' will be filled in connectivity resolution
                 topology_data["lines"][c_name] = {
                     "r_pu": r_pu,
                     "x_pu": x_pu,
@@ -232,7 +231,10 @@ class MoTopologyToolkit:
             # --- GENERATOR Parsing ---
             elif "Electrical.Machines" in c_type or "Generator" in c_type:
                 p_pu = self._resolve_if_reference(self._get_omc_param(c_name, "PGen0Pu", c_mods))
-                topology_data["generators"][c_name] = {"p_mw": p_pu * global_sn_ref}
+                topology_data["generators"][c_name] = {
+                    "p_mw": p_pu * global_sn_ref,
+                    "s_nom": global_sn_ref,
+                }
                 processed_count += 1
 
             # --- LOAD Parsing ---
@@ -332,28 +334,25 @@ class MoTopologyToolkit:
                 line_id, other_id = c2, c1
 
             if line_id:
-                # We have a Line connected to 'other_id'
                 # Ensure 'other_id' maps to a valid Bus ID (Explicit or Virtual)
                 target_bus_id = ensure_bus_exists(other_id)
 
                 # Assign to the other component if it's not a bus itself
                 if other_id not in data["buses"] and other_id != target_bus_id:
-                    # e.g. GenPV connected to Bus_GenPV
                     for cat in ["generators", "loads"]:
                         if other_id in data[cat]:
                             data[cat][other_id]["connected_to"] = target_bus_id
 
-                # Assign to Line (fill bus1 first, then bus2)
+                # Assign to Line
                 l_info = data["lines"][line_id]
                 if l_info["bus1"] is None:
                     l_info["bus1"] = target_bus_id
                 elif l_info["bus2"] is None and l_info["bus1"] != target_bus_id:
                     l_info["bus2"] = target_bus_id
 
-                continue  # Move to next connection
+                continue
 
             # CASE B: Direct connection (Gen <-> Load, or Gen <-> Bus)
-            # If one is a Bus, connect the other to it.
             if c1 in data["buses"]:
                 for cat in ["generators", "loads"]:
                     if c2 in data[cat]:
@@ -363,7 +362,7 @@ class MoTopologyToolkit:
                     if c1 in data[cat]:
                         data[cat][c1]["connected_to"] = c2
 
-            # If neither is a Bus (Gen <-> Load), we need a virtual bus for them
+            # If neither is a Bus, use a shared virtual bus
             else:
                 shared_bus = ensure_bus_exists(c1)
                 for cat in ["generators", "loads"]:
@@ -375,14 +374,10 @@ class MoTopologyToolkit:
         return data
 
     def _finalize_connectivity_for_init(self, data):
-        """
-        Links orphan INIT blocks to the bus of their 'host' component.
-        """
         comp_to_bus = {}
         for cat in ["generators", "loads", "lines"]:
             for c_id, c_info in data[cat].items():
                 if cat == "lines":
-                    # Lines don't have 'connected_to', they connect buses, skip for mapping
                     pass
                 elif "connected_to" in c_info:
                     comp_to_bus[c_id] = c_info["connected_to"]
@@ -423,26 +418,19 @@ class MoTopologyToolkit:
                 )
                 network.create_buses(id=b_id, voltage_level_id=vl_id)
 
-            # 2. Create Lines (CRITICAL ADDITION)
+            # 2. Create Lines
             for l_id, l_info in data["lines"].items():
                 b1 = l_info.get("bus1")
                 b2 = l_info.get("bus2")
 
                 if b1 and b2 and b1 in bus_nominal_v and b2 in bus_nominal_v:
-                    # Calculate Z/Y from pu
-                    # Base Impedance Zbase = Un^2 / Sn
-                    # Assuming same voltage base for simplification or taking V1
                     un_kv = bus_nominal_v[b1]
                     sn_mva = l_info.get("sn_ref", 100.0)
                     z_base = (un_kv**2) / sn_mva
 
                     r_ohm = l_info.get("r_pu", 0.0) * z_base
                     x_ohm = l_info.get("x_pu", 1e-6) * z_base
-                    b_s = (
-                        l_info.get("b_pu", 0.0) / z_base
-                    )  # Susceptance in Siemens? (Verify PyPowSybl units)
-                    # PyPowSybl expects G/B in Siemens. BPu is usually per unit. Y_pu = 1/Z_base.
-                    # Actually B_sim = B_pu * (1/Z_base) = B_pu * Sn / Un^2
+                    b_s = l_info.get("b_pu", 0.0) / z_base
 
                     network.create_lines(
                         id=l_id,
@@ -455,7 +443,7 @@ class MoTopologyToolkit:
                         g1=0.0,
                         b1=b_s / 2,
                         g2=0.0,
-                        b2=b_s / 2,  # Pi model split
+                        b2=b_s / 2,
                     )
                 else:
                     logger.warning(
@@ -470,6 +458,7 @@ class MoTopologyToolkit:
                     continue
 
                 p_mw = g_info.get("p_mw", 0.0)
+                s_nom = g_info.get("s_nom", 100.0)  # Retrieve nominal power for limits
                 target_v_pu = g_info.get("target_v")
 
                 regulator_on = False
@@ -478,6 +467,9 @@ class MoTopologyToolkit:
                     regulator_on = True
                     target_v_kv = target_v_pu * bus_nominal_v[bus_id]
 
+                print(f"VL_{bus_id}")
+                print(target_v_pu)
+
                 network.create_generators(
                     id=g_id,
                     voltage_level_id=f"VL_{bus_id}",
@@ -485,6 +477,8 @@ class MoTopologyToolkit:
                     target_p=p_mw,
                     voltage_regulator_on=regulator_on,
                     target_v=target_v_kv if regulator_on else None,
+                    min_p=-s_nom,
+                    max_p=s_nom,
                 )
 
             logger.info("   [OK] Network build complete.")
