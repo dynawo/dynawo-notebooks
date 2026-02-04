@@ -142,3 +142,19 @@ class OMCConnector:
         if val and "Error" not in str(val) and val != "":
             return str(val).strip().replace('"', "")
         return None
+
+    def get_extends(self, model_name: str) -> List[str]:
+        """
+        Retrieves the list of classes that the given model inherits from directly.
+        Uses the OMC command: getInheritedClasses()
+        """
+        cmd = f"getInheritedClasses({model_name})"
+        result = self._omc.sendExpression(cmd)
+
+        # OpenModelica can return a tuple, a list, or a single string depending on the version and result
+        if isinstance(result, (list, tuple)):
+            return [str(c) for c in result]
+        elif isinstance(result, str) and result:
+            return [result]
+
+        return []

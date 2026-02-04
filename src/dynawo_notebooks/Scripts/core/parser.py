@@ -1,14 +1,15 @@
+# FILE: src/dynawo_notebooks/Scripts/core/parser.py
 """
 Modelica Parsing Logic.
 
 This module handles the extraction of topology data from raw OMC outputs,
-resolves parameter references (regex), and manages graph connectivity.
-It supports inheritance traversal to find components AND connections in parent classes.
+resolves parameter references, and manages graph connectivity.
+It supports inheritance traversal and strictly matches pin names (terminal1/2, p/n)
+to ensure Lines and Transformers are connected correctly.
 """
 
 import logging
-import re
-from typing import Dict, Any, Optional, List, Tuple, Set
+from typing import Dict, Any, Optional, List
 from .connector import OMCConnector
 
 logger = logging.getLogger(__name__)
@@ -31,290 +32,234 @@ class ModelicaParser:
 
         # 1. Recursive Component Extraction (Handles Inheritance)
         all_components_map = self._collect_all_components_recursive()
-        logger.info(
-            f"Total unique components found (including inherited): {len(all_components_map)}"
-        )
+        logger.info(f"Total unique components found: {len(all_components_map)}")
 
         # 2. Dictionary Initialization
-        topo = {"buses": {}, "lines": {}, "generators": {}, "loads": {}, "shunts": {}}
+        # Added 'transformers' category
+        topo = {
+            "buses": {},
+            "lines": {},
+            "generators": {},
+            "loads": {},
+            "shunts": {},
+            "transformers": {},
+        }
 
-        # 3. Global Parameters
-        global_sn = (
-            self._resolve_val(self.conn.get_parameter_value(self.model_name, "SnRef")) or 100.0
-        )
-        global_un = self._resolve_val(
-            self.conn.get_parameter_value(self.model_name, "UNom")
-        ) or self._resolve_val(self.conn.get_parameter_value(self.model_name, "UBase"))
+        # 3. Process Components based on their Type/Name
+        for comp_name, comp_data in all_components_map.items():
+            c_type = comp_data["type"]
+            params = self._extract_parameters(self.model_name, comp_name)
 
-        logger.info(f"Global Bases: Sn={global_sn} MVA, Un={global_un} kV")
+            # Build the common data structure
+            element_data = {"id": comp_name, "modelica_type": c_type, **params}
 
-        # 4. Process collected components
-        for c_name, (c_type, c_mods) in all_components_map.items():
-            self._process_component(c_name, c_type, c_mods, topo, global_sn, global_un)
+            # --- Generators ---
+            if "Generator" in c_type or "Source" in c_type:
+                topo["generators"][comp_name] = element_data
 
-        # 5. Recursive Connection Extraction (NEW FIX)
-        # We must gather connections from all parent classes too.
+            # --- Loads ---
+            elif "Load" in c_type:
+                topo["loads"][comp_name] = element_data
+
+            # --- Shunts ---
+            elif "Shunt" in c_type or "Capacitor" in c_type or "Reactance" in c_type:
+                topo["shunts"][comp_name] = element_data
+
+            # --- Lines ---
+            elif "Line" in c_type:
+                topo["lines"][comp_name] = element_data
+
+            # --- Transformers ---
+            # Explicit support for Transformers
+            elif "Transformer" in c_type:
+                topo["transformers"][comp_name] = element_data
+
+            # --- Buses ---
+            elif "Bus" in c_type:
+                topo["buses"][comp_name] = element_data
+
+        # 4. Recursive Connection Extraction
         all_connections = self._collect_all_connections_recursive()
-        logger.info(f"Total connections found (including inherited): {len(all_connections)}")
+        logger.info(f"Total connections equations found: {len(all_connections)}")
 
-        data = self._resolve_connectivity(topo, all_connections)
+        # 5. Apply Connections (Map components to buses)
+        self._apply_connections(topo, all_connections)
 
-        # 6. Post-Processing (Merge INIT blocks)
-        data = self._merge_init_blocks(data)
+        return topo
 
-        # Summary Log
-        logger.info("Parsing Summary:")
-        logger.info(f" > Buses: {len(data['buses'])}")
-        logger.info(f" > Lines: {len(data['lines'])}")
-        logger.info(f" > Generators: {len(data['generators'])}")
-        logger.info(f" > Loads: {len(data['loads'])}")
-        logger.info(f" > Shunts: {len(data['shunts'])}")
+    # --------------------------------------------------------------------------
+    # RECURSIVE COLLECTION METHODS
+    # --------------------------------------------------------------------------
 
-        return data
-
-    def _collect_all_components_recursive(self) -> Dict[str, Tuple[str, str]]:
+    def _collect_all_components_recursive(
+        self, model_name: str = None, visited: set = None
+    ) -> Dict[str, Any]:
         """
-        Traverses the inheritance tree (BFS) to gather all components.
+        Recursively collects all components from the model and its inherited classes.
         """
+        if model_name is None:
+            model_name = self.model_name
+        if visited is None:
+            visited = set()
+
         components_map = {}
-        classes_to_visit = [self.model_name]
-        visited_classes = set()
+        if model_name in visited:
+            return components_map
+        visited.add(model_name)
 
-        while classes_to_visit:
-            current_class = classes_to_visit.pop(0)
-            if current_class in visited_classes:
-                continue
-            visited_classes.add(current_class)
+        # 1. Get components of the current class
+        raw_comps = self.conn.get_components(model_name)
+        for c in raw_comps:
+            components_map[c[1]] = {"type": c[0], "origin": model_name}
 
-            raw_comps = self.conn.get_components(current_class)
-
-            if raw_comps:
-                for i, comp in enumerate(raw_comps):
-                    c_name = comp[1]
-                    c_type = comp[0]
-                    # Child definition wins over parent
-                    if c_name not in components_map:
-                        c_mods = self.conn.get_component_modification(current_class, i + 1)
-                        components_map[c_name] = (c_type, c_mods)
-
-            parents = self.conn.get_inherited_classes(current_class)
-            classes_to_visit.extend(parents)
+        # 2. Handle Inheritance
+        parents = self.conn.get_extends(model_name)
+        for parent in parents:
+            parent_comps = self._collect_all_components_recursive(parent, visited)
+            for name, data in parent_comps.items():
+                if name not in components_map:
+                    components_map[name] = data
 
         return components_map
 
-    def _collect_all_connections_recursive(self) -> List[List[str]]:
+    def _collect_all_connections_recursive(
+        self, model_name: str = None, visited: set = None
+    ) -> List[List[str]]:
         """
-        Traverses the inheritance tree to gather ALL 'connect(a,b)' statements.
-        This is critical for models where connectivity is defined in parent classes (e.g. Network.mo).
+        Recursively collects all connection equations.
         """
-        all_conns = []
-        seen_conns = set()  # To avoid duplicates if needed, though typically distinct
+        if model_name is None:
+            model_name = self.model_name
+        if visited is None:
+            visited = set()
 
-        classes_to_visit = [self.model_name]
-        visited_classes = set()
+        connections = []
+        if model_name in visited:
+            return connections
+        visited.add(model_name)
 
-        while classes_to_visit:
-            current_class = classes_to_visit.pop(0)
-            if current_class in visited_classes:
-                continue
-            visited_classes.add(current_class)
+        local_conns = self.conn.get_connections(model_name)
+        connections.extend(local_conns)
 
-            # Get connections for this specific class level
-            current_conns = self.conn.get_connections(current_class)
+        parents = self.conn.get_extends(model_name)
+        for parent in parents:
+            parent_conns = self._collect_all_connections_recursive(parent, visited)
+            connections.extend(parent_conns)
 
-            for conn in current_conns:
-                # conn is [term1, term2]
-                # Sort tuple to ensure connect(a,b) is same as connect(b,a) for deduplication
-                c_tuple = tuple(sorted((conn[0], conn[1])))
-                if c_tuple not in seen_conns:
-                    seen_conns.add(c_tuple)
-                    all_conns.append(conn)
+        return connections
 
-            # Add parents
-            parents = self.conn.get_inherited_classes(current_class)
-            classes_to_visit.extend(parents)
+    # --------------------------------------------------------------------------
+    # CONNECTION PROCESSING (IMPROVED)
+    # --------------------------------------------------------------------------
 
-        return all_conns
+    def _apply_connections(self, topo: Dict, connections: List[List[str]]):
+        """
+        Iterates over raw connections and assigns buses to components.
+        Handles 'terminal1'/'p' vs 'terminal2'/'n' logic for 2-port devices.
+        """
+        bus_names = set(topo["buses"].keys())
 
-    def _process_component(
-        self, name: str, c_type: str, mods: str, topo: Dict, sn_ref: float, un_ref: float
-    ):
-        """Classifies and extracts data for a single component."""
+        for c1_full, c2_full in connections:
+            # Parse full strings: "line.terminal1" -> comp="line", pin="terminal1"
+            c1_comp, c1_pin = self._split_comp_pin(c1_full)
+            c2_comp, c2_pin = self._split_comp_pin(c2_full)
 
-        # --- BUSES ---
-        if "Electrical.Buses" in c_type or "Bus" in c_type:
-            u_nom = None
-            for p in ["UNom", "Unom", "UBase", "nominalVoltage", "VNom"]:
-                val = self._get_param(name, p, mods)
-                if val is not None:
-                    u_nom = self._resolve_val(val)
-                    break
+            # Determine which one is the bus
+            bus_id = None
+            target_comp = None
+            target_pin = None
 
-            if (u_nom is None or u_nom <= 0.0) and un_ref > 0.0:
-                u_nom = un_ref
+            if c1_comp in bus_names and c2_comp not in bus_names:
+                bus_id = c1_comp
+                target_comp = c2_comp
+                target_pin = c2_pin
+            elif c2_comp in bus_names and c1_comp not in bus_names:
+                bus_id = c2_comp
+                target_comp = c1_comp
+                target_pin = c1_pin
 
-            topo["buses"][name] = {"nominal_v": u_nom, "is_slack": "InfiniteBus" in c_type}
+            # If we found a Component <-> Bus connection
+            if bus_id and target_comp:
+                self._assign_bus_to_component(topo, target_comp, target_pin, bus_id)
 
-        # --- LINES ---
-        elif "Electrical.Lines" in c_type or "Line" in c_type:
-            topo["lines"][name] = {
-                "r_pu": self._resolve_val(self._get_param(name, "RPu", mods)),
-                "x_pu": self._resolve_val(self._get_param(name, "XPu", mods)),
-                "b_pu": self._resolve_val(self._get_param(name, "BPu", mods)),
-                "sn_ref": sn_ref,
-                "bus1": None,
-                "bus2": None,
-            }
+    def _split_comp_pin(self, full_str: str):
+        """Helper to safely split 'obj.pin'."""
+        parts = full_str.split(".")
+        if len(parts) > 1:
+            return parts[0], parts[1]
+        return parts[0], ""
 
-        # --- GENERATORS ---
-        elif "Electrical.Machines" in c_type or "Generator" in c_type:
-            topo["generators"][name] = {
-                "p_mw": self._resolve_val(self._get_param(name, "PGen0Pu", mods)) * sn_ref,
-                "q_mvar": self._resolve_val(self._get_param(name, "QGen0Pu", mods)) * sn_ref,
-                "s_nom": sn_ref,
-                "type": "Generator",
-            }
+    def _assign_bus_to_component(self, topo: Dict, comp_id: str, pin_name: str, bus_id: str):
+        """
+        Smartly assigns the bus based on the component category and pin name.
+        """
+        # 1. Transformers and Lines (2-Port Devices)
+        # We check specific pin names to decide if it is side 1 or side 2
+        for cat in ["lines", "transformers"]:
+            if comp_id in topo[cat]:
+                # Heuristics for Side 1 (Primary/Left)
+                if pin_name in ["terminal1", "p", "p1", "primary"]:
+                    topo[cat][comp_id]["bus1"] = bus_id
+                # Heuristics for Side 2 (Secondary/Right)
+                elif pin_name in ["terminal2", "n", "p2", "secondary"]:
+                    topo[cat][comp_id]["bus2"] = bus_id
+                else:
+                    # Fallback: fill empty slots if pin name is weird
+                    if "bus1" not in topo[cat][comp_id]:
+                        topo[cat][comp_id]["bus1"] = bus_id
+                    elif "bus2" not in topo[cat][comp_id]:
+                        topo[cat][comp_id]["bus2"] = bus_id
+                return
 
-        # --- LOADS ---
-        elif "Electrical.Loads" in c_type or "Load" in c_type:
-            topo["loads"][name] = {
-                "p_mw": self._resolve_val(self._get_param(name, "P0Pu", mods)) * sn_ref,
-                "q_mvar": self._resolve_val(self._get_param(name, "Q0Pu", mods)) * sn_ref,
-            }
-
-        # --- SHUNTS ---
-        elif any(k in c_type for k in ["Electrical.Shunts", "Shunt", "Reactor", "Capacitor"]):
-            topo["shunts"][name] = {
-                "q_mvar": self._resolve_val(self._get_param(name, "Q0Pu", mods)) * sn_ref,
-                "b_pu": self._resolve_val(self._get_param(name, "BPu", mods)),
-                "g_pu": self._resolve_val(self._get_param(name, "GPu", mods)),
-                "sn_ref": sn_ref,
-            }
-
-        # --- INIT BLOCKS ---
-        elif c_type.endswith("_INIT") or "_INIT" in c_type:
-            short_type = c_type.split(".")[-1].replace("_INIT", "") if "." in c_type else "Unknown"
-            s_nom = self._resolve_val(self._get_param(name, "SNom", mods))
-            if s_nom <= 0:
-                s_nom = sn_ref
-
-            p_pu_raw = self._extract_raw_value_from_string(mods, "P0Pu")
-            host_ref = self._extract_reference_target(p_pu_raw)
-
-            topo["generators"][name] = {
-                "s_nom": s_nom,
-                "type": short_type,
-                "host_ref": host_ref,
-                "is_init_block": True,
-            }
-
-    def _get_param(self, comp: str, param: str, mods: str) -> Optional[str]:
-        val = self.conn.get_parameter_value(self.model_name, f"{comp}.{param}")
-        if val:
-            return val
-        return self._extract_raw_value_from_string(mods, param)
-
-    def _extract_raw_value_from_string(self, mods_str: str, param: str) -> Optional[str]:
-        if not mods_str:
-            return None
-        s = str(mods_str).strip().strip("\"'")
-        pattern = re.compile(rf"['\"\(]*{param}['\"\)]*\s*[:=]\s*['\"]?([a-zA-Z0-9_\.\-]+)")
-        match = pattern.search(s)
-        return match.group(1) if match else None
-
-    def _resolve_val(self, val: Any) -> float:
-        if val is None:
-            return 0.0
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            if isinstance(val, str) and val:
-                clean_ref = val.strip().replace("'", "")
-                return self._resolve_val(self.conn.get_parameter_value(self.model_name, clean_ref))
-            return 0.0
-
-    def _extract_reference_target(self, val_str: Optional[str]) -> Optional[str]:
-        if val_str and "." in val_str:
-            return val_str.split(".")[0]
-        return None
-
-    def _resolve_connectivity(self, data: Dict, connections: List) -> Dict:
-        """Resolves topology connections, creating virtual buses if needed."""
-        logger.info("Resolving connectivity map...")
-
-        def ensure_bus(comp_id: str) -> str:
-            if comp_id in data["buses"]:
-                return comp_id
-            vbus = f"Bus_{comp_id}"
-            if vbus not in data["buses"]:
-                # Default virtual bus
-                data["buses"][vbus] = {"nominal_v": 225.0, "is_slack": False, "is_virtual": True}
-            return vbus
-
-        for c1_raw, c2_raw in connections:
-            try:
-                # Remove '.terminal', '.p', '.n', etc.
-                c1 = c1_raw.split(".", 1)[0]
-                c2 = c2_raw.split(".", 1)[0]
-            except ValueError:
-                continue
-
-            # Skip self-loops or bad parsing
-            if c1 == c2:
-                continue
-
-            # Determine if connection involves a line
-            line_id, other_id = None, None
-            if c1 in data["lines"]:
-                line_id, other_id = c1, c2
-            elif c2 in data["lines"]:
-                line_id, other_id = c2, c1
-
-            if line_id:
-                target_bus = ensure_bus(other_id)
-
-                # Link Component -> Bus
-                self._connect_to_bus(data, other_id, target_bus)
-
-                # Link Line -> Bus
-                l_info = data["lines"][line_id]
-                if l_info["bus1"] is None:
-                    l_info["bus1"] = target_bus
-                elif l_info["bus2"] is None and l_info["bus1"] != target_bus:
-                    l_info["bus2"] = target_bus
-            else:
-                # Direct component connection -> Shared virtual bus
-                # Check if one of them is already connected to a bus?
-                # For simplicity, create/ensure a bus for c1 and connect c2 to it.
-
-                bus_id = ensure_bus(c1)
-                self._connect_to_bus(data, c1, bus_id)
-                self._connect_to_bus(data, c2, bus_id)
-
-        return data
-
-    def _connect_to_bus(self, data: Dict, comp_id: str, bus_id: str):
+        # 2. One-Port Devices (Generators, Loads, Shunts)
         for cat in ["generators", "loads", "shunts"]:
-            if comp_id in data[cat]:
-                # Avoid overwriting if already connected (unless it's a virtual bus update)
-                if "connected_to" not in data[cat][comp_id]:
-                    data[cat][comp_id]["connected_to"] = bus_id
+            if comp_id in topo[cat]:
+                topo[cat][comp_id]["connected_to"] = bus_id
+                return
 
-    def _merge_init_blocks(self, data: Dict) -> Dict:
-        """Merges attributes from INIT blocks to their host generators."""
-        gens = data["generators"]
-        to_remove = []
+    # --------------------------------------------------------------------------
+    # PARAMETER EXTRACTION HELPERS
+    # --------------------------------------------------------------------------
 
-        for gid, info in gens.items():
-            if info.get("is_init_block"):
-                host = info.get("host_ref")
-                if host and host in gens:
-                    if "s_nom" in info:
-                        gens[host]["s_nom"] = info["s_nom"]
-                    if "type" in info:
-                        gens[host]["type"] = info["type"]
-                    to_remove.append(gid)
+    def _resolve_val(self, val_str: Optional[str]) -> Optional[float]:
+        if not val_str:
+            return None
+        try:
+            return float(val_str.strip().replace("'", ""))
+        except ValueError:
+            return None
 
-        for r in to_remove:
-            del gens[r]
-        return data
+    def _extract_parameters(self, model_context: str, comp_name: str) -> Dict[str, float]:
+        param_map = {
+            "Sn": "sn_nom",
+            "SNom": "sn_nom",
+            "Un": "nominal_v",
+            "U": "nominal_v",
+            "UPu": "u_pu",
+            "U0Pu": "u_pu",
+            "P": "p",
+            "PGen": "p",
+            "P0Pu": "p_pu",
+            "PGen0Pu": "p_pu",
+            "Q": "q",
+            "QGen": "q",
+            "Q0Pu": "q_pu",
+            "QGen0Pu": "q_pu",
+            "R": "r",
+            "RPu": "r_pu",
+            "X": "x",
+            "XPu": "x_pu",
+            "B": "b",
+            "BPu": "b_pu",
+            "G": "g",
+            "GPu": "g_pu",
+            "tapRatio": "ratio",
+        }
+        extracted = {}
+        for param_modelica, param_json in param_map.items():
+            full_path = f"{comp_name}.{param_modelica}"
+            val_str = self.conn.get_parameter_value(model_context, full_path)
+            val = self._resolve_val(val_str)
+            if val is not None:
+                extracted[param_json] = val
+        return extracted

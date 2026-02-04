@@ -9,9 +9,9 @@ import logging
 import json
 from typing import List, Dict, Any
 
-from .connector import OMCConnector
-from .parser import ModelicaParser
-from .converter import PowsyblConverter
+from dynawo_notebooks.Scripts.core.connector import OMCConnector
+from dynawo_notebooks.Scripts.core.parser import ModelicaParser
+from dynawo_notebooks.Scripts.core.converter import PowsyblConverter
 
 logger = logging.getLogger("MoTopologyToolkit")
 
