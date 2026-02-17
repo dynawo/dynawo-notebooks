@@ -35,7 +35,6 @@ class PowsyblConverter:
         # ----------------------------------------------------------------------
         for bid, info in data["buses"].items():
             # Get nominal voltage (default to 225.0 kV if missing)
-            logger.info(info)
             v = info.get("nominal_v") or 225.0
             bus_nominal_v[bid] = v
 

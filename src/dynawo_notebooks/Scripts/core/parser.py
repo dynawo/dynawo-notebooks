@@ -26,11 +26,11 @@ class ModelicaParser:
 
     def parse_topology(self) -> Dict[str, Dict]:
         """
-        Main pipeline: Extracts components (recursively), resolves params, and fixes connectivity (recursively).
+        Main pipeline: Extracts components, resolves params, and fixes connectivity.
         """
         logger.info(f"Starting topology parsing for root: {self.model_name}")
 
-        # 1. Recursive Component Extraction (Handles Inheritance)
+        # 1. Component Extraction
         all_components_map = self._collect_all_components_recursive()
         logger.info(f"Total unique components found: {len(all_components_map)}")
 
@@ -44,191 +44,226 @@ class ModelicaParser:
             "transformers": {},
         }
 
-        # 3. Process Components based on their Type/Name
-        for comp_name, comp_data in all_components_map.items():
-            c_type = comp_data["type"]
+        # 3. Process Components and Extract Parameters
+        for comp_name, comp_type in all_components_map.items():
             params = self._extract_parameters(self.model_name, comp_name)
 
-            # Build the common data structure
-            element_data = {"id": comp_name, "modelica_type": c_type, **params}
+            type_lower = comp_type.lower()
 
-            # --- Generators ---
-            if "InfiniteBus" in c_type or "Generator" in c_type or "Source" in c_type:
-                topo["generators"][comp_name] = element_data
+            # Categorize components based on their Modelica type
+            if "bus" in type_lower and "infinite" not in type_lower:
+                topo["buses"][comp_name] = params
+            elif "line" in type_lower:
+                topo["lines"][comp_name] = params
+            elif "generator" in type_lower or "infinitebus" in type_lower or "pv" in type_lower:
+                topo["generators"][comp_name] = params
+            elif "load" in type_lower:
+                topo["loads"][comp_name] = params
+            elif "shunt" in type_lower or "capacitor" in type_lower or "reactor" in type_lower:
+                topo["shunts"][comp_name] = params
+            elif "transformer" in type_lower:
+                topo["transformers"][comp_name] = params
 
-            # --- Loads ---
-            elif "Load" in c_type:
-                topo["loads"][comp_name] = element_data
+        # 4. Fetch raw connections from the OpenModelica connector
+        raw_connections = self.conn.get_connections(self.model_name)
 
-            # --- Shunts ---
-            elif "Shunt" in c_type or "Capacitor" in c_type or "Reactance" in c_type:
-                topo["shunts"][comp_name] = element_data
-
-            # --- Lines ---
-            elif "Line" in c_type:
-                topo["lines"][comp_name] = element_data
-
-            # --- Transformers ---
-            # Explicit support for Transformers
-            elif "Transformer" in c_type:
-                topo["transformers"][comp_name] = element_data
-
-            # --- Buses ---
-            elif "Bus" in c_type:
-                topo["buses"][comp_name] = element_data
-
-        # 4. Recursive Connection Extraction
-        all_connections = self._collect_all_connections_recursive()
-        logger.info(f"Total connections equations found: {len(all_connections)}")
-
-        # 5. Apply Connections (Map components to buses)
-        self._apply_connections(topo, all_connections)
+        # 5. Apply generic graph resolution to map all pins to PyPowSyBl buses
+        if raw_connections:
+            self._build_topological_nodes(topo, raw_connections)
+        else:
+            logger.warning("No connections were retrieved from the model.")
 
         return topo
 
     # --------------------------------------------------------------------------
-    # RECURSIVE COLLECTION METHODS
+    # TOPOLOGICAL GRAPH RESOLUTION (NEW ALGORITHM)
+    # --------------------------------------------------------------------------
+
+    def _build_topological_nodes(
+        self, topo: Dict[str, Dict], connections: List[List[str]]
+    ) -> None:
+        """
+        Generic graph-based approach to resolve Modelica connections into PyPowSyBl buses.
+        Finds connected components of terminals and generates Virtual Buses if an explicit
+        bus is not present in the graph node. This guarantees that all equipment
+        (Generators, Lines, etc.) has a valid Bus ID attached to it.
+        """
+        logger.info("Resolving electrical connections into topological buses...")
+
+        # 1. Build adjacency list for terminals
+        adj = {}
+        for c in connections:
+            if len(c) >= 2:
+                term1, term2 = c[0], c[1]
+                adj.setdefault(term1, []).append(term2)
+                adj.setdefault(term2, []).append(term1)
+
+        # 2. Find connected components (electrical nodes using BFS)
+        visited = set()
+        node_groups = []
+
+        for terminal in adj.keys():
+            if terminal not in visited:
+                queue = [terminal]
+                group = {terminal}
+                visited.add(terminal)
+                while queue:
+                    curr = queue.pop(0)
+                    for neighbor in adj.get(curr, []):
+                        if neighbor not in visited:
+                            visited.add(neighbor)
+                            group.add(neighbor)
+                            queue.append(neighbor)
+                node_groups.append(group)
+
+        # 3. Assign explicit or virtual buses to equipment
+        virtual_bus_idx = 1
+
+        for group in node_groups:
+            bus_id = None
+
+            # First pass: check if there's an explicit Modelica bus in this connected group
+            for term in group:
+                parts = term.split(".")
+                comp_name = ".".join(parts[:-1])
+                if comp_name in topo.get("buses", {}):
+                    bus_id = comp_name
+                    break
+
+            # Second pass: if no explicit bus is found, generate a Virtual Bus
+            if not bus_id:
+                bus_id = f"VirtualBus_{virtual_bus_idx}"
+                virtual_bus_idx += 1
+                if "buses" not in topo:
+                    topo["buses"] = {}
+                # Default voltage, it can be updated later based on loadflow or base voltages
+                topo["buses"][bus_id] = {"nominal_v": 225.0, "is_virtual": True}
+                logger.debug(f"Created {bus_id} for direct connections.")
+
+            # Third pass: map the equipment to the assigned bus_id
+            for term in group:
+                parts = term.split(".")
+                if len(parts) < 2:
+                    continue
+
+                comp_name = ".".join(parts[:-1])
+                pin_name = parts[-1].lower()
+
+                # Map to Lines
+                if comp_name in topo.get("lines", {}):
+                    # Robust pin mapping to avoid substring collision (like 'a' in 'terminal')
+                    if pin_name.endswith("1") or pin_name in ["p", "pin1", "terminal1", "a", "t1"]:
+                        topo["lines"][comp_name]["bus1"] = bus_id
+                    elif pin_name.endswith("2") or pin_name in [
+                        "n",
+                        "pin2",
+                        "terminal2",
+                        "b",
+                        "t2",
+                    ]:
+                        topo["lines"][comp_name]["bus2"] = bus_id
+                    else:
+                        # Fallback if pin names are completely non-standard
+                        if "bus1" not in topo["lines"][comp_name]:
+                            topo["lines"][comp_name]["bus1"] = bus_id
+                        else:
+                            topo["lines"][comp_name]["bus2"] = bus_id
+
+                # Map to Generators, Loads, and Shunts
+                elif comp_name in topo.get("generators", {}):
+                    topo["generators"][comp_name]["bus_id"] = bus_id  # Some versions use bus_id
+                    topo["generators"][comp_name]["bus"] = bus_id  # Keep for compatibility
+                elif comp_name in topo.get("loads", {}):
+                    topo["loads"][comp_name]["bus_id"] = bus_id
+                    topo["loads"][comp_name]["bus"] = bus_id
+                elif comp_name in topo.get("shunts", {}):
+                    topo["shunts"][comp_name]["bus_id"] = bus_id
+                    topo["shunts"][comp_name]["bus"] = bus_id
+
+                # Map to Transformers
+                elif comp_name in topo.get("transformers", {}):
+                    if pin_name.endswith("1") or pin_name in ["p", "pin1", "terminal1", "a", "t1"]:
+                        topo["transformers"][comp_name]["bus1"] = bus_id
+                    elif pin_name.endswith("2") or pin_name in [
+                        "n",
+                        "pin2",
+                        "terminal2",
+                        "b",
+                        "t2",
+                    ]:
+                        topo["transformers"][comp_name]["bus2"] = bus_id
+                    else:
+                        if "bus1" not in topo["transformers"][comp_name]:
+                            topo["transformers"][comp_name]["bus1"] = bus_id
+                        else:
+                            topo["transformers"][comp_name]["bus2"] = bus_id
+
+    # --------------------------------------------------------------------------
+    # COMPONENT & PARAMETER EXTRACTION HELPERS
     # --------------------------------------------------------------------------
 
     def _collect_all_components_recursive(
-        self, model_name: str = None, visited: set = None
-    ) -> Dict[str, Any]:
+        self, current_model: Optional[str] = None, visited: Optional[set] = None
+    ) -> Dict[str, str]:
         """
-        Recursively collects all components from the model and its inherited classes.
+        Recursively retrieves all components defined in the model and its inherited classes using the OMC API.
+        Returns a dictionary mapping component names to their Modelica types.
         """
-        if model_name is None:
-            model_name = self.model_name
+        if current_model is None:
+            current_model = self.model_name
+
         if visited is None:
             visited = set()
 
-        components_map = {}
-        if model_name in visited:
-            return components_map
-        visited.add(model_name)
+        # Evitar bucles infinitos en herencias circulares
+        if current_model in visited:
+            return {}
+        visited.add(current_model)
 
-        # 1. Get components of the current class
-        raw_comps = self.conn.get_components(model_name)
-        for c in raw_comps:
-            components_map[c[1]] = {"type": c[0], "origin": model_name}
+        components = {}
 
-        # 2. Handle Inheritance
-        parents = self.conn.get_extends(model_name)
-        for parent in parents:
-            parent_comps = self._collect_all_components_recursive(parent, visited)
-            for name, data in parent_comps.items():
-                if name not in components_map:
-                    components_map[name] = data
+        # 1. Obtener componentes del modelo actual
+        cmd = f"getComponents({current_model})"
+        raw_components = self.conn._omc.sendExpression(cmd)
 
-        return components_map
+        # OMPython puede devolver 'list' o 'tuple', debemos chequear ambos
+        if isinstance(raw_components, (list, tuple)):
+            for comp in raw_components:
+                # OpenModelica devuelve una lista/tupla de atributos para cada componente.
+                # Index 0: Tipo, Index 1: Nombre
+                if isinstance(comp, (list, tuple)) and len(comp) >= 2:
+                    comp_type = str(comp[0])
+                    comp_name = str(comp[1])
+                    components[comp_name] = comp_type
 
-    def _collect_all_connections_recursive(
-        self, model_name: str = None, visited: set = None
-    ) -> List[List[str]]:
-        """
-        Recursively collects all connection equations.
-        """
-        if model_name is None:
-            model_name = self.model_name
-        if visited is None:
-            visited = set()
+        # 2. Navegar recursivamente por las clases heredadas (necesario para la red Nordic)
+        try:
+            extends_list = self.conn.get_extends(current_model)
+            if extends_list:
+                for base_model in extends_list:
+                    base_components = self._collect_all_components_recursive(base_model, visited)
+                    # Añadir componentes heredados (sin sobrescribir los definidos localmente)
+                    for k, v in base_components.items():
+                        if k not in components:
+                            components[k] = v
+        except Exception as e:
+            logger.debug(f"Could not fetch extends for {current_model}: {e}")
 
-        connections = []
-        if model_name in visited:
-            return connections
-        visited.add(model_name)
-
-        local_conns = self.conn.get_connections(model_name)
-        connections.extend(local_conns)
-
-        parents = self.conn.get_extends(model_name)
-        for parent in parents:
-            parent_conns = self._collect_all_connections_recursive(parent, visited)
-            connections.extend(parent_conns)
-
-        return connections
-
-    # --------------------------------------------------------------------------
-    # CONNECTION PROCESSING (IMPROVED)
-    # --------------------------------------------------------------------------
-
-    def _apply_connections(self, topo: Dict, connections: List[List[str]]):
-        """
-        Iterates over raw connections and assigns buses to components.
-        Handles 'terminal1'/'p' vs 'terminal2'/'n' logic for 2-port devices.
-        """
-        bus_names = set(topo["buses"].keys())
-
-        for c1_full, c2_full in connections:
-            # Parse full strings: "line.terminal1" -> comp="line", pin="terminal1"
-            c1_comp, c1_pin = self._split_comp_pin(c1_full)
-            c2_comp, c2_pin = self._split_comp_pin(c2_full)
-
-            # Determine which one is the bus
-            bus_id = None
-            target_comp = None
-            target_pin = None
-
-            if c1_comp in bus_names and c2_comp not in bus_names:
-                bus_id = c1_comp
-                target_comp = c2_comp
-                target_pin = c2_pin
-            elif c2_comp in bus_names and c1_comp not in bus_names:
-                bus_id = c2_comp
-                target_comp = c1_comp
-                target_pin = c1_pin
-
-            # If we found a Component <-> Bus connection
-            if bus_id and target_comp:
-                self._assign_bus_to_component(topo, target_comp, target_pin, bus_id)
-
-    def _split_comp_pin(self, full_str: str):
-        """Helper to safely split 'obj.pin'."""
-        parts = full_str.split(".")
-        if len(parts) > 1:
-            return parts[0], parts[1]
-        return parts[0], ""
-
-    def _assign_bus_to_component(self, topo: Dict, comp_id: str, pin_name: str, bus_id: str):
-        """
-        Smartly assigns the bus based on the component category and pin name.
-        """
-        # 1. Transformers and Lines (2-Port Devices)
-        # We check specific pin names to decide if it is side 1 or side 2
-        for cat in ["lines", "transformers"]:
-            if comp_id in topo[cat]:
-                # Heuristics for Side 1 (Primary/Left)
-                if pin_name in ["terminal1", "p", "p1", "primary"]:
-                    topo[cat][comp_id]["bus1"] = bus_id
-                # Heuristics for Side 2 (Secondary/Right)
-                elif pin_name in ["terminal2", "n", "p2", "secondary"]:
-                    topo[cat][comp_id]["bus2"] = bus_id
-                else:
-                    # Fallback: fill empty slots if pin name is weird
-                    if "bus1" not in topo[cat][comp_id]:
-                        topo[cat][comp_id]["bus1"] = bus_id
-                    elif "bus2" not in topo[cat][comp_id]:
-                        topo[cat][comp_id]["bus2"] = bus_id
-                return
-
-        # 2. One-Port Devices (Generators, Loads, Shunts)
-        for cat in ["generators", "loads", "shunts"]:
-            if comp_id in topo[cat]:
-                topo[cat][comp_id]["connected_to"] = bus_id
-                return
-
-    # --------------------------------------------------------------------------
-    # PARAMETER EXTRACTION HELPERS
-    # --------------------------------------------------------------------------
+        return components
 
     def _resolve_val(self, val_str: Optional[str]) -> Optional[float]:
+        """Safely parses a string value into a float, stripping quotes."""
         if not val_str:
             return None
         try:
-            return float(val_str.strip().replace("'", ""))
+            return float(val_str.strip().replace("'", "").replace('"', ""))
         except ValueError:
             return None
 
     def _extract_parameters(self, model_context: str, comp_name: str) -> Dict[str, float]:
+        """
+        Extracts key electrical parameters from a given component via OMC.
+        """
         param_map = {
             "Sn": "sn_nom",
             "SNom": "sn_nom",
@@ -256,8 +291,7 @@ class ModelicaParser:
         }
         extracted = {}
         for param_modelica, param_json in param_map.items():
-            full_path = f"{comp_name}.{param_modelica}"
-            val_str = self.conn.get_parameter_value(model_context, full_path)
+            val_str = self.conn.get_parameter_value(model_context, f"{comp_name}.{param_modelica}")
             val = self._resolve_val(val_str)
             if val is not None:
                 extracted[param_json] = val
