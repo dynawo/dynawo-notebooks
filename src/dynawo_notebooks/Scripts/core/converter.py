@@ -118,10 +118,11 @@ class PowsyblConverter:
         # ----------------------------------------------------------------------
         # 3. GENERATORS
         # ----------------------------------------------------------------------
-        for gid, info in data["generators"].items():
-            if info.get("is_init_block"):
-                continue
-            PowsyblConverter._create_generator(network, gid, info, bus_nominal_v)
+        if "generators" in data and data["generators"]:
+            logger.info("Building Generators sequentially...")
+            for gid, info in data["generators"].items():
+                # We call the creation method for each individual generator
+                PowsyblConverter._create_generator(network, gid, info, bus_nominal_v)
 
         # ----------------------------------------------------------------------
         # 4. LOADS
@@ -139,42 +140,49 @@ class PowsyblConverter:
         return network
 
     @staticmethod
-    def _create_generator(net, gid: str, info: Dict, v_map: Dict):
-        # Support both naming conventions for connectivity
-        bid = info.get("bus_id") or info.get("connected_to")
+    def _create_generator(
+        network: pp.network.Network, gid: str, info: Dict, bus_nominal_v: Dict
+    ) -> None:
+        """
+        Creates a single generator directly into the network object.
+        Applies a heuristic to enable voltage regulation if it is a Slack/Infinite bus
+        and ensures no NaN values are passed for reactive power.
+        """
+        bus_id = info.get("bus_id") or info.get("bus")
+        vl_id = f"VL_{bus_id}"
 
-        if not bid or bid not in v_map:
-            logger.warning(f"Generator '{gid}' disconnected. Skipped.")
-            return
+        # 1. Calculate Active Power (P)
+        p_mw = info.get("p", 0.0)
+        if "p_pu" in info and "sn_nom" in info:
+            p_mw = info["p_pu"] * info["sn_nom"]
 
-        reg_on = False
-        tv_kv = None
-        # Handle Voltage Target (PU -> kV)
-        tv_pu = info.get("target_v") or info.get("u_pu")
+        # 2. Calculate Reactive Power (Q) - Ensure no NaN if regulator is OFF
+        q_mvar = info.get("q", 0.0)
+        if "q_pu" in info and "sn_nom" in info:
+            q_mvar = info["q_pu"] * info["sn_nom"]
 
-        if tv_pu and tv_pu > 0:
-            reg_on = True
-            tv_kv = tv_pu * v_map[bid]
+        # 3. Calculate Target Voltage (V)
+        target_v = info.get("nominal_v") or bus_nominal_v.get(bus_id, 225.0)
+        if "u_pu" in info:
+            target_v = info["u_pu"] * bus_nominal_v.get(bus_id, 225.0)
 
-        # SLACK BUS FIX: If it's an InfiniteBus, give it massive power limits so it can balance the grid
-        # CRITICAL FIX: The key created by the parser is 'modelica_type', not 'type'
-        is_infinite_bus = "InfiniteBus" in info.get("modelica_type", "")
-        s_nom = 99999.0 if is_infinite_bus else (info.get("s_nom") or info.get("sn_nom", 100.0))
+        # 4. Universal Heuristic for Slack Bus Detection
+        is_slack = "infinite" in gid.lower() or "slack" in gid.lower()
 
-        p_mw = info.get("p_mw") or info.get("p", 0.0)
-        q_mvar = info.get("q_mvar") or info.get("q", 0.0)
-
-        net.create_generators(
-            id=gid,
-            voltage_level_id=f"VL_{bid}",
-            bus_id=bid,
+        # 5. Sequential creation
+        # We ensure target_q is 0.0 if not provided to avoid NaN errors in PQ nodes
+        network.create_generators(
+            id=str(gid),
+            voltage_level_id=vl_id,
+            bus_id=str(bus_id),
             target_p=p_mw,
-            target_q=q_mvar,
-            voltage_regulator_on=reg_on,
-            target_v=tv_kv,
-            min_p=-s_nom,
-            max_p=s_nom,
+            target_q=q_mvar if not is_slack else 0.0,
+            target_v=target_v,
+            voltage_regulator_on=is_slack,
+            min_p=-9999.0 if is_slack else p_mw,
+            max_p=9999.0 if is_slack else p_mw,
         )
+        logger.debug(f"Generator '{gid}' created on bus '{bus_id}' (Regulator: {is_slack}).")
 
     @staticmethod
     def _create_load(net, lid: str, info: Dict):
