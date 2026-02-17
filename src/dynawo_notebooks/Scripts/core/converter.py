@@ -1,256 +1,178 @@
 # FILE: src/dynawo_notebooks/Scripts/core/converter.py
 """
 PyPowSybl Converter Module.
-
-This module converts the dictionary-based electrical topology provided by the Parser
-into a formal PyPowSybl Network object.
+Groups buses into substations to satisfy transformer connectivity requirements.
 """
 
 import logging
 import pandas as pd
 import pypowsybl as pp
-from typing import Dict
+from typing import Dict, Set
 
 logger = logging.getLogger(__name__)
 
 
 class PowsyblConverter:
-    """
-    Builder class for PyPowSybl Networks.
-    """
-
     @staticmethod
     def build_network(data: Dict) -> pp.network.Network:
-        """
-        Creates a PyPowSybl network from the topology dictionary.
-        """
         logger.info("Initializing PyPowSybl Network construction...")
         network = pp.network.create_empty()
 
-        # Dictionary to store nominal voltage for Z_base calculation
+        # 1. SUBSTATION GROUPING LOGIC
+        # PyPowSyBl requires both sides of a transformer to be in the same Substation.
+        # We use a mapping to group buses that are connected via transformers.
+        bus_to_sub = {bid: bid for bid in data.get("buses", {})}
+
+        if "transformers" in data:
+            for tid, info in data["transformers"].items():
+                b1, b2 = info.get("bus1"), info.get("bus2")
+                if b1 in bus_to_sub and b2 in bus_to_sub:
+                    # Union operation: assign b2 and all its peers to b1's substation
+                    old_sub = bus_to_sub[b2]
+                    new_sub = bus_to_sub[b1]
+                    for b, s in bus_to_sub.items():
+                        if s == old_sub:
+                            bus_to_sub[b] = new_sub
+
+        # Unique substations to create
+        unique_subs = set(bus_to_sub.values())
+        for sub_id in unique_subs:
+            network.create_substations(id=f"Sub_{sub_id}")
+
+        # 2. VOLTAGE LEVELS & BUSES
         bus_nominal_v = {}
+        if "buses" in data:
+            for bid, info in data["buses"].items():
+                v = info.get("nominal_v") or 225.0
+                bus_nominal_v[bid] = v
+                sub_assigned = bus_to_sub[bid]
 
-        # ----------------------------------------------------------------------
-        # 1. BUSES
-        # ----------------------------------------------------------------------
-        for bid, info in data["buses"].items():
-            # Get nominal voltage (default to 225.0 kV if missing)
-            v = info.get("nominal_v") or 225.0
-            bus_nominal_v[bid] = v
-
-            sub_id = f"Sub_{bid}"
-            vl_id = f"VL_{bid}"
-
-            # Create Substation and Voltage Level
-            network.create_substations(id=sub_id)
-
-            # We use BUS_BREAKER topology as requested.
-            # Crucial: To avoid "floating" nodes, lines must be connected
-            # explicitly to the Bus ID created in the next step.
-            network.create_voltage_levels(
-                id=vl_id, substation_id=sub_id, nominal_v=v, topology_kind="BUS_BREAKER"
-            )
-
-            # Create the Bus Node explicitly
-            network.create_buses(id=bid, voltage_level_id=vl_id)
-
-        # ----------------------------------------------------------------------
-        # 2. LINES (With Hybrid PU/Physical Conversion)
-        # ----------------------------------------------------------------------
-        for lid, info in data["lines"].items():
-            b1, b2 = info.get("bus1"), info.get("bus2")
-
-            # Validate connection
-            if b1 and b2 and b1 in bus_nominal_v and b2 in bus_nominal_v:
-                un = bus_nominal_v[b1]
-                sn = info.get("sn_ref", 100.0)  # Base MVA (usually 100)
-
-                # Calculate Base Impedance: Z_base = U^2 / S
-                z_base = (un**2) / sn
-                # Calculate Base Admittance: Y_base = S / U^2
-                y_base = sn / (un**2)
-
-                # --- Hybrid Logic: Physical vs Per Unit ---
-                # 1. Resistance (R)
-                r = info.get("r")
-                if r is None:
-                    # Convert from PU if physical value is missing
-                    r = info.get("r_pu", 0.0) * z_base
-
-                # 2. Reactance (X)
-                x = info.get("x")
-                if x is None:
-                    val_x_pu = info.get("x_pu", 0.0001)
-                    # Avoid exactly 0 reactance to prevent solver singularities
-                    if val_x_pu == 0:
-                        val_x_pu = 0.0001
-                    x = val_x_pu * z_base
-
-                # 3. Susceptance (B) - shunt
-                b = info.get("b")
-                if b is None:
-                    # Convert PU (Admittance) to Siemens
-                    b = info.get("b_pu", 0.0) * y_base
-
-                # 4. Conductance (G) - shunt
-                g = info.get("g")
-                if g is None:
-                    g = info.get("g_pu", 0.0) * y_base
-
-                network.create_lines(
-                    id=lid,
-                    voltage_level1_id=f"VL_{b1}",
-                    bus1_id=b1,  # Explicit connection to the Node ID fixes "floating" visual
-                    voltage_level2_id=f"VL_{b2}",
-                    bus2_id=b2,  # Explicit connection to the Node ID
-                    r=r,
-                    x=x,
-                    g1=g / 2,
-                    b1=b / 2,
-                    g2=g / 2,
-                    b2=b / 2,
+                network.create_voltage_levels(
+                    id=f"VL_{bid}",
+                    substation_id=f"Sub_{sub_assigned}",
+                    nominal_v=v,
+                    topology_kind="BUS_BREAKER",
                 )
-            else:
-                logger.warning(
-                    f"Line '{lid}' incomplete or buses not found (Bus1:{b1}, Bus2:{b2}). Skipped."
-                )
+                network.create_buses(id=bid, voltage_level_id=f"VL_{bid}")
 
-        # ----------------------------------------------------------------------
-        # 3. GENERATORS
-        # ----------------------------------------------------------------------
-        if "generators" in data and data["generators"]:
-            logger.info("Building Generators sequentially...")
-            for gid, info in data["generators"].items():
-                # We call the creation method for each individual generator
-                PowsyblConverter._create_generator(network, gid, info, bus_nominal_v)
+        # 3. LINES
+        for lid, info in data.get("lines", {}).items():
+            PowsyblConverter._create_line(network, lid, info, bus_nominal_v)
 
-        # ----------------------------------------------------------------------
-        # 4. LOADS
-        # ----------------------------------------------------------------------
-        for lid, info in data["loads"].items():
-            PowsyblConverter._create_load(network, lid, info)
+        # 4. GENERATORS
+        for gid, info in data.get("generators", {}).items():
+            PowsyblConverter._create_generator(network, gid, info, bus_nominal_v)
 
-        # ----------------------------------------------------------------------
-        # 5. SHUNTS
-        # ----------------------------------------------------------------------
-        for sid, info in data["shunts"].items():
+        # 5. LOADS
+        for lid, info in data.get("loads", {}).items():
+            PowsyblConverter._create_load(network, lid, info, bus_nominal_v)
+
+        # 6. SHUNTS
+        for sid, info in data.get("shunts", {}).items():
             PowsyblConverter._create_shunt(network, sid, info, bus_nominal_v)
 
-        logger.info("PyPowSybl Network object created successfully.")
+        # 7. TRANSFORMERS
+        for tid, info in data.get("transformers", {}).items():
+            PowsyblConverter._create_transformer(network, tid, info, bus_nominal_v, bus_to_sub)
+
         return network
 
     @staticmethod
-    def _create_generator(
-        network: pp.network.Network, gid: str, info: Dict, bus_nominal_v: Dict
-    ) -> None:
-        """
-        Creates a single generator directly into the network object.
-        Applies a heuristic to enable voltage regulation if it is a Slack/Infinite bus
-        and ensures no NaN values are passed for reactive power.
-        """
-        bus_id = info.get("bus_id") or info.get("bus")
-        vl_id = f"VL_{bus_id}"
+    def _create_line(network, lid, info, bus_v):
+        b1, b2 = info.get("bus1"), info.get("bus2")
+        if not b1 or not b2:
+            return
+        sn, un = info.get("sn_nom", 100.0), bus_v.get(b1, 225.0)
+        z_base = (un**2) / sn
+        network.create_lines(
+            id=str(lid),
+            bus1_id=str(b1),
+            bus2_id=str(b2),
+            r=info.get("r_pu", 0.0) * z_base,
+            x=info.get("x_pu", 0.001) * z_base,
+            g1=0,
+            b1=(info.get("b_pu", 0.0) / z_base) / 2,
+            g2=0,
+            b2=(info.get("b_pu", 0.0) / z_base) / 2,
+        )
 
-        # 1. Calculate Active Power (P)
-        p_mw = info.get("p", 0.0)
-        if "p_pu" in info and "sn_nom" in info:
-            p_mw = info["p_pu"] * info["sn_nom"]
-
-        # 2. Calculate Reactive Power (Q) - Ensure no NaN if regulator is OFF
-        q_mvar = info.get("q", 0.0)
-        if "q_pu" in info and "sn_nom" in info:
-            q_mvar = info["q_pu"] * info["sn_nom"]
-
-        # 3. Calculate Target Voltage (V)
-        target_v = info.get("nominal_v") or bus_nominal_v.get(bus_id, 225.0)
-        if "u_pu" in info:
-            target_v = info["u_pu"] * bus_nominal_v.get(bus_id, 225.0)
-
-        # 4. Universal Heuristic for Slack Bus Detection
+    @staticmethod
+    def _create_generator(network, gid, info, bus_v):
+        bid = info.get("bus")
+        sn = info.get("sn_nom", 100.0)
+        p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
         is_slack = "infinite" in gid.lower() or "slack" in gid.lower()
-
-        # 5. Sequential creation
-        # We ensure target_q is 0.0 if not provided to avoid NaN errors in PQ nodes
         network.create_generators(
             id=str(gid),
-            voltage_level_id=vl_id,
-            bus_id=str(bus_id),
-            target_p=p_mw,
-            target_q=q_mvar if not is_slack else 0.0,
-            target_v=target_v,
-            voltage_regulator_on=is_slack,
-            min_p=-9999.0 if is_slack else p_mw,
-            max_p=9999.0 if is_slack else p_mw,
-        )
-        logger.debug(f"Generator '{gid}' created on bus '{bus_id}' (Regulator: {is_slack}).")
-
-    @staticmethod
-    def _create_load(net, lid: str, info: Dict):
-        bid = info.get("bus_id") or info.get("connected_to")
-        if not bid:
-            logger.warning(f"Load '{lid}' disconnected. Skipped.")
-            return
-
-        p_mw = info.get("p_mw") or info.get("p", 0.0)
-        q_mvar = info.get("q_mvar") or info.get("q", 0.0)
-
-        net.create_loads(
-            id=lid,
             voltage_level_id=f"VL_{bid}",
-            bus_id=bid,
-            p0=p_mw,
-            q0=q_mvar,
+            bus_id=str(bid),
+            target_p=p_mw,
+            target_v=info.get("u_pu", 1.0) * bus_v.get(bid, 225.0),
+            voltage_regulator_on=is_slack,
+            target_q=0.0,
+            min_p=-9999 if is_slack else p_mw,
+            max_p=9999 if is_slack else p_mw,
         )
 
     @staticmethod
-    def _create_shunt(net, sid: str, info: Dict, v_map: Dict):
-        bid = info.get("bus_id") or info.get("connected_to")
-        if not bid or bid not in v_map:
-            logger.warning(f"Shunt '{sid}' disconnected. Skipped.")
+    def _create_load(network, lid, info, bus_v):
+        bid = info.get("bus")
+        sn = info.get("sn_nom", 100.0)
+        network.create_loads(
+            id=str(lid),
+            voltage_level_id=f"VL_{bid}",
+            bus_id=str(bid),
+            p0=info.get("p_pu", 0.0) * sn,
+            q0=info.get("q_pu", 0.0) * sn,
+        )
+
+    @staticmethod
+    def _create_shunt(network, sid, info, bus_v):
+        bid = info.get("bus")
+        un, sn = bus_v.get(bid, 225.0), info.get("sn_nom", 100.0)
+        q_mvar = info.get("q_pu", 0.0) * sn
+        b_s = q_mvar / (un**2) if q_mvar != 0 else 0.0
+
+        shunt_df = pd.DataFrame(
+            {
+                "id": [str(sid)],
+                "voltage_level_id": [f"VL_{bid}"],
+                "bus_id": [str(bid)],
+                "model_type": ["LINEAR"],
+                "section_count": [1],
+            }
+        ).set_index("id")
+
+        linear_model_df = pd.DataFrame(
+            {
+                "id": [str(sid)],
+                "g_per_section": [0.0],
+                "b_per_section": [b_s],
+                "max_section_count": [1],
+            }
+        ).set_index("id")
+
+        network.create_shunt_compensators(shunt_df, linear_model_df)
+
+    @staticmethod
+    def _create_transformer(network, tid, info, bus_v, bus_to_sub):
+        b1, b2 = info.get("bus1"), info.get("bus2")
+        if not b1 or not b2:
             return
+        sn, un1 = info.get("sn_nom", 100.0), bus_v.get(b1, 225.0)
+        z_base = (un1**2) / sn
 
-        un = v_map[bid]
-        sn = info.get("sn_ref", 100.0)
-
-        # Priority: Reactive Power Q (MVar) -> Susceptance B (Siemens)
-        q_mvar = info.get("q_mvar") or info.get("q", 0.0)
-        b_pu = info.get("b_pu", 0.0)
-
-        b_siemens = 0.0
-
-        # If Q is defined (MVar), calculate the equivalent B required at Nominal Voltage
-        if abs(q_mvar) > 1e-9:
-            b_siemens = q_mvar / (un**2)
-            logger.debug(
-                f"Shunt '{sid}': Calculated B={b_siemens:.2e} S from Q={q_mvar} MVar (Un={un} kV)"
-            )
-        else:
-            # Fallback to B_pu conversion
-            # B_siemens = B_pu * Y_base = B_pu * (S_base / U^2)
-            b_siemens = b_pu * sn / (un**2)
-            logger.debug(
-                f"Shunt '{sid}': Calculated B={b_siemens:.2e} S from B_pu={b_pu} (Sn={sn} MVA)"
-            )
-
-        g_siemens = info.get("g_pu", 0.0) * sn / (un**2)
-
-        # Using the DataFrame method as requested in the original structure
-        df_shunt = pd.DataFrame(
-            index=["id"],
-            columns=["id", "voltage_level_id", "bus_id", "model_type", "section_count"],
-            data=[(str(sid), f"VL_{bid}", str(bid), "LINEAR", 1)],
+        network.create_2_windings_transformers(
+            id=str(tid),
+            voltage_level1_id=f"VL_{b1}",
+            bus1_id=str(b1),
+            voltage_level2_id=f"VL_{b2}",
+            bus2_id=str(b2),
+            r=info.get("r_pu", 0.0) * z_base,
+            x=info.get("x_pu", 0.1) * z_base,
+            g=0,
+            b=0,
+            rated_u1=un1,
+            rated_u2=bus_v.get(b2, 225.0),
+            rated_s=sn,
         )
-
-        df_linear_model = pd.DataFrame(
-            index=["id"],
-            columns=["id", "max_section_count", "g_per_section", "b_per_section"],
-            data=[(str(sid), 1, g_siemens, b_siemens)],
-        )
-
-        # Ensure explicit string types to avoid Java bridge errors
-        df_shunt["id"] = df_shunt["id"].astype(str)
-        df_shunt["voltage_level_id"] = df_shunt["voltage_level_id"].astype(str)
-        df_shunt["bus_id"] = df_shunt["bus_id"].astype(str)
-        df_linear_model["id"] = df_linear_model["id"].astype(str)
-
-        net.create_shunt_compensators(shunt_df=df_shunt, linear_model_df=df_linear_model)
