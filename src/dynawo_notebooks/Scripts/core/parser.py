@@ -35,7 +35,6 @@ class ModelicaParser:
         logger.info(f"Total unique components found: {len(all_components_map)}")
 
         # 2. Dictionary Initialization
-        # Added 'transformers' category
         topo = {
             "buses": {},
             "lines": {},
@@ -54,7 +53,7 @@ class ModelicaParser:
             element_data = {"id": comp_name, "modelica_type": c_type, **params}
 
             # --- Generators ---
-            if "Generator" in c_type or "Source" in c_type:
+            if "InfiniteBus" in c_type or "Generator" in c_type or "Source" in c_type:
                 topo["generators"][comp_name] = element_data
 
             # --- Loads ---

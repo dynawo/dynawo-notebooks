@@ -158,7 +158,8 @@ class PowsyblConverter:
             tv_kv = tv_pu * v_map[bid]
 
         # SLACK BUS FIX: If it's an InfiniteBus, give it massive power limits so it can balance the grid
-        is_infinite_bus = "InfiniteBus" in info.get("type", "")
+        # CRITICAL FIX: The key created by the parser is 'modelica_type', not 'type'
+        is_infinite_bus = "InfiniteBus" in info.get("modelica_type", "")
         s_nom = 99999.0 if is_infinite_bus else (info.get("s_nom") or info.get("sn_nom", 100.0))
 
         p_mw = info.get("p_mw") or info.get("p", 0.0)
