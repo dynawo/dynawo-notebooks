@@ -21,6 +21,10 @@ class OMCConnector:
         except Exception as e:
             logger.critical(f"Failed to connect to OMC: {e}")
             raise e
+            
+        # --- NUEVO: Sistemas de Caché para acelerar x100 ---
+        self._list_cache = {}
+        self._param_cache = {}
 
     def load_libraries(self, dynawo_pkg_path: str) -> None:
         logger.info("Loading Standard Modelica Libraries...")
@@ -84,12 +88,20 @@ class OMCConnector:
         return connections
 
     def get_parameter_value(self, model_name: str, parameter_path: str) -> Optional[str]:
+        cache_key = f"{model_name}::{parameter_path}"
+        if cache_key in self._param_cache:
+            return self._param_cache[cache_key]
+
         try:
             val = self._omc.sendExpression(f'getParameterValue({model_name}, "{parameter_path}")')
             if val and "Error" not in str(val) and val != "":
-                return str(val).strip().replace('"', "")
+                res = str(val).strip().replace('"', "")
+                self._param_cache[cache_key] = res
+                return res
         except Exception:
             pass
+            
+        self._param_cache[cache_key] = None
         return None
 
     def get_modifier_value(
@@ -97,14 +109,21 @@ class OMCConnector:
     ) -> Optional[str]:
         """Fallback: Parses source code to find mathematical equations."""
         try:
-            definition_str = self._omc.sendExpression(f"list({model_name})")
-            if not definition_str or "Error" in str(definition_str):
-                return None
+            # OPTIMIZACIÓN: Solo pedir list(model) a OMC una sola vez
+            if model_name not in self._list_cache:
+                raw_list = self._omc.sendExpression(f"list({model_name})")
+                if not raw_list or "Error" in str(raw_list):
+                    self._list_cache[model_name] = ""
+                else:
+                    self._list_cache[model_name] = str(raw_list)
+
+            definition_str = self._list_cache[model_name]
+            if not definition_str: return None
+            
 
             comp_pattern = re.compile(rf"\b{component_name}\s*\(", re.IGNORECASE)
-            comp_match = comp_pattern.search(str(definition_str))
-            if not comp_match:
-                return None
+            comp_match = comp_pattern.search(definition_str)
+            if not comp_match: return None
 
             start_comp_idx = comp_match.end()
             depth = 1

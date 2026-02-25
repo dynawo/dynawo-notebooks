@@ -17,6 +17,8 @@ class ModelicaParser:
         raw_code = self.conn._omc.sendExpression(f"list({self.model_name})")
         self.top_code = str(raw_code) if raw_code else ""
 
+        self._flat_cache = {}
+
     def parse_topology(self) -> Dict[str, Dict]:
         logger.info(f"Starting topology parsing for root: {self.model_name}")
 
@@ -159,15 +161,19 @@ class ModelicaParser:
                         topo[cat][comp_name]["bus"] = bus_id
 
     def _extract_from_flat(self, comp_name: str, param: str) -> Optional[float]:
-        if not self.flat_model:
-            return None
-        pattern = re.compile(
-            rf"\b{re.escape(comp_name)}\.{re.escape(param)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;"
-        )
+        if not self.flat_model: return None
+        
+        # OPTIMIZACIÓN: Si ya lo buscamos antes, lo devolvemos al instante
+        cache_key = f"{comp_name}.{param}"
+        if cache_key in self._flat_cache:
+            return self._flat_cache[cache_key]
+
+        pattern = re.compile(rf"\b{re.escape(comp_name)}\.{re.escape(param)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;")
         match = pattern.search(self.flat_model)
-        if match:
-            return float(match.group(1))
-        return None
+        
+        result = float(match.group(1)) if match else None
+        self._flat_cache[cache_key] = result  # Guardar en memoria
+        return result
 
     def _resolve_val(self, val_str: Optional[str], depth: int = 0) -> Any:
         if not val_str or depth > 5:

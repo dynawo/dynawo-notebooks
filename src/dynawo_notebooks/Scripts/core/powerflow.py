@@ -29,33 +29,31 @@ class PowerFlowRunner:
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
         try:
-            # Load flow parameters can be customized here if needed
-            parameters = pp.loadflow.Parameters()
-
-            slack_buses = []
+            # 1. AUTO-DETECTAR EL SLACK BUS
+            slack_bus_id = None
             try:
                 gens_df = network.get_generators()
                 for gid, row in gens_df.iterrows():
                     # Si el ID del generador contiene "slack" o "infinite", atrapamos su bus
                     if "infinite" in str(gid).lower() or "slack" in str(gid).lower():
-                        slack_buses.append(row["bus_id"])
+                        slack_bus_id = row["bus_id"]
                         logger.info(
-                            f"Auto-detected Slack Bus: {row['bus_id']} (from generator {gid})"
+                            f"Auto-detected Slack Bus: {slack_bus_id} (from generator {gid})"
                         )
+                        break
             except Exception as e:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
-            # 2. CONFIGURAR LOS PARÁMETROS DEL SIMULADOR
-            lf_params = pp.loadflow.Parameters()
-            if slack_buses:
-                lf_params.slack_bus_ids = slack_buses  # ¡Aquí forzamos el bus correcto!
+            # 2. CONFIGURAR LOS PARÁMETROS DEL PROVEEDOR (OpenLoadFlow)
+            # Usamos exactamente los provider_parameters de la documentación
+            provider_params = {}
+            if slack_bus_id:
+                provider_params = {"slackBusSelectionMode": "NAME", "slackBusesIds": slack_bus_id}
+
+            lf_params = pp.loadflow.Parameters(provider_parameters=provider_params)
 
             # 3. EJECUTAR EL LOAD FLOW PASANDO LOS PARÁMETROS
             results = pp.loadflow.run_ac(network, parameters=lf_params)
-
-            if not results:
-                logger.error("No results returned from the load flow simulator.")
-                return False
 
             # results is a list of ComponentResult (one for each synchronous area)
             main_result = results[0]
