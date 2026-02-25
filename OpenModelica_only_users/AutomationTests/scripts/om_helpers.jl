@@ -4,15 +4,18 @@ module OMHelpers
 using OMJulia
 
 export
+    om_send,
     parse_modifier_dict,
     parse_component,
     parse_nth_connection,
     component_of_connector,
+    resolve_load_ref_value,
     get_all_components,
     code_modification_from_assignments,
     get_comp_param_value,
     apply_replacements!,
     add_init_models!,
+    apply_LF_modifiers!,
     add_init_equations!,
     delete_source_connections!,
     delete_sources!,
@@ -24,6 +27,20 @@ export
 # ----------------------- FUNCTIONS --------------------------
 # ------------------------------------------------------------
 # ------------------------------------------------------------
+
+function om_send(omc, expr; parsed=true)
+    println("OMC -> ", expr)
+    try
+        return sendExpression(omc, expr; parsed=parsed)
+    catch err
+        println("OMC FAILED on: ", expr)
+        println("OpenModelica says:")
+        println(sendExpression(omc, "getErrorString()"))
+        rethrow(err)
+    end
+end
+
+
 
 # ------------------------------------------------------------
 # Parsing helpers & String utilities
@@ -122,6 +139,36 @@ Returns the substring before the first dot.
 """
 function component_of_connector(conn::AbstractString)
     return String(split(conn, ".", limit=2)[1])
+end
+
+# For loads: get numeric value assigned via equation like
+# loadPQ1.PRefPu = PrefPu_load_01.setPoint;
+function resolve_load_ref_value(omc, model::String, comp::String, field::String)
+    lhs = "$comp.$field"
+
+    neq = sendExpression(omc, "getEquationItemsCount($model)")
+    for i in 1:neq
+        eqi = String(sendExpression(omc, "getNthEquationItem($model, $i)", parsed=false))
+        eqi = replace(eqi, "\"" => "")  # remove quotes
+
+        if occursin(lhs, eqi) && occursin("=", eqi)
+            parts = split(strip(eqi), "=", limit=2)
+            if length(parts) == 2 && occursin(lhs, strip(parts[1]))
+                rhs = strip(replace(parts[2], ";" => ""))
+
+                # If RHS is X.setPoint → return X.Value0
+                m = match(r"^([A-Za-z_]\w*)\.setPoint$", rhs)
+                if m !== nothing
+                    sp = m.captures[1]
+                    return string(sendExpression(omc, "getComponentModifierValue($model, $sp.Value0)"))
+                end
+
+                return rhs
+            end
+        end
+    end
+
+    return ""
 end
 
 # ------------------------------------------------------------
@@ -245,9 +292,8 @@ function apply_replacements!(
 
         mod_str = code_modification_from_assignments(assignments)
 
-        sendExpression(omc,
-            "updateComponent($comp_name, $new_class, $aux_model, modification = $mod_str)"
-        )
+        om_send(omc,
+            "updateComponent($comp_name, $new_class, $aux_model, modification = $mod_str)", parsed=false)
     end
 end
 
@@ -289,7 +335,19 @@ function add_init_models!(
 
         # Copy mapped parameters from the base component (e.g. BESS2 -> BESS2_INIT)
         for (init_param, base_param) in write_map
-            val = get_comp_param_value(omc, model, components, base_comp, base_param)
+            val = ""
+
+            # --- SPECIAL CASE FOR LOADS: get initial value from equation items (SetPoint.Value0) ---
+            if startswith(base_class, "Dynawo.Electrical.Loads.") && (base_param == "PRefPu" || base_param == "QRefPu")
+                val = resolve_load_ref_value(omc, model, base_comp, base_param)
+            else
+                val = string(get_comp_param_value(omc, model, components, base_comp, base_param))
+            end
+
+            if isempty(strip(val))
+                error("Empty value for $model.$base_comp.$base_param while building $init_name.$init_param")
+            end
+
             push!(assignments, "$(init_param) = $(val)")
         end
 
@@ -298,8 +356,48 @@ function add_init_models!(
 
         mod_str = code_modification_from_assignments(assignments)
 
-        sendExpression(omc,
-            "addComponent($init_name, $init_class, $aux_model, modification = $mod_str)"
+        om_send(omc,
+            "addComponent($init_name, $init_class, $aux_model, modification = $mod_str)", parsed=false)
+    end
+end
+
+
+"""
+    apply_LF_modifiers!(omc, model, aux_model, INIT_MODELS, components)
+
+For components whose class appears in INIT_MODELS, optionally apply extra
+modifiers to the *base component* in the auxiliary model using updateComponent.
+
+This is necessary for the initial load flow.
+"""
+function apply_LF_modifiers!(
+    omc,
+    model::String,
+    aux_model::String,
+    INIT_MODELS::Dict{String,Any},
+    components::Dict{String, Dict{String, Any}}
+)
+    for (base_comp, c) in components
+        base_class = c["class"]::String
+        if !haskey(INIT_MODELS, base_class)
+            continue
+        end
+
+        spec = INIT_MODELS[base_class]::Dict{String,Any}
+        if !haskey(spec, "LF_modifiers_raw")
+            continue
+        end
+
+        extra_raw = spec["LF_modifiers_raw"]::Vector{String}
+        isempty(extra_raw) && continue
+
+        mod_str = code_modification_from_assignments(extra_raw)
+
+        # Update the base component in the AUX model, keeping the same class
+        om_send(
+            omc,
+            "updateComponent($base_comp, $base_class, $aux_model, modification = $mod_str)";
+            parsed=false
         )
     end
 end
@@ -340,7 +438,7 @@ function add_init_equations!(
     end
 
     block = join(lines, "\n")
-    sendExpression(omc, "loadClassContentString(\"$block\", $aux_model)")
+    om_send(omc, "loadClassContentString(\"$block\", $aux_model)", parsed=false)
 end
 
 
@@ -408,6 +506,12 @@ function patch_aux_equations!(aux_file::String)
     txt = replace(txt, "BESS2.injector.switchOffSignal1.value = false;" => "BESS2.switchOffSignal1.value = false;")
     txt = replace(txt, "BESS2.injector.switchOffSignal2.value = false;" => "BESS2.switchOffSignal2.value = false;")
     txt = replace(txt, "BESS2.injector.switchOffSignal3.value = false;" => "BESS2.switchOffSignal3.value = false;")
+    txt = replace(txt, "  der(generatorSynchronous.lambdafPu) = 0;" => "")
+    txt = replace(txt, "  der(generatorSynchronous.lambdaDPu) = 0;" => "")
+    txt = replace(txt, "  der(generatorSynchronous.lambdaQ1Pu) = 0;" => "")
+    txt = replace(txt, "  der(generatorSynchronous.lambdaQ2Pu) = 0;" => "")
+    txt = replace(txt, "  der(generatorSynchronous.theta) = 0;" => "")
+    txt = replace(txt, "  der(generatorSynchronous.omegaPu) = 0;" => "")
     write(aux_file, txt)
     return nothing
 end
