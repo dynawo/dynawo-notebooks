@@ -32,8 +32,26 @@ class PowerFlowRunner:
             # Load flow parameters can be customized here if needed
             parameters = pp.loadflow.Parameters()
 
-            # Execute the Load Flow
-            results = pp.loadflow.run_ac(network, parameters=parameters)
+            slack_buses = []
+            try:
+                gens_df = network.get_generators()
+                for gid, row in gens_df.iterrows():
+                    # Si el ID del generador contiene "slack" o "infinite", atrapamos su bus
+                    if "infinite" in str(gid).lower() or "slack" in str(gid).lower():
+                        slack_buses.append(row["bus_id"])
+                        logger.info(
+                            f"Auto-detected Slack Bus: {row['bus_id']} (from generator {gid})"
+                        )
+            except Exception as e:
+                logger.warning(f"Could not read generators for slack detection: {e}")
+
+            # 2. CONFIGURAR LOS PARÁMETROS DEL SIMULADOR
+            lf_params = pp.loadflow.Parameters()
+            if slack_buses:
+                lf_params.slack_bus_ids = slack_buses  # ¡Aquí forzamos el bus correcto!
+
+            # 3. EJECUTAR EL LOAD FLOW PASANDO LOS PARÁMETROS
+            results = pp.loadflow.run_ac(network, parameters=lf_params)
 
             if not results:
                 logger.error("No results returned from the load flow simulator.")

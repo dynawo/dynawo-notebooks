@@ -1,12 +1,11 @@
+# FILE: src/dynawo_notebooks/Scripts/core/connector.py
 """
 OpenModelica Connector Module.
-
-This module handles the low-level communication with the OpenModelica Compiler (OMC)
-via ZMQ. It abstracts the session management and ensures the environment is ready.
 """
 
 import os
 import logging
+import re
 from typing import Optional, List, Any
 from OMPython import OMCSessionZMQ
 
@@ -14,12 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class OMCConnector:
-    """
-    Wrapper around OMCSessionZMQ to provide a cleaner API for Modelica operations.
-    """
-
     def __init__(self):
-        """Initializes the ZMQ session with OpenModelica."""
         logger.info("Connecting to OpenModelica Compiler (OMC)...")
         try:
             self._omc = OMCSessionZMQ()
@@ -29,98 +23,53 @@ class OMCConnector:
             raise e
 
     def load_libraries(self, dynawo_pkg_path: str) -> None:
-        """
-        Loads standard Modelica libraries and the Dynawo package.
-        """
         logger.info("Loading Standard Modelica Libraries...")
         self._omc.sendExpression("loadModel(Modelica)")
         self._omc.sendExpression("loadModel(Complex)")
         self._omc.sendExpression("loadModel(ModelicaServices)")
 
-        # Convert to absolute path to avoid ambiguity
         abs_pkg_path = os.path.abspath(dynawo_pkg_path).replace("\\", "/")
+        if not abs_pkg_path.endswith("package.mo"):
+            load_path = f"{abs_pkg_path}/package.mo"
+        else:
+            load_path = abs_pkg_path
 
-        logger.info(f"Loading Dynawo Package from: {abs_pkg_path}")
-        if not self._omc.sendExpression(f'loadFile("{abs_pkg_path}")'):
-            err = self._omc.sendExpression("getErrorString()")
-            logger.error(f"OMC Error loading Dynawo: {err}")
-            raise RuntimeError(f"Failed to load Dynawo package: {err}")
+        logger.info(f"Loading Dynawo Package from: {load_path}")
+        if not self._omc.sendExpression(f'loadFile("{load_path}")'):
+            logger.error("Failed to load Dynawo package. Check path.")
 
-    def load_local_files(self, source_dir: str, files: List[str]) -> None:
-        """
-        Loads user-defined Modelica files from a specific directory using Absolute Paths.
-        """
-        abs_source_dir = os.path.abspath(source_dir).replace("\\", "/")
-
-        if not os.path.exists(abs_source_dir):
-            logger.error(f"Source directory does not exist: {abs_source_dir}")
-            raise FileNotFoundError(f"Directory not found: {abs_source_dir}")
-
-        logger.info(f"Loading local models from: {abs_source_dir}")
-        self._omc.sendExpression(f'cd("{abs_source_dir}")')
-
-        for filename in files:
-            full_path = os.path.join(abs_source_dir, filename).replace("\\", "/")
-            if not os.path.exists(full_path):
-                logger.error(f"File not found on disk: {full_path}")
-                continue
-
-            logger.debug(f"Loading file: {filename}")
+    def load_local_files(self, source_dir: str, file_list: List[str]) -> None:
+        abs_source = os.path.abspath(source_dir).replace("\\", "/")
+        logger.info(f"Loading {len(file_list)} local files from {abs_source}...")
+        for f in file_list:
+            full_path = f"{abs_source}/{f}"
             if not self._omc.sendExpression(f'loadFile("{full_path}")'):
-                err_msg = self._omc.sendExpression("getErrorString()")
-                logger.error(f"Failed to load '{filename}'. OMC Error: {err_msg}")
+                logger.warning(f"Failed to load file: {f}")
 
     def check_model(self, model_name: str) -> bool:
+        logger.info(f"Checking model: {model_name}")
+        res = self._omc.sendExpression(f"checkModel({model_name})")
+        return "Error" not in str(res)
+
+    def instantiate_model(self, model_name: str) -> Optional[str]:
         """
-        Runs checkModel() on the specified model.
+        Attempts to force OMC to compile and flatten the model safely.
         """
-        logger.info(f"Verifying integrity of model '{model_name}'...")
-        result = self._omc.sendExpression(f"checkModel({model_name})")
+        logger.info(f"Attempting to instantiate (flatten) model {model_name}...")
+        try:
+            res = self._omc.sendExpression(f"instantiateModel({model_name})")
+            if res and "Error" not in str(res):
+                return str(res)
+        except Exception as e:
+            logger.warning(
+                "OMC could not flatten the model (likely due to unbound parameters). Falling back to AST parsing."
+            )
+        return None
 
-        result_str = str(result)
-        if "Error" in result_str:
-            if "Class" in result_str and "not found in scope" in result_str:
-                logger.critical(f"Model not found: {result_str}")
-                return False
-            logger.warning(f"checkModel reported issues:\n{result_str}")
-            return False
-
-        logger.info(f"Model '{model_name}' check passed successfully.")
-        return True
-
-    def get_components(self, model_name: str) -> list:
-        """Wraps getComponents(). Returns list of [Type, Name, Comment]."""
+    def get_components(self, model_name: str) -> List[Any]:
         return self._omc.sendExpression(f"getComponents({model_name})")
 
-    def get_inherited_classes(self, model_name: str) -> List[str]:
-        """
-        Retrieves the list of classes that 'model_name' extends (inherits from).
-        Corrected to use the standard API 'getInheritedClasses'.
-        """
-        # API returns a tuple or list of strings directly: ('Parent1', 'Parent2')
-        result = self._omc.sendExpression(f"getInheritedClasses({model_name})")
-
-        if not result:
-            return []
-
-        # Ensure we return a clean python list of strings
-        if isinstance(result, (list, tuple)):
-            return [str(c) for c in result]
-        elif isinstance(result, str):
-            return [result]
-
-        return []
-
-    def get_component_modification(self, model_name: str, index: int) -> str:
-        """
-        Wraps getNthComponentModification() with parsed=False.
-        """
-        return self._omc.sendExpression(
-            f"getNthComponentModification({model_name}, {index})", parsed=False
-        )
-
-    def get_connections(self, model_name: str) -> list:
-        """Retrieves all connections in the model."""
+    def get_connections(self, model_name: str) -> List[List[str]]:
         count_str = self._omc.sendExpression(f"getConnectionCount({model_name})")
         connections = []
         if count_str:
@@ -135,26 +84,74 @@ class OMCConnector:
         return connections
 
     def get_parameter_value(self, model_name: str, parameter_path: str) -> Optional[str]:
-        """
-        Retrieves the evaluated value of a parameter.
-        """
-        val = self._omc.sendExpression(f'getParameterValue({model_name}, "{parameter_path}")')
-        if val and "Error" not in str(val) and val != "":
-            return str(val).strip().replace('"', "")
+        try:
+            val = self._omc.sendExpression(f'getParameterValue({model_name}, "{parameter_path}")')
+            if val and "Error" not in str(val) and val != "":
+                return str(val).strip().replace('"', "")
+        except Exception:
+            pass
         return None
 
+    def get_modifier_value(
+        self, model_name: str, component_name: str, parameter_name: str
+    ) -> Optional[str]:
+        """Fallback: Parses source code to find mathematical equations."""
+        try:
+            definition_str = self._omc.sendExpression(f"list({model_name})")
+            if not definition_str or "Error" in str(definition_str):
+                return None
+
+            comp_pattern = re.compile(rf"\b{component_name}\s*\(", re.IGNORECASE)
+            comp_match = comp_pattern.search(str(definition_str))
+            if not comp_match:
+                return None
+
+            start_comp_idx = comp_match.end()
+            depth = 1
+            comp_modifiers_str = ""
+            for char in str(definition_str)[start_comp_idx:]:
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    depth -= 1
+                if depth == 0:
+                    break
+                comp_modifiers_str += char
+
+            param_pattern = re.compile(rf"\b{parameter_name}\s*=", re.IGNORECASE)
+            param_match = param_pattern.search(comp_modifiers_str)
+            if not param_match:
+                return None
+
+            start_param_idx = param_match.end()
+            value_str = ""
+            depth_param = 0
+
+            for char in comp_modifiers_str[start_param_idx:]:
+                if char == "(":
+                    depth_param += 1
+                elif char == ")":
+                    depth_param -= 1
+                if depth_param < 0:
+                    break
+                if depth_param == 0 and char == ",":
+                    break
+                value_str += char
+
+            val = value_str.strip()
+            val = val.split("/*")[0].split("//")[0].strip()
+            return val if val else None
+        except Exception:
+            return None
+
     def get_extends(self, model_name: str) -> List[str]:
-        """
-        Retrieves the list of classes that the given model inherits from directly.
-        Uses the OMC command: getInheritedClasses()
-        """
-        cmd = f"getInheritedClasses({model_name})"
-        result = self._omc.sendExpression(cmd)
-
-        # OpenModelica can return a tuple, a list, or a single string depending on the version and result
-        if isinstance(result, (list, tuple)):
-            return [str(c) for c in result]
-        elif isinstance(result, str) and result:
-            return [result]
-
+        try:
+            cmd = f"getInheritedClasses({model_name})"
+            result = self._omc.sendExpression(cmd)
+            if isinstance(result, (list, tuple)):
+                return [str(c) for c in result]
+            elif isinstance(result, str) and result:
+                return [result]
+        except Exception:
+            pass
         return []

@@ -102,6 +102,14 @@ class PowsyblConverter:
         sn = info.get("sn_nom", 100.0)
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
         is_slack = "infinite" in gid.lower() or "slack" in gid.lower()
+
+        # Si es un Nudo Slack y está a 0 MW, le damos un valor inicial dummy (1.0 MW).
+        # Esto le da un "factor de participación" > 0% para que OpenLoadFlow
+        # acepte enviarle el desajuste de potencia. El valor se sobrescribirá al converger.
+
+        if is_slack and p_mw == 0.0:
+            p_mw = 1.0
+
         network.create_generators(
             id=str(gid),
             voltage_level_id=f"VL_{bid}",

@@ -1,5 +1,6 @@
 # FILE: src/dynawo_notebooks/Scripts/core/parser.py
 import logging
+import re
 from typing import Dict, Any, Optional, List
 from .connector import OMCConnector
 
@@ -10,11 +11,15 @@ class ModelicaParser:
     def __init__(self, connector: OMCConnector, model_name: str):
         self.conn = connector
         self.model_name = model_name
+        self.flat_model = self.conn.instantiate_model(model_name) or ""
+
+        # Guardamos el código fuente del modelo principal (ej. LoadFlow.mo) para el Fallback
+        raw_code = self.conn._omc.sendExpression(f"list({self.model_name})")
+        self.top_code = str(raw_code) if raw_code else ""
 
     def parse_topology(self) -> Dict[str, Dict]:
         logger.info(f"Starting topology parsing for root: {self.model_name}")
 
-        # 1. Recursive Component Extraction
         all_components_map = self._collect_all_components_recursive()
         logger.info(f"Total unique components found: {len(all_components_map)}")
 
@@ -27,9 +32,15 @@ class ModelicaParser:
             "transformers": {},
         }
 
-        # 2. Process Components and Extract Parameters
-        for comp_name, comp_type in all_components_map.items():
-            params = self._extract_parameters(self.model_name, comp_name)
+        for comp_name, comp_info in all_components_map.items():
+            if isinstance(comp_info, dict):
+                comp_type = comp_info["type"]
+                declaring_model = comp_info["declared_in"]
+            else:
+                comp_type = comp_info
+                declaring_model = self.model_name
+
+            params = self._extract_parameters(declaring_model, comp_name)
             type_lower = comp_type.lower()
 
             if "bus" in type_lower and "infinite" not in type_lower:
@@ -45,20 +56,15 @@ class ModelicaParser:
             elif "transformer" in type_lower:
                 topo["transformers"][comp_name] = params
 
-        # 3. Recursive Connection Extraction (Crucial for Nordic)
         raw_connections = self._collect_all_connections_recursive()
-
-        # 4. Apply generic graph resolution
         if raw_connections:
             self._build_topological_nodes(topo, raw_connections)
-        else:
-            logger.warning("No connections were retrieved from the model hierarchy.")
 
         return topo
 
     def _collect_all_components_recursive(
         self, current_model: Optional[str] = None, visited: Optional[set] = None
-    ) -> Dict[str, str]:
+    ) -> Dict[str, Any]:
         if current_model is None:
             current_model = self.model_name
         if visited is None:
@@ -68,21 +74,19 @@ class ModelicaParser:
         visited.add(current_model)
 
         components = {}
-        raw_components = self.conn._omc.sendExpression(f"getComponents({current_model})")
-        if isinstance(raw_components, (list, tuple)):
-            for comp in raw_components:
+        raw = self.conn.get_components(current_model)
+        if isinstance(raw, (list, tuple)):
+            for comp in raw:
                 if isinstance(comp, (list, tuple)) and len(comp) >= 2:
-                    components[str(comp[1])] = str(comp[0])
+                    components[str(comp[1])] = {"type": str(comp[0]), "declared_in": current_model}
 
-        extends_list = self.conn.get_extends(current_model)
-        for base in extends_list:
+        for base in self.conn.get_extends(current_model):
             components.update(self._collect_all_components_recursive(base, visited))
         return components
 
     def _collect_all_connections_recursive(
         self, current_model: Optional[str] = None, visited: Optional[set] = None
     ) -> List[List[str]]:
-        """Collects connections from the current model and all its parents."""
         if current_model is None:
             current_model = self.model_name
         if visited is None:
@@ -92,9 +96,7 @@ class ModelicaParser:
         visited.add(current_model)
 
         connections = self.conn.get_connections(current_model)
-
-        extends_list = self.conn.get_extends(current_model)
-        for base in extends_list:
+        for base in self.conn.get_extends(current_model):
             connections.extend(self._collect_all_connections_recursive(base, visited))
         return connections
 
@@ -133,7 +135,6 @@ class ModelicaParser:
                 ),
                 None,
             )
-
             if not bus_id:
                 bus_id = f"VirtualBus_{virtual_bus_idx}"
                 virtual_bus_idx += 1
@@ -153,20 +154,69 @@ class ModelicaParser:
                             else "bus2"
                         )
                         topo[cat][comp_name][side] = bus_id
-
                 for cat in ["generators", "loads", "shunts"]:
                     if comp_name in topo[cat]:
                         topo[cat][comp_name]["bus"] = bus_id
 
-    def _resolve_val(self, val_str: Optional[str]) -> Optional[float]:
-        if not val_str:
+    def _extract_from_flat(self, comp_name: str, param: str) -> Optional[float]:
+        if not self.flat_model:
             return None
+        pattern = re.compile(
+            rf"\b{re.escape(comp_name)}\.{re.escape(param)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;"
+        )
+        match = pattern.search(self.flat_model)
+        if match:
+            return float(match.group(1))
+        return None
+
+    def _resolve_val(self, val_str: Optional[str], depth: int = 0) -> Any:
+        if not val_str or depth > 5:
+            return None
+        clean = val_str.strip().replace("'", "").replace('"', "")
         try:
-            return float(val_str.strip().replace("'", "").replace('"', ""))
+            return float(clean)
+        except ValueError:
+            pass
+
+        identifiers = set(re.findall(r"[a-zA-Z_][a-zA-Z0-9_]*", clean))
+        resolved_expr = clean
+        for var in identifiers:
+            if var in ["Complex", "sin", "cos", "tan", "sqrt", "j"]:
+                continue
+
+            var_val = self.conn.get_parameter_value(self.model_name, var)
+
+            # DYNAWO FALLBACK: Busca la variable directamente en el texto de LoadFlow.mo
+            if not var_val:
+                match = re.search(
+                    rf"\b{var}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
+                )
+                if match:
+                    var_val = match.group(1)
+
+            if var_val:
+                val_num = self._resolve_val(var_val, depth + 1)
+                if val_num is not None:
+                    if isinstance(val_num, complex):
+                        resolved_expr = re.sub(
+                            rf"\b{var}\b",
+                            f"Complex({val_num.real}, {val_num.imag})",
+                            resolved_expr,
+                        )
+                    else:
+                        resolved_expr = re.sub(r"\b" + var + r"\b", str(val_num), resolved_expr)
+
+        py_expr = resolved_expr.replace("^", "**")
+
+        def Complex_func(r, i):
+            return complex(r, i)
+
+        try:
+            return eval(py_expr, {"__builtins__": None}, {"Complex": Complex_func})
         except:
             return None
 
-    def _extract_parameters(self, model_context: str, comp_name: str) -> Dict[str, float]:
+    def _extract_parameters(self, declaring_model: str, comp_name: str) -> Dict[str, float]:
         param_map = {
             "Sn": "sn_nom",
             "SNom": "sn_nom",
@@ -176,8 +226,11 @@ class ModelicaParser:
             "U0Pu": "u_pu",
             "P": "p",
             "P0Pu": "p_pu",
+            "PGen0Pu": "p_pu",  # Añadido PGen0Pu para PV/BESS
             "Q": "q",
             "Q0Pu": "q_pu",
+            "QGenPu": "q_pu",
+            "QGen0Pu": "q_pu",  # Añadidos para PV/BESS
             "R": "r",
             "RPu": "r_pu",
             "X": "x",
@@ -186,12 +239,70 @@ class ModelicaParser:
             "BPu": "b_pu",
             "G": "g",
             "GPu": "g_pu",
+            "tapRatio": "ratio",
         }
+
+        extracted = {}
+        # ... (resto del código igual) ...
         extracted = {}
         for pm, pj in param_map.items():
-            val = self._resolve_val(
-                self.conn.get_parameter_value(model_context, f"{comp_name}.{pm}")
-            )
+            val = self._extract_from_flat(comp_name, pm)
+
+            if val is None:
+                raw = self.conn.get_modifier_value(declaring_model, comp_name, pm)
+                if raw:
+                    val = self._resolve_val(raw)
+
+            if val is None:
+                raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
+                if raw:
+                    val = self._resolve_val(raw)
+
+            # DYNAWO FALLBACK: Extrae P0Pu_g01 = 6 leyendo directamente LoadFlow.mo
+            if val is None:
+                match = re.search(
+                    rf"\b{pm}_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)",
+                    self.top_code,
+                )
+                if match:
+                    val = float(match.group(1))
+
             if val is not None:
-                extracted[pj] = val
+                if isinstance(val, complex):
+                    extracted[pj] = val.real
+                else:
+                    extracted[pj] = float(val)
+
+        p_val = self._extract_from_flat(comp_name, "s0Pu.re")
+        q_val = self._extract_from_flat(comp_name, "s0Pu.im")
+
+        if p_val is None or q_val is None:
+            raw_s0 = self.conn.get_modifier_value(declaring_model, comp_name, "s0Pu")
+            if not raw_s0:
+                raw_s0 = self.conn.get_parameter_value(self.model_name, f"{comp_name}.s0Pu")
+            s0_val = self._resolve_val(raw_s0)
+            if s0_val is not None and isinstance(s0_val, complex):
+                p_val = s0_val.real
+                q_val = s0_val.imag
+
+        if p_val is not None:
+            extracted["p_pu"] = p_val
+        if q_val is not None:
+            extracted["q_pu"] = q_val
+
+        # Última red de seguridad para Cargas (ej. P0Pu_load_01 = 2)
+        if "p_pu" not in extracted:
+            match_p = re.search(
+                rf"\bP0Pu_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
+            )
+            if match_p:
+                extracted["p_pu"] = float(match_p.group(1))
+
+        if "q_pu" not in extracted:
+            match_q = re.search(
+                rf"\bQ0Pu_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
+            )
+            if match_q:
+                extracted["q_pu"] = float(match_q.group(1))
+
         return extracted
