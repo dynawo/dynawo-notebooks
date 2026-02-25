@@ -24,10 +24,10 @@ class NetworkVisualizer:
         """
         Generates both the macro (Network Area) and micro (Single Line) diagrams.
 
-        Returns:
-            Dict[str, str]: A dictionary containing the SVG strings.
-                            Key 'network_area' contains the macro view.
-                            Keys like 'Sub_X' contain the detailed views.
+        :param network: The PyPowSyBl network to be visualized.
+        :return: A dictionary containing the SVG strings.
+                 Key 'network_area' contains the macro view.
+                 Keys like 'Sub_X' contain the detailed views.
         """
         diagrams = {}
         logger.info("Generating full system visualization diagrams...")

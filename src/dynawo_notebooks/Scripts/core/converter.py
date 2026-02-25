@@ -1,7 +1,10 @@
 # FILE: src/dynawo_notebooks/Scripts/core/converter.py
 """
 PyPowSybl Converter Module.
-Groups buses into substations to satisfy transformer connectivity requirements.
+
+This module is responsible for converting the parsed electrical topology dictionary
+into a strictly typed PyPowSyBl Network object. It handles the grouping of buses
+into substations to satisfy transformer connectivity requirements.
 """
 
 import logging
@@ -13,8 +16,19 @@ logger = logging.getLogger(__name__)
 
 
 class PowsyblConverter:
+    """
+    Utility class that handles the instantiation and population of a PyPowSyBl network
+    using extracted topological and parametric data.
+    """
+
     @staticmethod
     def build_network(data: Dict) -> pp.network.Network:
+        """
+        Constructs a complete PyPowSyBl Network from the raw parsed topology data.
+
+        :param data: A dictionary containing topological elements (buses, lines, etc.).
+        :return: A fully instantiated PyPowSybl Network.
+        """
         logger.info("Initializing PyPowSybl Network construction...")
         network = pp.network.create_empty()
 
@@ -78,7 +92,15 @@ class PowsyblConverter:
         return network
 
     @staticmethod
-    def _create_line(network, lid, info, bus_v):
+    def _create_line(network: pp.network.Network, lid: str, info: Dict, bus_v: Dict) -> None:
+        """
+        Creates an AC line in the PyPowSyBl network.
+
+        :param network: The PyPowSyBl network instance.
+        :param lid: The unique identifier for the line.
+        :param info: Dictionary containing the line's parameters.
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        """
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return
@@ -97,15 +119,23 @@ class PowsyblConverter:
         )
 
     @staticmethod
-    def _create_generator(network, gid, info, bus_v):
+    def _create_generator(network: pp.network.Network, gid: str, info: Dict, bus_v: Dict) -> None:
+        """
+        Creates a generator in the PyPowSyBl network, properly configuring slack bus behavior.
+
+        :param network: The PyPowSyBl network instance.
+        :param gid: The unique identifier for the generator.
+        :param info: Dictionary containing the generator's parameters.
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        """
         bid = info.get("bus")
         sn = info.get("sn_nom", 100.0)
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
         is_slack = "infinite" in gid.lower() or "slack" in gid.lower()
 
-        # Si es un Nudo Slack y está a 0 MW, le damos un valor inicial dummy (1.0 MW).
-        # Esto le da un "factor de participación" > 0% para que OpenLoadFlow
-        # acepte enviarle el desajuste de potencia. El valor se sobrescribirá al converger.
+        # If it is a Slack Bus and its active power is 0 MW, we assign a dummy initial value (1.0 MW).
+        # This provides a "participation factor" > 0% so that OpenLoadFlow
+        # accepts sending power mismatch to it. The value will be overwritten upon convergence.
 
         if is_slack and p_mw == 0.0:
             p_mw = 1.0
@@ -123,7 +153,15 @@ class PowsyblConverter:
         )
 
     @staticmethod
-    def _create_load(network, lid, info, bus_v):
+    def _create_load(network: pp.network.Network, lid: str, info: Dict, bus_v: Dict) -> None:
+        """
+        Creates a load in the PyPowSyBl network.
+
+        :param network: The PyPowSyBl network instance.
+        :param lid: The unique identifier for the load.
+        :param info: Dictionary containing the load's parameters.
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        """
         bid = info.get("bus")
         sn = info.get("sn_nom", 100.0)
         network.create_loads(
@@ -135,7 +173,15 @@ class PowsyblConverter:
         )
 
     @staticmethod
-    def _create_shunt(network, sid, info, bus_v):
+    def _create_shunt(network: pp.network.Network, sid: str, info: Dict, bus_v: Dict) -> None:
+        """
+        Creates a linear shunt compensator in the PyPowSyBl network.
+
+        :param network: The PyPowSyBl network instance.
+        :param sid: The unique identifier for the shunt.
+        :param info: Dictionary containing the shunt's parameters.
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        """
         bid = info.get("bus")
         un, sn = bus_v.get(bid, 225.0), info.get("sn_nom", 100.0)
         q_mvar = info.get("q_pu", 0.0) * sn
@@ -163,7 +209,18 @@ class PowsyblConverter:
         network.create_shunt_compensators(shunt_df, linear_model_df)
 
     @staticmethod
-    def _create_transformer(network, tid, info, bus_v, bus_to_sub):
+    def _create_transformer(
+        network: pp.network.Network, tid: str, info: Dict, bus_v: Dict, bus_to_sub: Dict
+    ) -> None:
+        """
+        Creates a two-windings transformer in the PyPowSyBl network.
+
+        :param network: The PyPowSyBl network instance.
+        :param tid: The unique identifier for the transformer.
+        :param info: Dictionary containing the transformer's parameters.
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        :param bus_to_sub: Dictionary mapping bus IDs to their assigned substations.
+        """
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return

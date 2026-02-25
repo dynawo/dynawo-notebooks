@@ -1,4 +1,13 @@
 # FILE: src/dynawo_notebooks/Scripts/core/parser.py
+"""
+Modelica Topology Parser Module.
+
+This module is responsible for extracting the electrical topology and physical
+parameters from Modelica network models. It utilizes the OMCConnector to query
+the OpenModelica compiler, inspecting flat models and resolving variable mappings
+to build a standardized topological dictionary.
+"""
+
 import logging
 import re
 from typing import Dict, Any, Optional, List
@@ -8,18 +17,38 @@ logger = logging.getLogger(__name__)
 
 
 class ModelicaParser:
+    """
+    Parses Modelica models to extract hierarchical components, parameter assignments,
+    and topological connectivity (nodes and edges).
+    """
+
     def __init__(self, connector: OMCConnector, model_name: str):
+        """
+        Initializes the ModelicaParser instance.
+
+        It attempts to flatten the model to resolve variables and stores
+        the raw code of the top-level model to be used as a fallback for regex parsing.
+
+        :param connector: Active OMCConnector instance for Modelica queries.
+        :param model_name: The name of the root Modelica model to parse.
+        """
         self.conn = connector
         self.model_name = model_name
         self.flat_model = self.conn.instantiate_model(model_name) or ""
 
-        # Guardamos el código fuente del modelo principal (ej. LoadFlow.mo) para el Fallback
+        # Store the source code of the main model (e.g., LoadFlow.mo) for Fallback regex parsing
         raw_code = self.conn._omc.sendExpression(f"list({self.model_name})")
         self.top_code = str(raw_code) if raw_code else ""
 
         self._flat_cache = {}
 
     def parse_topology(self) -> Dict[str, Dict]:
+        """
+        Executes the full parsing pipeline. Extracts all components, categorizes them
+        based on their types, extracts their parameters, and resolves their connectivity.
+
+        :return: A deeply structured dictionary containing categorized topological elements.
+        """
         logger.info(f"Starting topology parsing for root: {self.model_name}")
 
         all_components_map = self._collect_all_components_recursive()
@@ -67,6 +96,14 @@ class ModelicaParser:
     def _collect_all_components_recursive(
         self, current_model: Optional[str] = None, visited: Optional[set] = None
     ) -> Dict[str, Any]:
+        """
+        Recursively queries the OMC to retrieve all declared components
+        in the current model and its inherited base classes.
+
+        :param current_model: The name of the Modelica model to inspect.
+        :param visited: A set tracking already visited models to prevent infinite loops.
+        :return: A mapping of component instance names to their structural types and origins.
+        """
         if current_model is None:
             current_model = self.model_name
         if visited is None:
@@ -89,6 +126,14 @@ class ModelicaParser:
     def _collect_all_connections_recursive(
         self, current_model: Optional[str] = None, visited: Optional[set] = None
     ) -> List[List[str]]:
+        """
+        Recursively retrieves explicit electrical connection statements (connect())
+        declared within the model and its inherited base classes.
+
+        :param current_model: The name of the Modelica model to inspect.
+        :param visited: A set tracking already visited models.
+        :return: A list containing pairs of connected terminals.
+        """
         if current_model is None:
             current_model = self.model_name
         if visited is None:
@@ -105,6 +150,14 @@ class ModelicaParser:
     def _build_topological_nodes(
         self, topo: Dict[str, Dict], connections: List[List[str]]
     ) -> None:
+        """
+        Processes connection statements to deduce physical topological nodes.
+        Groups interconnected pins/terminals into logical buses, creating Virtual
+        Buses when implicit junctions are detected without an explicit Bus component.
+
+        :param topo: The topological dictionary containing extracted components.
+        :param connections: List of connection terminal pairs.
+        """
         adj = {}
         for c in connections:
             if len(c) >= 2:
@@ -161,21 +214,40 @@ class ModelicaParser:
                         topo[cat][comp_name]["bus"] = bus_id
 
     def _extract_from_flat(self, comp_name: str, param: str) -> Optional[float]:
-        if not self.flat_model: return None
-        
-        # OPTIMIZACIÓN: Si ya lo buscamos antes, lo devolvemos al instante
+        """
+        Extracts the numerical value of a specified parameter directly from the
+        flattened model string using regular expressions.
+
+        :param comp_name: The instance name of the component.
+        :param param: The parameter name to search for (e.g., 's0Pu.re').
+        :return: The extracted numerical float value, or None if not found.
+        """
+        if not self.flat_model:
+            return None
+
+        # OPTIMIZATION: If previously searched, retrieve from cache instantly
         cache_key = f"{comp_name}.{param}"
         if cache_key in self._flat_cache:
             return self._flat_cache[cache_key]
 
-        pattern = re.compile(rf"\b{re.escape(comp_name)}\.{re.escape(param)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;")
+        pattern = re.compile(
+            rf"\b{re.escape(comp_name)}\.{re.escape(param)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;"
+        )
         match = pattern.search(self.flat_model)
-        
+
         result = float(match.group(1)) if match else None
-        self._flat_cache[cache_key] = result  # Guardar en memoria
+        self._flat_cache[cache_key] = result  # Store in memory cache
         return result
 
     def _resolve_val(self, val_str: Optional[str], depth: int = 0) -> Any:
+        """
+        Safely casts a raw Modelica string value into a Python float or complex number.
+        Can resolve mathematical expressions and recursively fetch variable definitions.
+
+        :param val_str: The raw string expression assigned to a parameter.
+        :param depth: Current recursion depth to prevent infinite loops.
+        :return: A numerical value (float or complex), or None if unresolved.
+        """
         if not val_str or depth > 5:
             return None
         clean = val_str.strip().replace("'", "").replace('"', "")
@@ -192,7 +264,7 @@ class ModelicaParser:
 
             var_val = self.conn.get_parameter_value(self.model_name, var)
 
-            # DYNAWO FALLBACK: Busca la variable directamente en el texto de LoadFlow.mo
+            # DYNAWO FALLBACK: Search for the variable directly in the LoadFlow.mo source text
             if not var_val:
                 match = re.search(
                     rf"\b{var}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
@@ -223,6 +295,14 @@ class ModelicaParser:
             return None
 
     def _extract_parameters(self, declaring_model: str, comp_name: str) -> Dict[str, float]:
+        """
+        Iterates over a mapping of known physical parameters, extracting their values
+        for a specific component using multiple fallback parsing strategies.
+
+        :param declaring_model: The name of the model where the component is defined.
+        :param comp_name: The instance name of the component.
+        :return: A dictionary of extracted parameter keys and float values.
+        """
         param_map = {
             "Sn": "sn_nom",
             "SNom": "sn_nom",
@@ -232,11 +312,11 @@ class ModelicaParser:
             "U0Pu": "u_pu",
             "P": "p",
             "P0Pu": "p_pu",
-            "PGen0Pu": "p_pu",  # Añadido PGen0Pu para PV/BESS
+            "PGen0Pu": "p_pu",  # Added PGen0Pu for PV/BESS models
             "Q": "q",
             "Q0Pu": "q_pu",
             "QGenPu": "q_pu",
-            "QGen0Pu": "q_pu",  # Añadidos para PV/BESS
+            "QGen0Pu": "q_pu",  # Added for PV/BESS models
             "R": "r",
             "RPu": "r_pu",
             "X": "x",
@@ -264,7 +344,7 @@ class ModelicaParser:
                 if raw:
                     val = self._resolve_val(raw)
 
-            # DYNAWO FALLBACK: Extrae P0Pu_g01 = 6 leyendo directamente LoadFlow.mo
+            # DYNAWO FALLBACK: Extract assignments like P0Pu_g01 = 6 reading LoadFlow.mo directly
             if val is None:
                 match = re.search(
                     rf"\b{pm}_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)",
@@ -296,7 +376,7 @@ class ModelicaParser:
         if q_val is not None:
             extracted["q_pu"] = q_val
 
-        # Última red de seguridad para Cargas (ej. P0Pu_load_01 = 2)
+        # Final safety net for Load parameters (e.g., P0Pu_load_01 = 2)
         if "p_pu" not in extracted:
             match_p = re.search(
                 rf"\bP0Pu_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code

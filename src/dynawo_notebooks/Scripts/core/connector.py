@@ -1,6 +1,9 @@
 # FILE: src/dynawo_notebooks/Scripts/core/connector.py
 """
 OpenModelica Connector Module.
+
+This module provides the OMCConnector class, which manages the communication
+and interaction with the OpenModelica Compiler (OMC) via the OMPython API.
 """
 
 import os
@@ -13,7 +16,18 @@ logger = logging.getLogger(__name__)
 
 
 class OMCConnector:
+    """
+    Manages the session with the OpenModelica Compiler (OMC).
+    Provides methods to load libraries, check models, and extract parameters,
+    components, and topology definitions from Modelica code.
+    """
+
     def __init__(self):
+        """
+        Initializes the connection to the OpenModelica Compiler (OMC).
+        Sets up the ZeroMQ session and initializes cache dictionaries for performance.
+        Raises an exception if the connection fails.
+        """
         logger.info("Connecting to OpenModelica Compiler (OMC)...")
         try:
             self._omc = OMCSessionZMQ()
@@ -21,12 +35,17 @@ class OMCConnector:
         except Exception as e:
             logger.critical(f"Failed to connect to OMC: {e}")
             raise e
-            
-        # --- NUEVO: Sistemas de Caché para acelerar x100 ---
+
+        # --- CACHE SYSTEM: Caching mechanisms to significantly improve performance ---
         self._list_cache = {}
         self._param_cache = {}
 
     def load_libraries(self, dynawo_pkg_path: str) -> None:
+        """
+        Loads the standard Modelica libraries and the specified Dynawo package.
+
+        :param dynawo_pkg_path: Path to the local Dynawo package directory.
+        """
         logger.info("Loading Standard Modelica Libraries...")
         self._omc.sendExpression("loadModel(Modelica)")
         self._omc.sendExpression("loadModel(Complex)")
@@ -43,6 +62,12 @@ class OMCConnector:
             logger.error("Failed to load Dynawo package. Check path.")
 
     def load_local_files(self, source_dir: str, file_list: List[str]) -> None:
+        """
+        Loads user-specified local Modelica files into the OMC session.
+
+        :param source_dir: The root directory containing the source files.
+        :param file_list: List of file names to load.
+        """
         abs_source = os.path.abspath(source_dir).replace("\\", "/")
         logger.info(f"Loading {len(file_list)} local files from {abs_source}...")
         for f in file_list:
@@ -51,6 +76,12 @@ class OMCConnector:
                 logger.warning(f"Failed to load file: {f}")
 
     def check_model(self, model_name: str) -> bool:
+        """
+        Checks the target model for syntactic and semantic errors.
+
+        :param model_name: Name of the Modelica model to check.
+        :return: True if no errors are found, False otherwise.
+        """
         logger.info(f"Checking model: {model_name}")
         res = self._omc.sendExpression(f"checkModel({model_name})")
         return "Error" not in str(res)
@@ -58,6 +89,10 @@ class OMCConnector:
     def instantiate_model(self, model_name: str) -> Optional[str]:
         """
         Attempts to force OMC to compile and flatten the model safely.
+        Flattening resolves equations, functions, and inheritances into a single scope.
+
+        :param model_name: Name of the Modelica model.
+        :return: Flattened model string if successful, None otherwise.
         """
         logger.info(f"Attempting to instantiate (flatten) model {model_name}...")
         try:
@@ -71,9 +106,21 @@ class OMCConnector:
         return None
 
     def get_components(self, model_name: str) -> List[Any]:
+        """
+        Retrieves a list of component declarations inside the specified model.
+
+        :param model_name: Name of the Modelica model.
+        :return: A list containing the model's components.
+        """
         return self._omc.sendExpression(f"getComponents({model_name})")
 
     def get_connections(self, model_name: str) -> List[List[str]]:
+        """
+        Retrieves the electrical or mathematical connections defined in the model.
+
+        :param model_name: Name of the Modelica model.
+        :return: A list of connection pairs (e.g., [['compA.pin', 'compB.pin'], ...]).
+        """
         count_str = self._omc.sendExpression(f"getConnectionCount({model_name})")
         connections = []
         if count_str:
@@ -88,6 +135,13 @@ class OMCConnector:
         return connections
 
     def get_parameter_value(self, model_name: str, parameter_path: str) -> Optional[str]:
+        """
+        Retrieves the static value assigned to a specific parameter, utilizing an internal cache.
+
+        :param model_name: Name of the Modelica model.
+        :param parameter_path: Dot-notation path to the parameter.
+        :return: String representation of the value, or None if not found or an error occurs.
+        """
         cache_key = f"{model_name}::{parameter_path}"
         if cache_key in self._param_cache:
             return self._param_cache[cache_key]
@@ -100,16 +154,24 @@ class OMCConnector:
                 return res
         except Exception:
             pass
-            
+
         self._param_cache[cache_key] = None
         return None
 
     def get_modifier_value(
         self, model_name: str, component_name: str, parameter_name: str
     ) -> Optional[str]:
-        """Fallback: Parses source code to find mathematical equations."""
+        """
+        Fallback method: Parses the raw source code definition to extract a modifier's value
+        when standard API methods fail (e.g., inside complex inherited structures).
+
+        :param model_name: Name of the Modelica model.
+        :param component_name: Target component instance name.
+        :param parameter_name: Modifier parameter name to find.
+        :return: String value of the modifier, or None if not found.
+        """
         try:
-            # OPTIMIZACIÓN: Solo pedir list(model) a OMC una sola vez
+            # OPTIMIZATION: Request list(model) from OMC only once and cache the result
             if model_name not in self._list_cache:
                 raw_list = self._omc.sendExpression(f"list({model_name})")
                 if not raw_list or "Error" in str(raw_list):
@@ -118,12 +180,13 @@ class OMCConnector:
                     self._list_cache[model_name] = str(raw_list)
 
             definition_str = self._list_cache[model_name]
-            if not definition_str: return None
-            
+            if not definition_str:
+                return None
 
             comp_pattern = re.compile(rf"\b{component_name}\s*\(", re.IGNORECASE)
             comp_match = comp_pattern.search(definition_str)
-            if not comp_match: return None
+            if not comp_match:
+                return None
 
             start_comp_idx = comp_match.end()
             depth = 1
@@ -164,6 +227,12 @@ class OMCConnector:
             return None
 
     def get_extends(self, model_name: str) -> List[str]:
+        """
+        Fetches the classes that the given model inherits from.
+
+        :param model_name: Name of the Modelica model.
+        :return: List of parent class names.
+        """
         try:
             cmd = f"getInheritedClasses({model_name})"
             result = self._omc.sendExpression(cmd)

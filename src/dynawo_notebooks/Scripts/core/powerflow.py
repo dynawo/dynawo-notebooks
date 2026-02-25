@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 class PowerFlowRunner:
     """
-    Utility class to run Power Flow and extract convergence status.
+    Utility class responsible for executing AC Power Flow calculations
+    and extracting their convergence status and details.
     """
 
     @staticmethod
@@ -23,18 +24,18 @@ class PowerFlowRunner:
         Executes the AC Load Flow on the provided PyPowSyBl network.
         The network object is updated in-place with the mathematical results.
 
-        Returns:
-            bool: True if the load flow converged successfully, False otherwise.
+        :param network: The PyPowSyBl network object to be analyzed.
+        :return: True if the load flow converged successfully, False otherwise.
         """
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
         try:
-            # 1. AUTO-DETECTAR EL SLACK BUS
+            # 1. AUTO-DETECT THE SLACK BUS
             slack_bus_id = None
             try:
                 gens_df = network.get_generators()
                 for gid, row in gens_df.iterrows():
-                    # Si el ID del generador contiene "slack" o "infinite", atrapamos su bus
+                    # Identify the slack bus if the generator ID indicates it is a slack or infinite bus
                     if "infinite" in str(gid).lower() or "slack" in str(gid).lower():
                         slack_bus_id = row["bus_id"]
                         logger.info(
@@ -44,15 +45,18 @@ class PowerFlowRunner:
             except Exception as e:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
-            # 2. CONFIGURAR LOS PARÁMETROS DEL PROVEEDOR (OpenLoadFlow)
-            # Usamos exactamente los provider_parameters de la documentación
+            # 2. CONFIGURE PROVIDER PARAMETERS (OpenLoadFlow)
             provider_params = {}
             if slack_bus_id:
                 provider_params = {"slackBusSelectionMode": "NAME", "slackBusesIds": slack_bus_id}
 
-            lf_params = pp.loadflow.Parameters(provider_parameters=provider_params)
+            # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
+            # Utilize 'DC_VALUES' voltage initialization to provide a realistic starting point for the Newton-Raphson solver
+            lf_params = pp.loadflow.Parameters(
+                provider_parameters=provider_params, voltage_init_mode="DC_VALUES"
+            )
 
-            # 3. EJECUTAR EL LOAD FLOW PASANDO LOS PARÁMETROS
+            # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
             results = pp.loadflow.run_ac(network, parameters=lf_params)
 
             # results is a list of ComponentResult (one for each synchronous area)
