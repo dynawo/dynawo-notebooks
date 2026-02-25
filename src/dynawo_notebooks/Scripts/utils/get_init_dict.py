@@ -12,11 +12,11 @@ import json
 import argparse
 import logging
 import xml.etree.ElementTree as ET
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # Configure module-level logger
 logger = logging.getLogger(__name__)
-# If run as standalone script, configure basic logging
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
@@ -24,10 +24,10 @@ if __name__ == "__main__":
 def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
     """
     Recursively scans a folder for XML files and extracts 'dyn:unitDynamicModel' attributes.
+    Compiles these attributes into a JSON dictionary mapping Modelica models.
 
-    Args:
-        folder_path (str): The root directory to search for .xml files.
-        output_folder (str): The destination directory for the JSON output.
+    :param folder_path: The root directory to search for .xml files.
+    :param output_folder: The destination directory where the resulting JSON will be saved.
     """
     namespaces = {"dyn": "http://www.rte-france.com/dynawo"}
     output_filename = "parsed_models_data.json"
@@ -42,22 +42,15 @@ def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
         logger.warning(f"No XML files found in directory: {folder_path}")
         return
 
-    logger.info(f"Found {len(xml_files)} XML files. Starting parsing process...")
-
     parse_count = 0
     for file_path in xml_files:
         try:
             tree = ET.parse(file_path)
             root = tree.getroot()
+            parse_count += 1
 
-            # Find elements with the specific attribute using namespace
-            elements = root.findall(".//*[@dyn:unitDynamicModel]", namespaces)
-
-            if elements:
-                parse_count += 1
-                logger.debug(f"Found dynamic models in: {os.path.basename(file_path)}")
-
-            for elem in elements:
+            # Search dynamically for unit models across the XML structure
+            for elem in root.iter():
                 model_name = elem.get(f"{{{namespaces['dyn']}}}unitDynamicModel")
                 if model_name:
                     if model_name not in models_data:
@@ -70,7 +63,7 @@ def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
 
     logger.info(f"Extracted {len(models_data)} unique dynamic models from {parse_count} files.")
 
-    # Export
+    # Export dictionary to standard JSON format
     output_path = os.path.join(output_folder, output_filename)
     try:
         os.makedirs(output_folder, exist_ok=True)
@@ -97,4 +90,4 @@ if __name__ == "__main__":
     if os.path.exists(args.path):
         parse_dynawo_xmls(args.path, args.output)
     else:
-        logger.error(f"The provided path does not exist: {args.path}")
+        logger.error(f"Provided path does not exist: {args.path}")

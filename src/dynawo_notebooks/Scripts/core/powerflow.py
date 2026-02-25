@@ -52,8 +52,10 @@ class PowerFlowRunner:
 
             # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
             # Utilize 'DC_VALUES' voltage initialization to provide a realistic starting point for the Newton-Raphson solver
+
             lf_params = pp.loadflow.Parameters(
-                provider_parameters=provider_params, voltage_init_mode="DC_VALUES"
+                provider_parameters=provider_params, 
+                # voltage_init_mode=pp.voltage_initializer 
             )
 
             # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
