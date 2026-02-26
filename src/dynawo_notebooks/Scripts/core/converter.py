@@ -65,8 +65,8 @@ class PowsyblConverter:
                     id=f"VL_{bid}",
                     substation_id=f"Sub_{sub_assigned}",
                     nominal_v=v,
-                    low_voltage_limit=v * 0.8,  # Límite mínimo de tensión (80%)
-                    high_voltage_limit=v * 1.2,  # Límite máximo de tensión (120%)
+                    low_voltage_limit=v * 0.8,  # Minimum voltage limit (80%)
+                    high_voltage_limit=v * 1.2,  # Maximum voltage limit (120%)
                     topology_kind="BUS_BREAKER",
                 )
                 network.create_buses(id=bid, voltage_level_id=f"VL_{bid}")

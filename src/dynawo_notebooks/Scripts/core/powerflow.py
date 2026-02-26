@@ -30,11 +30,12 @@ class PowerFlowRunner:
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
         try:
-            # 1. AUTO-DETECTAR EL SLACK BUS
+            # 1. AUTO-DETECT THE SLACK BUS
             slack_bus_id = None
             try:
                 gens_df = network.get_generators()
                 for gid, row in gens_df.iterrows():
+                    # If the generator ID contains "slack" or "infinite", identify and assign its bus as the slack bus
                     if "infinite" in str(gid).lower() or "slack" in str(gid).lower():
                         slack_bus_id = row["bus_id"]
                         logger.info(
@@ -44,19 +45,19 @@ class PowerFlowRunner:
             except Exception as e:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
-            # 2. CONFIGURAR LOS PARÁMETROS DEL PROVEEDOR (OpenLoadFlow)
+            # 2. CONFIGURE PROVIDER PARAMETERS (OpenLoadFlow)
             provider_params = {}
             if slack_bus_id:
                 provider_params = {"slackBusSelectionMode": "NAME", "slackBusesIds": slack_bus_id}
 
-            # 3. CREAR LOS PARÁMETROS GLOBALES
-            # OJO AQUÍ: La ruta correcta es pp.loadflow.VoltageInitMode
+            # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
+            # NOTE: Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
                 voltage_init_mode=pp.loadflow.VoltageInitMode.DC_VALUES,
             )
 
-            # 4. EJECUTAR EL LOAD FLOW PASANDO LOS PARÁMETROS
+            # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
             results = pp.loadflow.run_ac(network, parameters=lf_params)
 
             # results is a list of ComponentResult (one for each synchronous area)
