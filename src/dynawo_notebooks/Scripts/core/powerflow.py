@@ -30,12 +30,11 @@ class PowerFlowRunner:
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
         try:
-            # 1. AUTO-DETECT THE SLACK BUS
+            # 1. AUTO-DETECTAR EL SLACK BUS
             slack_bus_id = None
             try:
                 gens_df = network.get_generators()
                 for gid, row in gens_df.iterrows():
-                    # Identify the slack bus if the generator ID indicates it is a slack or infinite bus
                     if "infinite" in str(gid).lower() or "slack" in str(gid).lower():
                         slack_bus_id = row["bus_id"]
                         logger.info(
@@ -45,20 +44,19 @@ class PowerFlowRunner:
             except Exception as e:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
-            # 2. CONFIGURE PROVIDER PARAMETERS (OpenLoadFlow)
+            # 2. CONFIGURAR LOS PARÁMETROS DEL PROVEEDOR (OpenLoadFlow)
             provider_params = {}
             if slack_bus_id:
                 provider_params = {"slackBusSelectionMode": "NAME", "slackBusesIds": slack_bus_id}
 
-            # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
-            # Utilize 'DC_VALUES' voltage initialization to provide a realistic starting point for the Newton-Raphson solver
-
+            # 3. CREAR LOS PARÁMETROS GLOBALES
+            # OJO AQUÍ: La ruta correcta es pp.loadflow.VoltageInitMode
             lf_params = pp.loadflow.Parameters(
-                provider_parameters=provider_params, 
-                # voltage_init_mode=pp.voltage_initializer 
+                provider_parameters=provider_params,
+                voltage_init_mode=pp.loadflow.VoltageInitMode.DC_VALUES,
             )
 
-            # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
+            # 4. EJECUTAR EL LOAD FLOW PASANDO LOS PARÁMETROS
             results = pp.loadflow.run_ac(network, parameters=lf_params)
 
             # results is a list of ComponentResult (one for each synchronous area)

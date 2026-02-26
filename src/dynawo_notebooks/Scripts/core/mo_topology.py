@@ -84,3 +84,21 @@ class MoTopologyToolkit:
             logger.info(f"Data exported successfully to: {filename}")
         except IOError as e:
             logger.error(f"Failed to export data: {e}")
+
+    def import_from_standard_json(self, filepath: str) -> dict:
+        logger.info(f"Importing topology data from JSON file: {filepath}")
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            logger.info(f"Successfully loaded data from {filepath}")
+
+            for category, items in data.items():
+                logger.info(f" - Loaded {len(items)} {category}")
+
+            return data
+
+        except Exception as e:
+            logger.error(f"Error reading {filepath}: {e}")
+            raise
