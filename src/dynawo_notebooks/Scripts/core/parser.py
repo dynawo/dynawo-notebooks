@@ -83,6 +83,16 @@ class ModelicaParser:
         all_components_map = self._collect_all_components_recursive()
         logger.info(f"Total unique components found: {len(all_components_map)}")
 
+        if self.flat_model and len(self.flat_model) > 100:
+            logger.info(
+                f"SUCCESS: Flattened model generated correctly ({len(self.flat_model)} characters)."
+            )
+        else:
+            logger.info(
+                f"WARNING: Flattened model is empty or too short. "
+                f"OpenModelica could not resolve equations for {self.model_name}. "
+            )
+
         topo = {
             "buses": {},
             "lines": {},
