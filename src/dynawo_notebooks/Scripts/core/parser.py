@@ -42,6 +42,35 @@ class ModelicaParser:
 
         self._flat_cache = {}
 
+        # --- OPTIMIZATION: BULK PARSING ---
+        # Instead of thousands of individual ZMQ calls, we pre-parse the data into
+        # lookup dictionaries once during initialization.
+        self._flat_assignments = self._prebuild_assignment_map(self.flat_model)
+        self._source_assignments = self._prebuild_source_map(self.top_code)
+
+    def _prebuild_assignment_map(self, flat_str: str) -> Dict[str, float]:
+        """
+        Scans the flattened model string once to map all parameter assignments to their values.
+
+        Note: We only capture literals here; Complex types are handled via fallback.
+
+        :param flat_str: The flattened model string containing variable assignments.
+        :return: A dictionary mapping 'path.to.component.parameter' to numerical values.
+        """
+        # Pattern to capture 'path.to.component.parameter = value;'
+        pattern = re.compile(r"([\w\.]+)\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;")
+        return {match.group(1): float(match.group(2)) for match in pattern.finditer(flat_str)}
+
+    def _prebuild_source_map(self, source_str: str) -> Dict[str, float]:
+        """
+        Scans the raw source code string once to map all parameter assignments to their values.
+
+        :param source_str: The raw source code of the Modelica model.
+        :return: A dictionary mapping 'param_component' to numerical values.
+        """
+        pattern = re.compile(r"\b(\w+)\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b")
+        return {match.group(1): float(match.group(2)) for match in pattern.finditer(source_str)}
+
     def parse_topology(self) -> Dict[str, Dict]:
         """
         Executes the full parsing pipeline. Extracts all components, categorizes them
@@ -215,29 +244,13 @@ class ModelicaParser:
 
     def _extract_from_flat(self, comp_name: str, param: str) -> Optional[float]:
         """
-        Extracts the numerical value of a specified parameter directly from the
-        flattened model string using regular expressions.
+        Extracts parameters utilizing the pre-built memory map to bypass ZMQ latency.
 
         :param comp_name: The instance name of the component.
         :param param: The parameter name to search for (e.g., 's0Pu.re').
         :return: The extracted numerical float value, or None if not found.
         """
-        if not self.flat_model:
-            return None
-
-        # OPTIMIZATION: If previously searched, retrieve from cache instantly
-        cache_key = f"{comp_name}.{param}"
-        if cache_key in self._flat_cache:
-            return self._flat_cache[cache_key]
-
-        pattern = re.compile(
-            rf"\b{re.escape(comp_name)}\.{re.escape(param)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;"
-        )
-        match = pattern.search(self.flat_model)
-
-        result = float(match.group(1)) if match else None
-        self._flat_cache[cache_key] = result  # Store in memory cache
-        return result
+        return self._flat_assignments.get(f"{comp_name}.{param}")
 
     def _resolve_val(self, val_str: Optional[str], depth: int = 0) -> Any:
         """
@@ -262,18 +275,13 @@ class ModelicaParser:
             if var in ["Complex", "sin", "cos", "tan", "sqrt", "j"]:
                 continue
 
-            var_val = self.conn.get_parameter_value(self.model_name, var)
+            # Optimized variable lookup using the source map
+            var_val = self._source_assignments.get(var)
+            if var_val is None:
+                var_val = self.conn.get_parameter_value(self.model_name, var)
 
-            # DYNAWO FALLBACK: Search for the variable directly in the LoadFlow.mo source text
-            if not var_val:
-                match = re.search(
-                    rf"\b{var}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
-                )
-                if match:
-                    var_val = match.group(1)
-
-            if var_val:
-                val_num = self._resolve_val(var_val, depth + 1)
+            if var_val is not None:
+                val_num = self._resolve_val(str(var_val), depth + 1)
                 if val_num is not None:
                     if isinstance(val_num, complex):
                         resolved_expr = re.sub(
@@ -297,7 +305,7 @@ class ModelicaParser:
     def _extract_parameters(self, declaring_model: str, comp_name: str) -> Dict[str, float]:
         """
         Iterates over a mapping of known physical parameters, extracting their values
-        for a specific component using multiple fallback parsing strategies.
+        for a specific component utilizing memory maps to bypass ZMQ latency.
 
         :param declaring_model: The name of the model where the component is defined.
         :param comp_name: The instance name of the component.
@@ -355,63 +363,35 @@ class ModelicaParser:
 
         extracted = {}
         for pm, pj in param_map.items():
-            val = self._extract_from_flat(comp_name, pm)
+            # Strategy 1: Flattened Memory Map (Literal numbers)
+            val = self._flat_assignments.get(f"{comp_name}.{pm}")
 
+            # Strategy 2: Source Code Memory Map (Assignments like P0Pu_g01)
+            if val is None:
+                val = self._source_assignments.get(f"{pm}_{comp_name}")
+
+            # Strategy 3: Individual API calls (Handles Complex, modifiers and expressions)
             if val is None:
                 raw = self.conn.get_modifier_value(declaring_model, comp_name, pm)
+                if not raw:
+                    raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
                 if raw:
                     val = self._resolve_val(raw)
-
-            if val is None:
-                raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
-                if raw:
-                    val = self._resolve_val(raw)
-
-            # DYNAWO FALLBACK: Extract assignments like P0Pu_g01 = 6 reading LoadFlow.mo directly
-            if val is None:
-                match = re.search(
-                    rf"\b{pm}_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)",
-                    self.top_code,
-                )
-                if match:
-                    val = float(match.group(1))
 
             if val is not None:
+                # FIX: Check if val is a complex number from _resolve_val
                 if isinstance(val, complex):
-                    extracted[pj] = val.real
+                    extracted[pj] = float(val.real)
                 else:
                     extracted[pj] = float(val)
 
-        p_val = self._extract_from_flat(comp_name, "s0Pu.re")
-        q_val = self._extract_from_flat(comp_name, "s0Pu.im")
-
-        if p_val is None or q_val is None:
-            raw_s0 = self.conn.get_modifier_value(declaring_model, comp_name, "s0Pu")
-            if not raw_s0:
-                raw_s0 = self.conn.get_parameter_value(self.model_name, f"{comp_name}.s0Pu")
-            s0_val = self._resolve_val(raw_s0)
-            if s0_val is not None and isinstance(s0_val, complex):
-                p_val = s0_val.real
-                q_val = s0_val.imag
+        # Handle complex power s0Pu via memory map
+        p_val = self._flat_assignments.get(f"{comp_name}.s0Pu.re")
+        q_val = self._flat_assignments.get(f"{comp_name}.s0Pu.im")
 
         if p_val is not None:
             extracted["p_pu"] = p_val
         if q_val is not None:
             extracted["q_pu"] = q_val
-
-        # Final safety net for Load parameters (e.g., P0Pu_load_01 = 2)
-        if "p_pu" not in extracted:
-            match_p = re.search(
-                rf"\bP0Pu_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
-            )
-            if match_p:
-                extracted["p_pu"] = float(match_p.group(1))
-
-        if "q_pu" not in extracted:
-            match_q = re.search(
-                rf"\bQ0Pu_{comp_name}\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)", self.top_code
-            )
-            if match_q:
-                extracted["q_pu"] = float(match_q.group(1))
 
         return extracted
