@@ -53,11 +53,44 @@ class PowsyblConverter:
         for sub_id in unique_subs:
             network.create_substations(id=f"Sub_{sub_id}")
 
-        # 2. VOLTAGE LEVELS & BUSES
+        # 2. VOLTAGE DISCOVERY & CREATION
+        # Dynawo buses often don't have explicit Un. We discover it from connected equipment.
         bus_nominal_v = {}
         if "buses" in data:
             for bid, info in data["buses"].items():
-                v = info.get("nominal_v") or 225.0
+                # 2.1 Try to get explicit voltage
+                v = info.get("nominal_v")
+
+                # 2.2 Discovery from Transformers (rated_u1/u2)
+                if not v or v == 0.0:
+                    for tid, t_info in data.get("transformers", {}).items():
+                        if t_info.get("bus1") == bid and t_info.get("rated_u1"):
+                            v = t_info.get("rated_u1")
+                            break
+                        if t_info.get("bus2") == bid and t_info.get("rated_u2"):
+                            v = t_info.get("rated_u2")
+                            break
+
+                # 2.3 Discovery from Generators (nominal_v)
+                if not v or v == 0.0:
+                    for gid, g_info in data.get("generators", {}).items():
+                        if g_info.get("bus") == bid and g_info.get("nominal_v"):
+                            v = g_info.get("nominal_v")
+                            break
+
+                # 2.4 Last resort: Nordic naming convention or generic default
+                if not v or v == 0.0:
+                    if bid.startswith("bus_4"):
+                        v = 400.0
+                    elif bid.startswith("bus_2"):
+                        v = 220.0
+                    elif bid.startswith("bus_1"):
+                        v = 130.0
+                    elif "BG" in bid:
+                        v = 20.0
+                    else:
+                        v = 225.0
+
                 bus_nominal_v[bid] = v
                 sub_assigned = bus_to_sub[bid]
 
@@ -226,7 +259,14 @@ class PowsyblConverter:
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return
-        sn, un1 = info.get("sn_nom", 100.0), bus_v.get(b1, 225.0)
+
+        # Priority for Transformer Voltages:
+        # 1. rated_u1/u2 from JSON (if Parser extracted it)
+        # 2. Discovered nominal voltage of the connected bus
+        un1 = info.get("rated_u1") or bus_v.get(b1, 225.0)
+        un2 = info.get("rated_u2") or bus_v.get(b2, 225.0)
+        sn = info.get("sn_nom", 100.0)
+
         z_base = (un1**2) / sn
 
         network.create_2_windings_transformers(
@@ -240,6 +280,6 @@ class PowsyblConverter:
             g=0,
             b=0,
             rated_u1=un1,
-            rated_u2=bus_v.get(b2, 225.0),
+            rated_u2=un2,
             rated_s=sn,
         )

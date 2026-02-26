@@ -304,32 +304,55 @@ class ModelicaParser:
         :return: A dictionary of extracted parameter keys and float values.
         """
         param_map = {
+            # --- Nominal Power (S_base) ---
             "Sn": "sn_nom",
             "SNom": "sn_nom",
+            "rated_s": "sn_nom",
+            "PNomAlt": "sn_nom",  # Found in Synchronous Machines (SMIB)
+            "PNomTurb": "sn_nom",  # Backup for turbines
+            # --- Nominal Voltage (V_base) ---
             "Un": "nominal_v",
             "U": "nominal_v",
+            "UNom": "nominal_v",  # Found in InertialGrid cases
+            "rated_u1": "rated_u1",  # Transformer Winding 1
+            "rated_u2": "rated_u2",  # Transformer Winding 2
+            # --- Voltage Setpoints (p.u.) ---
             "UPu": "u_pu",
             "U0Pu": "u_pu",
+            "u0Pu": "u_pu",  # Found in BESS
+            "target_v": "u_pu",
+            # --- Active Power (P) ---
             "P": "p",
+            "p": "p",
             "P0Pu": "p_pu",
-            "PGen0Pu": "p_pu",  # Added PGen0Pu for PV/BESS models
+            "p0Pu": "p_pu",  # Found in BESS_init
+            "PGen0Pu": "p_pu",  # Found in PV/BESS static models
+            "PGenPu": "p_pu",
+            # --- Reactive Power (Q) ---
             "Q": "q",
+            "q": "q",
             "Q0Pu": "q_pu",
+            "q0Pu": "q_pu",  # Found in BESS
             "QGenPu": "q_pu",
-            "QGen0Pu": "q_pu",  # Added for PV/BESS models
+            "QGen0Pu": "q_pu",
+            # --- Impedance / Admittance (R, X, B, G) ---
             "R": "r",
             "RPu": "r_pu",
+            "rPu": "r_pu",
             "X": "x",
             "XPu": "x_pu",
+            "xPu": "x_pu",
             "B": "b",
             "BPu": "b_pu",
+            "bPu": "b_pu",
             "G": "g",
             "GPu": "g_pu",
+            "gPu": "g_pu",
+            # --- Others ---
             "tapRatio": "ratio",
+            "ratio": "ratio",
         }
 
-        extracted = {}
-        # ... (resto del código igual) ...
         extracted = {}
         for pm, pj in param_map.items():
             val = self._extract_from_flat(comp_name, pm)
