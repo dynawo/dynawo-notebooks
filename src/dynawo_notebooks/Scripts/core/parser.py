@@ -8,6 +8,8 @@ the OpenModelica compiler, inspecting flat models and resolving variable mapping
 to build a standardized topological dictionary.
 """
 
+import os
+import json
 import logging
 import re
 from typing import Dict, Any, Optional, List
@@ -42,11 +44,32 @@ class ModelicaParser:
 
         self._flat_cache = {}
 
+        # --- LOAD PARAMETER MAPPING ---
+        self.param_map = self._load_param_mapping()
+
         # --- OPTIMIZATION: BULK PARSING ---
         # Instead of thousands of individual ZMQ calls, we pre-parse the data into
         # lookup dictionaries once during initialization.
         self._flat_assignments = self._prebuild_assignment_map(self.flat_model)
         self._source_assignments = self._prebuild_source_map(self.top_code)
+
+    def _load_param_mapping(self, filename: str = "param_mapping.json") -> Dict[str, str]:
+        """
+        Loads the parameter mapping dictionary from an external JSON configuration file.
+        """
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        filepath = os.path.join(script_dir, filename)
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                mapping = json.load(f)
+            logger.info(f"Loaded {len(mapping)} parameter mappings from {filename}")
+            return mapping
+        except Exception as e:
+            logger.error(
+                f"Failed to load parameter mapping from {filepath}. Using empty map. Error: {e}"
+            )
+            return {}
 
     def _prebuild_assignment_map(self, flat_str: str) -> Dict[str, float]:
         """
@@ -68,7 +91,7 @@ class ModelicaParser:
         :param source_str: The raw source code of the Modelica model.
         :return: A dictionary mapping 'param_component' to numerical values.
         """
-        pattern = re.compile(r"\b(\w+)\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b")
+        pattern = re.compile(r"\b([\w\.]+)\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b")
         return {match.group(1): float(match.group(2)) for match in pattern.finditer(source_str)}
 
     def parse_topology(self) -> Dict[str, Dict]:
@@ -314,74 +337,33 @@ class ModelicaParser:
 
     def _extract_parameters(self, declaring_model: str, comp_name: str) -> Dict[str, float]:
         """
-        Iterates over a mapping of known physical parameters, extracting their values
-        for a specific component utilizing memory maps to bypass ZMQ latency.
+        Extracts physical parameters for a specific component using multi-strategy lookups.
 
-        :param declaring_model: The name of the model where the component is defined.
+        This method prioritizes pre-built memory maps (Flattened and Source) to bypass
+        OMC communication latency. It includes logic for sign correction (generation),
+        complex number resolution, and hierarchical modifier support (IEEE 57).
+
+        :param declaring_model: The name of the Modelica model where the component is declared.
         :param comp_name: The instance name of the component.
-        :return: A dictionary of extracted parameter keys and float values.
+        :return: A dictionary of extracted parameter keys and their float values.
         """
-        param_map = {
-            # --- Nominal Power (S_base) ---
-            "Sn": "sn_nom",
-            "SNom": "sn_nom",
-            "rated_s": "sn_nom",
-            "PNomAlt": "sn_nom",  # Found in Synchronous Machines (SMIB)
-            "PNomTurb": "sn_nom",  # Backup for turbines
-            # --- Nominal Voltage (V_base) ---
-            "Un": "nominal_v",
-            "U": "nominal_v",
-            "UNom": "nominal_v",  # Found in InertialGrid cases
-            "rated_u1": "rated_u1",  # Transformer Winding 1
-            "rated_u2": "rated_u2",  # Transformer Winding 2
-            # --- Voltage Setpoints (p.u.) ---
-            "UPu": "u_pu",
-            "U0Pu": "u_pu",
-            "u0Pu": "u_pu",  # Found in BESS
-            "target_v": "u_pu",
-            # --- Active Power (P) ---
-            "P": "p",
-            "p": "p",
-            "P0Pu": "p_pu",
-            "p0Pu": "p_pu",  # Found in BESS_init
-            "PGen0Pu": "p_pu",  # Found in PV/BESS static models
-            "PGenPu": "p_pu",
-            # --- Reactive Power (Q) ---
-            "Q": "q",
-            "q": "q",
-            "Q0Pu": "q_pu",
-            "q0Pu": "q_pu",  # Found in BESS
-            "QGenPu": "q_pu",
-            "QGen0Pu": "q_pu",
-            # --- Impedance / Admittance (R, X, B, G) ---
-            "R": "r",
-            "RPu": "r_pu",
-            "rPu": "r_pu",
-            "X": "x",
-            "XPu": "x_pu",
-            "xPu": "x_pu",
-            "B": "b",
-            "BPu": "b_pu",
-            "bPu": "b_pu",
-            "G": "g",
-            "GPu": "g_pu",
-            "gPu": "g_pu",
-            # --- Others ---
-            "tapRatio": "ratio",
-            "ratio": "ratio",
-        }
-
         extracted = {}
-        for pm, pj in param_map.items():
-            # Strategy 1: Flattened Memory Map (Literal numbers)
+
+        # Iterate over the mapping loaded from JSON
+        for pm, pj in self.param_map.items():
+            # Strategy 1: Flattened Memory Map (Resolved numerical literals)
             val = self._flat_assignments.get(f"{comp_name}.{pm}")
 
-            # Strategy 2: Source Code Memory Map (Assignments like P0Pu_g01)
+            # Strategy 2: Source Code Memory Map (TestCase Modifiers)
             if val is None:
+                # Pattern A: Nordic style (param_comp)
                 val = self._source_assignments.get(f"{pm}_{comp_name}")
+                # Pattern B: IEEE 57 / Hierarchical style (comp.param)
+                if val is None:
+                    val = self._source_assignments.get(f"{comp_name}.{pm}")
 
-            # Strategy 3: Individual API calls (Handles Complex, modifiers and expressions)
-            if val is None:
+            # Strategy 3: Individual API calls (Fallback for complex math or global variables)
+            if val is None or isinstance(val, str):
                 raw = self.conn.get_modifier_value(declaring_model, comp_name, pm)
                 if not raw:
                     raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
@@ -389,19 +371,30 @@ class ModelicaParser:
                     val = self._resolve_val(raw)
 
             if val is not None:
-                # FIX: Check if val is a complex number from _resolve_val
-                if isinstance(val, complex):
-                    extracted[pj] = float(val.real)
+                # Handle complex numbers by extracting the real part
+                numeric_val = val.real if isinstance(val, complex) else float(val)
+
+                # Sign correction: Dynawo TestCases often use negative values for injection.
+                # PyPowSyBl (IIDM) expects positive values for generator target power.
+                if pj == "p_pu" or pj == "p":
+                    extracted[pj] = abs(numeric_val)
                 else:
-                    extracted[pj] = float(val)
+                    extracted[pj] = numeric_val
 
-        # Handle complex power s0Pu via memory map
-        p_val = self._flat_assignments.get(f"{comp_name}.s0Pu.re")
-        q_val = self._flat_assignments.get(f"{comp_name}.s0Pu.im")
+        # --- SPECIAL HANDLING: COMPLEX POWER (s0Pu, s10Pu, s20Pu) ---
+        # Used extensively in Loads, BESS, and HVDC links.
+        for s_param in ["s0Pu", "s10Pu", "s20Pu"]:
+            # Try to get real and imaginary parts from the flattened model map
+            p_val = self._flat_assignments.get(f"{comp_name}.{s_param}.re")
+            q_val = self._flat_assignments.get(f"{comp_name}.{s_param}.im")
 
-        if p_val is not None:
-            extracted["p_pu"] = p_val
-        if q_val is not None:
-            extracted["q_pu"] = q_val
+            # Fallback for scalar assignments in the source map
+            if p_val is None:
+                p_val = self._source_assignments.get(f"{comp_name}.{s_param}")
+
+            if p_val is not None:
+                extracted["p_pu"] = abs(float(p_val))
+            if q_val is not None:
+                extracted["q_pu"] = float(q_val) if q_val is not None else 0.0
 
         return extracted
