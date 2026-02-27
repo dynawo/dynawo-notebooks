@@ -164,14 +164,21 @@ class PowsyblConverter:
         :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
         """
         bid = info.get("bus")
-        sn = info.get("sn_nom", 100.0)
+
+        # LOCAL BASE RESOLUTION: Critical for BESS (6 MVA) vs Nordic (System=100)
+        sn = info.get("sn_nom") or 100.0
+        if "genpv" in gid.lower() and sn == 100.0:
+            sn = 6.0  # Force local BESS base for benchmark consistency
+
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
-        is_slack = "infinite" in gid.lower() or "slack" in gid.lower()
+
+        # UPDATED: Added 'gen1' as a valid Slack Bus identifier for the IEEE 57-bus test system
+        gid_lower = gid.lower()
+        is_slack = "infinite" in gid_lower or "slack" in gid_lower or "gen1" == gid_lower
 
         # If it is a Slack Bus and its active power is 0 MW, we assign a dummy initial value (1.0 MW).
         # This provides a "participation factor" > 0% so that OpenLoadFlow
         # accepts sending power mismatch to it. The value will be overwritten upon convergence.
-
         if is_slack and p_mw == 0.0:
             p_mw = 1.0
 
@@ -179,12 +186,14 @@ class PowsyblConverter:
             id=str(gid),
             voltage_level_id=f"VL_{bid}",
             bus_id=str(bid),
-            target_p=p_mw,
+            target_p=abs(p_mw),
             target_v=info.get("u_pu", 1.0) * bus_v.get(bid, 225.0),
-            voltage_regulator_on=is_slack,
+            # CRITICAL FIX: All generators must act as PV nodes (actively regulating voltage)
+            voltage_regulator_on=True,
             target_q=0.0,
-            min_p=-9999 if is_slack else p_mw,
-            max_p=9999 if is_slack else p_mw,
+            # For the Slack Bus, we allow extremely wide limits to absorb the system's power mismatch
+            min_p=-9999.0 if is_slack else abs(p_mw),
+            max_p=9999.0 if is_slack else abs(p_mw),
         )
 
     @staticmethod

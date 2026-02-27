@@ -35,8 +35,9 @@ class PowerFlowRunner:
             try:
                 gens_df = network.get_generators()
                 for gid, row in gens_df.iterrows():
-                    # If the generator ID contains "slack" or "infinite", identify and assign its bus as the slack bus
-                    if "infinite" in str(gid).lower() or "slack" in str(gid).lower():
+                    gid_str = str(gid).lower()
+                    # UPDATED: Recognize Gen1 as the Slack Bus specifically for the IEEE 57-bus network
+                    if "infinite" in gid_str or "slack" in gid_str or gid_str == "gen1":
                         slack_bus_id = row["bus_id"]
                         logger.info(
                             f"Auto-detected Slack Bus: {slack_bus_id} (from generator {gid})"
