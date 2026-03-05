@@ -7,6 +7,8 @@ into a strictly typed PyPowSyBl Network object. It handles the grouping of buses
 into substations to satisfy transformer connectivity requirements.
 """
 
+import os
+import json
 import logging
 import pandas as pd
 import pypowsybl as pp
@@ -22,6 +24,29 @@ class PowsyblConverter:
     """
 
     @staticmethod
+    def _load_voltage_mapping(filename: str = "voltage_mapping.json") -> Dict[str, float]:
+        """
+        Loads the voltage mapping dictionary from an external JSON configuration file.
+        Provides a safe fallback to default values if the configuration file is missing.
+
+        :param filename: The name of the JSON file containing the voltage mapping rules.
+        :return: A dictionary mapping string prefixes to nominal voltage values (float).
+        """
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        filepath = os.path.join(script_dir, filename)
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                mapping = json.load(f)
+            logger.debug(f"Loaded {len(mapping)} voltage rules from {filename}")
+            return mapping
+        except Exception as e:
+            logger.warning(
+                f"Failed to load voltage mapping from {filepath}. Using defaults. Error: {e}"
+            )
+            return {"bus_4": 400.0, "bus_2": 220.0, "bus_1": 130.0, "BG": 20.0, "default": 225.0}
+
+    @staticmethod
     def build_network(data: Dict) -> pp.network.Network:
         """
         Constructs a complete PyPowSyBl Network from the raw parsed topology data.
@@ -31,6 +56,9 @@ class PowsyblConverter:
         """
         logger.info("Initializing PyPowSybl Network construction...")
         network = pp.network.create_empty()
+
+        # Load external configuration for voltage naming conventions
+        voltage_mapping = PowsyblConverter._load_voltage_mapping()
 
         # 1. SUBSTATION GROUPING LOGIC
         # PyPowSyBl requires both sides of a transformer to be in the same Substation.
@@ -78,18 +106,40 @@ class PowsyblConverter:
                             v = g_info.get("nominal_v")
                             break
 
-                # 2.4 Last resort: Nordic naming convention or generic default
+                # 2.4 Discovery from Loads
                 if not v or v == 0.0:
-                    if bid.startswith("bus_4"):
-                        v = 400.0
-                    elif bid.startswith("bus_2"):
-                        v = 220.0
-                    elif bid.startswith("bus_1"):
-                        v = 130.0
-                    elif "BG" in bid:
-                        v = 20.0
-                    else:
-                        v = 225.0
+                    for lid, l_info in data.get("loads", {}).items():
+                        if l_info.get("bus") == bid and l_info.get("nominal_v"):
+                            v = l_info.get("nominal_v")
+                            break
+
+                # 2.5 Discovery from Lines
+                if not v or v == 0.0:
+                    for lid, l_info in data.get("lines", {}).items():
+                        if (l_info.get("bus1") == bid or l_info.get("bus2") == bid) and l_info.get(
+                            "nominal_v"
+                        ):
+                            v = l_info.get("nominal_v")
+                            break
+
+                # 2.6 Naming convention fallback using external JSON rules (IMPLEMENTED)
+                if not v or v == 0.0:
+                    for prefix, mapped_voltage in voltage_mapping.items():
+                        if prefix != "default" and prefix in bid:
+                            v = mapped_voltage
+                            break
+                    # If it still hasn't found a match, apply the default voltage
+                    if not v or v == 0.0:
+                        v = voltage_mapping.get("default", 225.0)
+
+                # Force 'v' to be a float. If the parser extracted a weird string, fallback safely.
+                try:
+                    v = float(v)
+                except (ValueError, TypeError):
+                    logger.warning(
+                        f"Could not cast voltage '{v}' to float for bus {bid}. Using default."
+                    )
+                    v = float(voltage_mapping.get("default", 225.0))
 
                 bus_nominal_v[bid] = v
                 sub_assigned = bus_to_sub[bid]
@@ -102,6 +152,7 @@ class PowsyblConverter:
                     high_voltage_limit=v * 1.2,  # Maximum voltage limit (120%)
                     topology_kind="BUS_BREAKER",
                 )
+
                 network.create_buses(id=bid, voltage_level_id=f"VL_{bid}")
 
         # 3. LINES
@@ -172,13 +223,18 @@ class PowsyblConverter:
 
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
 
-        # UPDATED: Added 'gen1' as a valid Slack Bus identifier for the IEEE 57-bus test system
+        # We use slack_bus_mapping.json in powerflow.py. Here we do a basic check
+        # just to set wide limits for generators that might act as slack.
         gid_lower = gid.lower()
-        is_slack = "infinite" in gid_lower or "slack" in gid_lower or "gen1" == gid_lower
+        is_slack = (
+            "infinite" in gid_lower
+            or "slack" in gid_lower
+            or "gen1" == gid_lower
+            or "g20" == gid_lower
+        )
 
         # If it is a Slack Bus and its active power is 0 MW, we assign a dummy initial value (1.0 MW).
-        # This provides a "participation factor" > 0% so that OpenLoadFlow
-        # accepts sending power mismatch to it. The value will be overwritten upon convergence.
+        # This provides a "participation factor" > 0% so that OpenLoadFlow accepts mismatch injection.
         if is_slack and p_mw == 0.0:
             p_mw = 1.0
 
