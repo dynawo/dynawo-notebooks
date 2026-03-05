@@ -243,3 +243,61 @@ class OMCConnector:
         except Exception:
             pass
         return []
+
+    def simulate_model(self, model_name: str, stop_time: float = 0.0) -> bool:
+        """
+        Runs a Modelica simulation to evaluate initialization and steady-state values.
+
+        :param model_name: Name of the Modelica model to simulate.
+        :param stop_time: Simulation stop time (default 0.0 for Load Flow / Init).
+        :return: True if the simulation was successful, False otherwise.
+        """
+        logger.info(
+            f"Starting OMC simulation for '{model_name}' (stopTime={stop_time}). This may take a moment..."
+        )
+        res = self._omc.sendExpression(f"simulate({model_name}, stopTime={stop_time})")
+
+        # OpenModelica returns a dictionary-like string on success, containing "timeCompile" etc.
+        if res and "timeCompile" in str(res) and "Error" not in str(res):
+            logger.info("OMC Simulation completed successfully.")
+            return True
+        else:
+            logger.error(f"OMC Simulation failed: {res}")
+            return False
+
+    def get_simulation_value(self, variable_name: str, time: float = 0.0) -> Optional[float]:
+        """
+        Extracts the numerical value of a variable at a specific time from the last simulation.
+
+        :param variable_name: The exact dot-notation path to the variable (e.g., 'bus_1.UPu').
+        :param time: The time point to query.
+        :return: The float value, or None if extraction fails.
+        """
+        try:
+            val = self._omc.sendExpression(f"val({variable_name}, {time})")
+            if val is not None and not isinstance(val, str):
+                return float(val)
+            elif isinstance(val, str) and "Error" not in val:
+                return float(val)
+            return None
+        except Exception:
+            return None
+
+    def get_working_directory(self) -> str:
+        """
+        Gets the current working directory of the OMC session.
+        """
+        res = self._omc.sendExpression("cd()")
+        return str(res).strip('"') if res else ""
+
+    def set_working_directory(self, path: str) -> bool:
+        """
+        Sets the working directory for the OMC session.
+        OpenModelica requires forward slashes for paths.
+
+        :param path: The target directory path.
+        :return: True if successful, False otherwise.
+        """
+        clean_path = str(path).replace("\\", "/")
+        res = self._omc.sendExpression(f'cd("{clean_path}")')
+        return "Error" not in str(res)

@@ -194,7 +194,9 @@ class PowsyblConverter:
         z_base = (un**2) / sn
         network.create_lines(
             id=str(lid),
+            voltage_level1_id=f"VL_{b1}",
             bus1_id=str(b1),
+            voltage_level2_id=f"VL_{b2}",
             bus2_id=str(b2),
             r=info.get("r_pu", 0.0) * z_base,
             x=info.get("x_pu", 0.001) * z_base,
