@@ -21,7 +21,7 @@ class PowerFlowRunner:
     """
 
     @staticmethod
-    def _load_slack_mapping(filename: str = "slack_bus_mapping.json") -> list:
+    def load_slack_mapping(filename: str = "slack_bus_mapping.json") -> list:
         """
         Loads the valid slack bus identifiers from an external JSON file.
         Provides fallback identifiers if the file cannot be loaded or is missing.
@@ -56,7 +56,7 @@ class PowerFlowRunner:
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
         # Load dynamic identifiers for the slack bus
-        valid_slack_identifiers = PowerFlowRunner._load_slack_mapping()
+        valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
 
         try:
             # 1. AUTO-DETECT THE SLACK BUS (IMPLEMENTED VIA JSON MAPPING)
@@ -77,9 +77,22 @@ class PowerFlowRunner:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
             # 2. CONFIGURE PROVIDER PARAMETERS (OpenLoadFlow)
-            provider_params = {}
+            # Introduce specific OpenLoadFlow provider parameters to prevent solver
+            # failure upon large initial power mismatches and to disable distributed slack.
+            provider_params = {
+                "open-load-flow.no-load-flow-if-mismatch-is-too-big": "false",
+                "open-load-flow.distributed-slack": "false",
+            }
+
             if slack_bus_id:
-                provider_params = {"slackBusSelectionMode": "NAME", "slackBusesIds": slack_bus_id}
+                provider_params.update(
+                    {
+                        "slackBusSelectionMode": "NAME",
+                        "slackBusesIds": slack_bus_id,
+                        "open-load-flow.slack-bus-selection-mode": "NAME",
+                        "open-load-flow.slack-buses-ids": slack_bus_id,
+                    }
+                )
 
             # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
             # NOTE: Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization

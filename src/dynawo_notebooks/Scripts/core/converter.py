@@ -13,6 +13,7 @@ import logging
 import pandas as pd
 import pypowsybl as pp
 from typing import Dict, Set
+from dynawo_notebooks.Scripts.core.powerflow import PowerFlowRunner
 
 logger = logging.getLogger(__name__)
 
@@ -225,15 +226,19 @@ class PowsyblConverter:
 
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
 
-        # We use slack_bus_mapping.json in powerflow.py. Here we do a basic check
-        # just to set wide limits for generators that might act as slack.
-        gid_lower = gid.lower()
-        is_slack = (
-            "infinite" in gid_lower
-            or "slack" in gid_lower
-            or "gen1" == gid_lower
-            or "g20" == gid_lower
-        )
+        is_slack = True
+        valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
+        try:
+            gens_df = network.get_generators()
+            for gid_temp, row in gens_df.iterrows():
+                gid_str = str(gid_temp).lower()
+
+                # Check if any of the dynamic identifiers match the generator ID
+                if any(identifier in gid_str for identifier in valid_slack_identifiers):
+                    is_slack = False
+                    break
+        except Exception as e:
+            logger.warning(f"Could not read generators for slack detection: {e}")
 
         # If it is a Slack Bus and its active power is 0 MW, we assign a dummy initial value (1.0 MW).
         # This provides a "participation factor" > 0% so that OpenLoadFlow accepts mismatch injection.
@@ -286,8 +291,10 @@ class PowsyblConverter:
         """
         bid = info.get("bus")
         un, sn = bus_v.get(bid, 225.0), info.get("sn_nom", 100.0)
-        q_mvar = info.get("q_pu", 0.0) * sn
-        b_s = q_mvar / (un**2) if q_mvar != 0 else 0.0
+        b_pu = info.get("b_pu", 0.0)
+        q_pu = info.get("q_pu", b_pu)
+        q_mvar = q_pu * sn
+        b_s = q_mvar / (un**2) if un != 0 else 0.0
 
         shunt_df = pd.DataFrame(
             {
