@@ -8,6 +8,7 @@ Parser, and Converter modules to provide a seamless experience for the user.
 import logging
 import json
 from typing import List, Dict, Any
+import pypowsybl as pp
 
 from dynawo_notebooks.Scripts.core.connector import OMCConnector
 from dynawo_notebooks.Scripts.core.parser import ModelicaParser
@@ -111,3 +112,28 @@ class MoTopologyToolkit:
         except Exception as e:
             logger.error(f"Error reading {filepath}: {e}")
             raise
+
+    def save_powsybl_network(
+        self, network: pp.network.Network, export_path: str = "debug_network_dump"
+    ) -> None:
+        """
+        Utility method to dump the PyPowSyBl network state for inspection
+        before cross-validation. It exports all network DataFrames to CSVs.
+
+        :param network: The PyPowSyBl network object.
+        :param export_path: Target directory for the CSV dump files.
+        """
+        logger.info(f">>> SAVING PYPOWSYBL NETWORK TO: {export_path}")
+        try:
+            import os
+
+            # Ensure the directory exists before dumping
+            if not os.path.exists(export_path):
+                os.makedirs(export_path)
+
+            # The pypowsybl 'dump' command exports one CSV per equipment type
+            network.dump(export_path)
+            logger.info("Network saved successfully. Ready for manual inspection.")
+
+        except Exception as e:
+            logger.error(f"Critical error while saving the PyPowSyBl network: {e}")
