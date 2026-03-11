@@ -360,47 +360,67 @@ class ModelicaParser:
         :return: A dictionary of extracted parameter keys and their float values.
         """
         extracted = {}
+        critical_params = {"r_pu", "x_pu", "b_pu", "g_pu"}
 
         # Iterate over the mapping loaded from JSON
         for pm, pj in self.param_map.items():
-            # Strategy 1: Flattened Memory Map (Resolved numerical literals)
-            val = self._flat_assignments.get(f"{comp_name}.{pm}")
+            val = None
+            
 
-            # Strategy 2: Source Code Memory Map (TestCase Modifiers)
+            # --- STRATEGY 0: ABSOLUTE GROUND TRUTH VIA REGEX ---
+            # Si el parámetro es una impedancia, lo buscamos con fuerza bruta en el texto aplanado
+            # que ya cacheamos en self.flat_model durante el __init__.
+            if pj in critical_params and self.flat_model:
+                # Patrón que busca: nombre_componente.parametro (ignora atributos) = VALOR_NUMERICO
+                # Ej: parameter Real line_4062_4063b.XPu(unit="pu") = 0.051;
+                pattern = rf"{re.escape(comp_name)}\.{re.escape(pm)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
+                match = re.search(pattern, self.flat_model)
+                if match:
+                    print(pj, pm, comp_name)
+                    val = float(match.group(1))
+                    print(val)
+
+            # --- STRATEGIES 1, 2, 3: FAST CACHE & FALLBACKS ---
             if val is None:
-                # Pattern A: Nordic style (param_comp)
-                val = self._source_assignments.get(f"{pm}_{comp_name}")
-                # Pattern B: IEEE 57 / Hierarchical style (comp.param)
+                # Strategy 1: Flattened Memory Map (Resolved numerical literals)
+                val = self._flat_assignments.get(f"{comp_name}.{pm}")
+
+                # Strategy 2: Source Code Memory Map (TestCase Modifiers)
                 if val is None:
-                    val = self._source_assignments.get(f"{comp_name}.{pm}")
+                    # Pattern A: Nordic style (param_comp)
+                    val = self._source_assignments.get(f"{pm}_{comp_name}")
+                    # Pattern B: IEEE 57 / Hierarchical style (comp.param)
+                    if val is None:
+                        val = self._source_assignments.get(f"{comp_name}.{pm}")
 
-            # Strategy 3: Individual API calls (Fallback for complex math or global variables)
-            if val is None or isinstance(val, str):
-                raw = self.conn.get_modifier_value(declaring_model, comp_name, pm)
-                if not raw:
-                    raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
-                if raw:
-                    val = self._resolve_val(raw)
+                # Strategy 3: Individual API calls (Fallback for complex math or global variables)
+                if val is None or isinstance(val, str):
+                    raw = self.conn.get_modifier_value(declaring_model, comp_name, pm)
+                    if not raw:
+                        raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
+                    if raw:
+                        val = self._resolve_val(raw)
 
+            # --- ASSIGNMENT & ALIAS PROTECTION ---
             if val is not None:
                 # Handle complex numbers by extracting the real part
                 numeric_val = val.real if isinstance(val, complex) else float(val)
 
-                # Sign correction: Dynawo TestCases often use negative values for injection.
-                # PyPowSyBl (IIDM) expects positive values for generator target power.
-                if pj == "p_pu" or pj == "p":
-                    extracted[pj] = abs(numeric_val)
-                else:
-                    extracted[pj] = numeric_val
+                # Sign correction
+                final_val = abs(numeric_val) if pj in ["p_pu", "p"] else numeric_val
+
+                # PROTECCIÓN contra el solapamiento de alias nulos
+                if pj in extracted and pj in critical_params:
+                    if final_val == 0.0 and extracted[pj] != 0.0:
+                        continue
+
+                extracted[pj] = final_val
 
         # --- SPECIAL HANDLING: COMPLEX POWER (s0Pu, s10Pu, s20Pu) ---
-        # Used extensively in Loads, BESS, and HVDC links.
         for s_param in ["s0Pu", "s10Pu", "s20Pu"]:
-            # Try to get real and imaginary parts from the flattened model map
             p_val = self._flat_assignments.get(f"{comp_name}.{s_param}.re")
             q_val = self._flat_assignments.get(f"{comp_name}.{s_param}.im")
 
-            # Fallback for scalar assignments in the source map
             if p_val is None:
                 p_val = self._source_assignments.get(f"{comp_name}.{s_param}")
 

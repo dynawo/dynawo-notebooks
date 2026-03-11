@@ -332,25 +332,24 @@ class PowsyblConverter:
     def _create_transformer(
         network: pp.network.Network, tid: str, info: Dict, bus_v: Dict, bus_to_sub: Dict
     ) -> None:
-        """
-        Creates a two-windings transformer in the PyPowSyBl network.
-
-        :param network: The PyPowSyBl network instance.
-        :param tid: The unique identifier for the transformer.
-        :param info: Dictionary containing the transformer's parameters.
-        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
-        :param bus_to_sub: Dictionary mapping bus IDs to their assigned substations.
-        """
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return
 
-        un1 = info.get("rated_u1") or bus_v.get(b1, 225.0)
-        un2 = info.get("rated_u2") or bus_v.get(b2, 225.0)
+        # LA CLAVE: Si no hay rated_u1/u2 explícito en el JSON, usa OBLIGATORIAMENTE el voltaje real del nudo
+        # que hemos deducido por su nombre (via voltage_mapping.json).
+        un1 = info.get("rated_u1")
+        if not un1:
+            un1 = bus_v.get(b1, 225.0)
 
+        un2 = info.get("rated_u2")
+        if not un2:
+            un2 = bus_v.get(b2, 225.0)
+
+        sn_system = 100.0
         sn_comp = info.get("sn_nom", 100.0)
 
-        # EXACT RATIO (rho) CALCULATION FOR IEEE 57
+        # CÁLCULO EXACTO DEL RATIO (rho)
         base_ratio = info.get("ratio", 1.0)
         tap_pos = info.get("tap0", 6.0)
         n_tap = info.get("n_tap", 13.0)
@@ -360,12 +359,11 @@ class PowsyblConverter:
 
         effective_ratio = base_ratio
         if rho_max is not None and rho_min is not None and n_tap > 1:
-            # Tap0 in Dynawo is 0-indexed (e.g., from 0 to 12)
             step_size = (rho_max - rho_min) / (n_tap - 1)
             effective_ratio = base_ratio * (rho_min + tap_pos * step_size)
 
         rated_u1_effective = un1 * effective_ratio
-        z_base = (un1**2) / sn_comp
+        z_base = (un1**2) / sn_system
 
         network.create_2_windings_transformers(
             id=str(tid),
