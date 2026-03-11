@@ -134,6 +134,9 @@ class ModelicaParser:
                 declaring_model = self.model_name
 
             params = self._extract_parameters(declaring_model, comp_name)
+
+            # Store the Modelica type to allow the Converter to infer equipment behavior (e.g., PQ vs PV nodes)
+            params["modelica_type"] = comp_type
             type_lower = comp_type.lower()
 
             if "bus" in type_lower and "infinite" not in type_lower:
@@ -252,10 +255,19 @@ class ModelicaParser:
                 ),
                 None,
             )
+
             if not bus_id:
                 bus_id = f"VirtualBus_{virtual_bus_idx}"
                 virtual_bus_idx += 1
-                topo["buses"][bus_id] = {"nominal_v": 225.0, "is_virtual": True}
+
+                # Capture the first pin in the topological group as a reference point.
+                # This allows the comparator to query the complex voltage (V.re, V.im) directly.
+                om_ref = list(group)[0] if group else None
+                topo["buses"][bus_id] = {
+                    "nominal_v": 225.0,
+                    "is_virtual": True,
+                    "om_reference": om_ref,
+                }
 
             for term in group:
                 parts = term.split(".")

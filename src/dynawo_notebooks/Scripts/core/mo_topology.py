@@ -118,21 +118,21 @@ class MoTopologyToolkit:
     ) -> None:
         """
         Utility method to dump the PyPowSyBl network state for inspection
-        before cross-validation. It exports all network DataFrames to CSVs.
+        before cross-validation. It exports the network data to the specified directory.
 
         :param network: The PyPowSyBl network object.
-        :param export_path: Target directory for the CSV dump files.
+        :param export_path: Target directory for the exported network files.
         """
         logger.info(f">>> SAVING PYPOWSYBL NETWORK TO: {export_path}")
         try:
             import os
 
-            # Ensure the directory exists before dumping
+            # Ensure the target directory exists before executing the save operation
             if not os.path.exists(export_path):
                 os.makedirs(export_path)
 
-            # The pypowsybl 'dump' command exports one CSV per equipment type
-            network.dump(export_path)
+            # The PyPowSyBl 'save' method exports the network data for external analysis
+            network.save(export_path)
             logger.info("Network saved successfully. Ready for manual inspection.")
 
         except Exception as e:

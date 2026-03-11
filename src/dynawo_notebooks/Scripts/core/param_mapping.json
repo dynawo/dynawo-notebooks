@@ -50,5 +50,15 @@
     "RatioTfo0Pu": "ratio",
     "AlphaTfo0": "phase_angle",
     "uMax": "u_max",
-    "uMin": "u_min"
+    "uMin": "u_min",
+    "Tap0": "tap0",
+    "StepPu": "dtap",
+    "TapStep": "dtap",
+    "QMinPu": "q_min_pu",
+    "QMaxPu": "q_max_pu",
+    "QGenMinPu": "q_min_pu",
+    "QGenMaxPu": "q_max_pu",
+    "rhoMax": "rho_max",
+    "rhoMin": "rho_min",
+    "NbTap": "n_tap"
 }

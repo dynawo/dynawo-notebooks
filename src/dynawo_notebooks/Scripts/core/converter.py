@@ -202,7 +202,7 @@ class PowsyblConverter:
             r=info.get("r_pu", 0.0) * z_base,
             x=info.get("x_pu", 0.001) * z_base,
             g1=0,
-            b1=(info.get("b_pu", 0.0) / z_base) / 2,
+            b1=(info.get("b_pu", 0.0) / z_base) / 2,  # Split Pi-model capacitance
             g2=0,
             b2=(info.get("b_pu", 0.0) / z_base) / 2,
         )
@@ -219,10 +219,9 @@ class PowsyblConverter:
         """
         bid = info.get("bus")
 
-        # LOCAL BASE RESOLUTION: Critical for BESS (6 MVA) vs Nordic (System=100)
-        sn = info.get("sn_nom") or 100.0
+        sn = info.get("sn_nom", 100.0)
         if "genpv" in gid.lower() and sn == 100.0:
-            sn = 6.0  # Force local BESS base for benchmark consistency
+            sn = 6.0
 
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
 
@@ -245,16 +244,28 @@ class PowsyblConverter:
         if is_slack and p_mw == 0.0:
             p_mw = 1.0
 
+        # GENERATOR TYPE (PQ vs PV)
+        modelica_type = info.get("modelica_type", "").lower()
+        is_pq = "pq" in modelica_type
+
+        is_regulator_on = True
+        if is_pq and not is_slack:
+            is_regulator_on = False
+
+        target_q = 0.0
+        if is_pq:
+            target_q = info.get("q_mvar") or info.get("q", 0.0)
+            if "q_pu" in info:
+                target_q = info["q_pu"] * sn
+
         network.create_generators(
             id=str(gid),
             voltage_level_id=f"VL_{bid}",
             bus_id=str(bid),
             target_p=abs(p_mw),
+            target_q=target_q,
             target_v=info.get("u_pu", 1.0) * bus_v.get(bid, 225.0),
-            # CRITICAL FIX: All generators must act as PV nodes (actively regulating voltage)
-            voltage_regulator_on=True,
-            target_q=0.0,
-            # For the Slack Bus, we allow extremely wide limits to absorb the system's power mismatch
+            voltage_regulator_on=is_regulator_on,
             min_p=-9999.0 if is_slack else abs(p_mw),
             max_p=9999.0 if is_slack else abs(p_mw),
         )
@@ -334,14 +345,27 @@ class PowsyblConverter:
         if not b1 or not b2:
             return
 
-        # Priority for Transformer Voltages:
-        # 1. rated_u1/u2 from JSON (if Parser extracted it)
-        # 2. Discovered nominal voltage of the connected bus
         un1 = info.get("rated_u1") or bus_v.get(b1, 225.0)
         un2 = info.get("rated_u2") or bus_v.get(b2, 225.0)
-        sn = info.get("sn_nom", 100.0)
 
-        z_base = (un1**2) / sn
+        sn_comp = info.get("sn_nom", 100.0)
+
+        # EXACT RATIO (rho) CALCULATION FOR IEEE 57
+        base_ratio = info.get("ratio", 1.0)
+        tap_pos = info.get("tap0", 6.0)
+        n_tap = info.get("n_tap", 13.0)
+
+        rho_max = info.get("rho_max")
+        rho_min = info.get("rho_min")
+
+        effective_ratio = base_ratio
+        if rho_max is not None and rho_min is not None and n_tap > 1:
+            # Tap0 in Dynawo is 0-indexed (e.g., from 0 to 12)
+            step_size = (rho_max - rho_min) / (n_tap - 1)
+            effective_ratio = base_ratio * (rho_min + tap_pos * step_size)
+
+        rated_u1_effective = un1 * effective_ratio
+        z_base = (un1**2) / sn_comp
 
         network.create_2_windings_transformers(
             id=str(tid),
@@ -351,9 +375,9 @@ class PowsyblConverter:
             bus2_id=str(b2),
             r=info.get("r_pu", 0.0) * z_base,
             x=info.get("x_pu", 0.1) * z_base,
-            g=0,
-            b=0,
-            rated_u1=un1,
+            g=info.get("g_pu", 0.0) / z_base,
+            b=info.get("b_pu", 0.0) / z_base,
+            rated_u1=rated_u1_effective,
             rated_u2=un2,
-            rated_s=sn,
+            rated_s=sn_comp,
         )
