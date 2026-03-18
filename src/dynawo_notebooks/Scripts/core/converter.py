@@ -136,6 +136,10 @@ class PowsyblConverter:
                 # Force 'v' to be a float. If the parser extracted a weird string, fallback safely.
                 try:
                     v = float(v)
+                    # --- CRITICAL FIX 3: Auto-convert Volts to kV for PyPowSyBl ---
+                    # Ensures that any raw value (like 69000.0) gets correctly interpreted as 69.0 kV
+                    if v > 1000.0:
+                        v = v / 1000.0
                 except (ValueError, TypeError):
                     logger.warning(
                         f"Could not cast voltage '{v}' to float for bus {bid}. Using default."
@@ -370,17 +374,25 @@ class PowsyblConverter:
         if not b1 or not b2:
             return
 
-        # THE KEY: If there is no explicit rated_u1/u2 in the JSON, it MANDATORILY uses
-        # the real bus voltage that we deduced from its name (via voltage_mapping.json).
-        un1 = info.get("rated_u1")
+        # --- CRITICAL FIX 4: Dynamic Base Voltage Prioritization ---
+        # We first try to get the real nominal voltage parsed from Modelica parameters.
+        # This prevents the Z_base from exploding when using default or non-matching rules.
+        un1 = info.get("nominal_v") or info.get("rated_u1")
         if not un1:
             un1 = bus_v.get(b1, 225.0)
 
-        un2 = info.get("rated_u2")
+        un2 = info.get("rated_u2") or info.get("nominal_v")
         if not un2:
             un2 = bus_v.get(b2, 225.0)
 
-        # CRITICAL FIX: Z_base for transformers MUST use their own nominal apparent power (SnNom)
+        # Auto-convert Volts to kV for PyPowSyBl if extracted raw as > 1000
+        if un1 > 1000.0:
+            un1 = un1 / 1000.0
+        if un2 > 1000.0:
+            un2 = un2 / 1000.0
+
+        # --- CRITICAL FIX 5: Transformer Z_base isolation ---
+        # Z_base for transformers MUST use their own nominal apparent power (SnNom)
         sn_comp = info.get("sn_nom", 100.0)
 
         # EXACT RATIO (rho) CALCULATION

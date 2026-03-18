@@ -393,16 +393,27 @@ class ModelicaParser:
         for pm, pj in self.param_map.items():
             val = None
 
-            # PRIORITY 1: FLAT MEMORY MAP (Ultra-fast memory scan)
-            val = self._flat_assignments.get(f"{comp_name}.{pm}")
+            # --- CRITICAL FIX 1: Prioritize evaluated values from OMC via get_simulation_value ---
+            # This extracts the actual evaluated per-unit or physical value computed by Modelica,
+            # instead of regex-matching the un-evaluated literal expressions (like '0.8188 / ZBASE13_8')
+            try:
+                sim_val = self.conn.get_simulation_value(f"{comp_name}.{pm}")
+                if sim_val is not None:
+                    val = float(sim_val)
+            except Exception:
+                pass
 
-            # PRIORITY 2: SOURCE CODE MAP
+            # PRIORITY 2: FLAT MEMORY MAP (Ultra-fast memory scan)
+            if val is None:
+                val = self._flat_assignments.get(f"{comp_name}.{pm}")
+
+            # PRIORITY 3: SOURCE CODE MAP
             if val is None:
                 val = self._source_assignments.get(f"{pm}_{comp_name}")
                 if val is None:
                     val = self._source_assignments.get(f"{comp_name}.{pm}")
 
-            # PRIORITY 3: OMC KERNEL EVALUATION (The Golden Standard from the Old Code)
+            # PRIORITY 4: OMC KERNEL EVALUATION (The Golden Standard from the Old Code)
             if val is None:
                 raw_api = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
                 if raw_api:
@@ -410,7 +421,7 @@ class ModelicaParser:
                     if resolved is not None:
                         val = resolved  # FIX: Removed float() wrapper to preserve complex number objects
 
-            # PRIORITY 4: EXPLICIT MODIFIERS (Regex fallback from the Old Code)
+            # PRIORITY 5: EXPLICIT MODIFIERS (Regex fallback from the Old Code)
             if val is None:
                 raw_mod = self._extract_raw_value_from_modifiers(modifiers, pm)
                 if raw_mod:
@@ -418,7 +429,7 @@ class ModelicaParser:
                     if resolved is not None:
                         val = resolved  # FIX: Removed float() wrapper to preserve complex number objects
 
-            # PRIORITY 5: AST MODIFIER FALLBACK (Deep recursive scan)
+            # PRIORITY 6: AST MODIFIER FALLBACK (Deep recursive scan)
             if val is None:
                 raw_ast = self.conn.get_modifier_value(declaring_model, comp_name, pm)
                 if raw_ast:
@@ -441,8 +452,9 @@ class ModelicaParser:
 
                 # --- NOMINAL_V PROTECTION FILTER ---
                 if pj == "nominal_v":
-                    # If the value is 1.0, 0.0, or 1.1, it is highly likely a per-unit value
-                    # from a base class. We discard it to force voltage discovery in the Converter.
+                    # CRITICAL FIX 2: Allow valid voltage bases (like 69kV, 18kV) to pass.
+                    # We only discard typical base-class placeholders <= 1.1 (e.g., 1.0 pu init).
+                    # Now it will correctly store values like 69000.0, 18000.0, or 69.0.
                     if final_val <= 1.1:
                         continue
 
