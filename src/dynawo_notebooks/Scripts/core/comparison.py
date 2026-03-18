@@ -69,25 +69,6 @@ class LoadFlowComparator:
                 if theta_rad_om is None:
                     theta_rad_om = connector.get_simulation_value(f"{bus_id}.theta", 0.0)
 
-                bus_info = parsed_data.get("buses", {}).get(bus_id, {})
-                if v_pu_om is None and bus_info.get("is_virtual"):
-                    om_ref = bus_info.get("om_reference")  # e.g., 'line.terminal1'
-                    if om_ref:
-                        # In Dynawo, component pins store complex voltage as V.re and V.im
-                        v_re = connector.get_simulation_value(f"{om_ref}.V.re", 0.0)
-                        v_im = connector.get_simulation_value(f"{om_ref}.V.im", 0.0)
-
-                        if v_re is not None and v_im is not None:
-                            v_mag = np.sqrt(v_re**2 + v_im**2)
-                            theta_rad_om = np.arctan2(v_im, v_re)
-
-                            v_nom = float(bus_info.get("nominal_v", 225.0))
-                            # If the extracted voltage magnitude is > 2.0, we assume it is in kV and convert it to per-unit (p.u.)
-                            if v_mag > 2.0 and v_nom > 0:
-                                v_pu_om = v_mag / v_nom
-                            else:
-                                v_pu_om = v_mag
-
                 theta_deg_om = np.degrees(theta_rad_om) if theta_rad_om is not None else np.nan
                 if v_pu_om is None:
                     v_pu_om = np.nan
@@ -152,25 +133,6 @@ class LoadFlowComparator:
 
             connector.set_working_directory(original_dir)
             logger.info("Cleaning up temporary simulation files...")
-
-        # --- RELATIVE ANGLE ALIGNMENT (Shift OpenModelica to the PyPowSyBl reference frame) ---
-        slack_bus_record = next(
-            (row for row in comparison_data if row["Theta_PPS (deg)"] == 0.0), None
-        )
-        if slack_bus_record and pd.notna(slack_bus_record["Theta_OM (deg)"]):
-            theta_shift_om = slack_bus_record["Theta_OM (deg)"]
-
-            for row in comparison_data:
-                if pd.notna(row["Theta_OM (deg)"]):
-                    shifted_om = row["Theta_OM (deg)"] - theta_shift_om
-                    # Normalize the phase angle to the [-180, 180] degrees range
-                    shifted_om = (shifted_om + 180) % 360 - 180
-                    row["Theta_OM (deg)"] = round(shifted_om, 4)
-
-                    if pd.notna(row["Theta_PPS (deg)"]):
-                        diff = abs(shifted_om - row["Theta_PPS (deg)"])
-                        diff = diff if diff <= 180 else 360 - diff
-                        row["Δ Theta (deg)"] = round(diff, 4)
 
         # Construct and sort the final comparison DataFrame
         df = pd.DataFrame(comparison_data).set_index("Bus")

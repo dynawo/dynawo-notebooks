@@ -114,6 +114,22 @@ class OMCConnector:
         """
         return self._omc.sendExpression(f"getComponents({model_name})")
 
+    def get_component_modification(self, model_name: str, index: int) -> str:
+        """
+        Retrieves the modifier string used during component instantiation.
+
+        :param model_name: Name of the Modelica model.
+        :param index: The 1-based index of the component.
+        :return: String value of the modifier.
+        """
+        try:
+            res = self._omc.sendExpression(
+                f"getNthComponentModification({model_name}, {index})", parsed=False
+            )
+            return str(res) if res else ""
+        except Exception:
+            return ""
+
     def get_connections(self, model_name: str) -> List[List[str]]:
         """
         Retrieves the electrical or mathematical connections defined in the model.
@@ -171,7 +187,6 @@ class OMCConnector:
         :return: String value of the modifier, or None if not found.
         """
         try:
-            # OPTIMIZATION: Request list(model) from OMC only once and cache the result
             if model_name not in self._list_cache:
                 raw_list = self._omc.sendExpression(f"list({model_name})")
                 if not raw_list or "Error" in str(raw_list):
@@ -220,8 +235,9 @@ class OMCConnector:
                     break
                 value_str += char
 
+            # CLEANUP: Strip out strings and comments to leave clean math/values
             val = value_str.strip()
-            val = val.split("/*")[0].split("//")[0].strip()
+            val = val.split('"')[0].split("/*")[0].split("//")[0].strip()
             return val if val else None
         except Exception:
             return None
@@ -257,7 +273,6 @@ class OMCConnector:
         )
         res = self._omc.sendExpression(f"simulate({model_name}, stopTime={stop_time})")
 
-        # OpenModelica returns a dictionary-like string on success, containing "timeCompile" etc.
         if res and "timeCompile" in str(res) and "Error" not in str(res):
             logger.info("OMC Simulation completed successfully.")
             return True

@@ -191,20 +191,44 @@ class PowsyblConverter:
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return
-        sn, un = info.get("sn_nom", 100.0), bus_v.get(b1, 225.0)
+        sn = info.get("sn_nom", 100.0)
+        un = bus_v.get(b1, 225.0)
         z_base = (un**2) / sn
+
+        # CRITICAL FIX: Determine if the Modelica component expects per-unit values
+        model_type = info.get("modelica_type", "").lower()
+        is_pu = "pu" in model_type or "perunit" in model_type
+
+        raw_r = info.get("r_pu", 0.0)
+        raw_x = info.get("x_pu", 0.001)
+        raw_b = info.get("b_pu", 0.0)
+        raw_g = info.get("g_pu", 0.0)
+
+        if is_pu:
+            # IEEE57 style: Convert p.u. to Ohms/Siemens
+            r_ohm = raw_r * z_base
+            x_ohm = raw_x * z_base
+            b_sie = raw_b / z_base
+            g_sie = raw_g / z_base
+        else:
+            # Nordic style: Values are already in physical Ohms/Siemens
+            r_ohm = raw_r
+            x_ohm = raw_x
+            b_sie = raw_b
+            g_sie = raw_g
+
         network.create_lines(
             id=str(lid),
             voltage_level1_id=f"VL_{b1}",
             bus1_id=str(b1),
             voltage_level2_id=f"VL_{b2}",
             bus2_id=str(b2),
-            r=info.get("r_pu", 0.0) * z_base,
-            x=info.get("x_pu", 0.001) * z_base,
-            g1=0,
-            b1=(info.get("b_pu", 0.0) / z_base) / 2,  # Split Pi-model capacitance
-            g2=0,
-            b2=(info.get("b_pu", 0.0) / z_base) / 2,
+            r=r_ohm,
+            x=x_ohm,
+            g1=g_sie / 2,
+            b1=b_sie / 2,  # Split Pi-model capacitance
+            g2=g_sie / 2,
+            b2=b_sie / 2,
         )
 
     @staticmethod
@@ -332,12 +356,22 @@ class PowsyblConverter:
     def _create_transformer(
         network: pp.network.Network, tid: str, info: Dict, bus_v: Dict, bus_to_sub: Dict
     ) -> None:
+        """
+        Creates a 2-winding transformer in the PyPowSyBl network.
+        It calculates the effective voltage ratio and handles tap changer positions.
+
+        :param network: The PyPowSyBl network instance.
+        :param tid: The unique identifier for the transformer.
+        :param info: Dictionary containing the transformer's parameters.
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        :param bus_to_sub: Dictionary mapping bus IDs to their parent substation ID.
+        """
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return
 
-        # LA CLAVE: Si no hay rated_u1/u2 explícito en el JSON, usa OBLIGATORIAMENTE el voltaje real del nudo
-        # que hemos deducido por su nombre (via voltage_mapping.json).
+        # THE KEY: If there is no explicit rated_u1/u2 in the JSON, it MANDATORILY uses
+        # the real bus voltage that we deduced from its name (via voltage_mapping.json).
         un1 = info.get("rated_u1")
         if not un1:
             un1 = bus_v.get(b1, 225.0)
@@ -346,10 +380,10 @@ class PowsyblConverter:
         if not un2:
             un2 = bus_v.get(b2, 225.0)
 
-        sn_system = 100.0
+        # CRITICAL FIX: Z_base for transformers MUST use their own nominal apparent power (SnNom)
         sn_comp = info.get("sn_nom", 100.0)
 
-        # CÁLCULO EXACTO DEL RATIO (rho)
+        # EXACT RATIO (rho) CALCULATION
         base_ratio = info.get("ratio", 1.0)
         tap_pos = info.get("tap0", 6.0)
         n_tap = info.get("n_tap", 13.0)
@@ -363,7 +397,7 @@ class PowsyblConverter:
             effective_ratio = base_ratio * (rho_min + tap_pos * step_size)
 
         rated_u1_effective = un1 * effective_ratio
-        z_base = (un1**2) / sn_system
+        z_base = (un1**2) / sn_comp
 
         network.create_2_windings_transformers(
             id=str(tid),

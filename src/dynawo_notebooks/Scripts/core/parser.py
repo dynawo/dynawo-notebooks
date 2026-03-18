@@ -80,8 +80,10 @@ class ModelicaParser:
         :param flat_str: The flattened model string containing variable assignments.
         :return: A dictionary mapping 'path.to.component.parameter' to numerical values.
         """
-        # Pattern to capture 'path.to.component.parameter = value;'
-        pattern = re.compile(r"([\w\.]+)\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*;")
+        # CRITICAL FIX: Enhanced regex to ignore attributes like (unit="pu") and capture cleanly.
+        pattern = re.compile(
+            r"([\w\.]+)(?:\([^)]*\))?\s*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)[^;]*;"
+        )
         return {match.group(1): float(match.group(2)) for match in pattern.finditer(flat_str)}
 
     def _prebuild_source_map(self, source_str: str) -> Dict[str, float]:
@@ -129,11 +131,13 @@ class ModelicaParser:
             if isinstance(comp_info, dict):
                 comp_type = comp_info["type"]
                 declaring_model = comp_info["declared_in"]
+                modifiers_str = comp_info.get("modifiers", "")
             else:
                 comp_type = comp_info
                 declaring_model = self.model_name
+                modifiers_str = ""
 
-            params = self._extract_parameters(declaring_model, comp_name)
+            params = self._extract_parameters(declaring_model, comp_name, modifiers_str)
 
             # Store the Modelica type to allow the Converter to infer equipment behavior (e.g., PQ vs PV nodes)
             params["modelica_type"] = comp_type
@@ -180,9 +184,14 @@ class ModelicaParser:
         components = {}
         raw = self.conn.get_components(current_model)
         if isinstance(raw, (list, tuple)):
-            for comp in raw:
+            for i, comp in enumerate(raw):
                 if isinstance(comp, (list, tuple)) and len(comp) >= 2:
-                    components[str(comp[1])] = {"type": str(comp[0]), "declared_in": current_model}
+                    c_mods = self.conn.get_component_modification(current_model, i + 1)
+                    components[str(comp[1])] = {
+                        "type": str(comp[0]),
+                        "declared_in": current_model,
+                        "modifiers": c_mods,
+                    }
 
         for base in self.conn.get_extends(current_model):
             components.update(self._collect_all_components_recursive(base, visited))
@@ -297,6 +306,22 @@ class ModelicaParser:
         """
         return self._flat_assignments.get(f"{comp_name}.{param}")
 
+    def _extract_raw_value_from_modifiers(self, mods_str: str, param: str) -> Optional[str]:
+        """
+        Extracts a parameter's assigned value from a raw Modelica modifier string.
+        """
+        if not mods_str:
+            return None
+        s = str(mods_str).strip().strip("\"'")
+        pattern = re.compile(rf"\b{param}\b\s*=\s*([^,)]+)")
+        match = pattern.search(s)
+        if match:
+            raw_val = match.group(1).strip()
+            # CLEANUP: Remove trailing comments or descriptions
+            clean_val = raw_val.split('"')[0].split("/*")[0].split("//")[0].strip()
+            return clean_val if clean_val else None
+        return None
+
     def _resolve_val(self, val_str: Optional[str], depth: int = 0) -> Any:
         """
         Safely casts a raw Modelica string value into a Python float or complex number.
@@ -347,7 +372,9 @@ class ModelicaParser:
         except:
             return None
 
-    def _extract_parameters(self, declaring_model: str, comp_name: str) -> Dict[str, float]:
+    def _extract_parameters(
+        self, declaring_model: str, comp_name: str, modifiers: str = ""
+    ) -> Dict[str, float]:
         """
         Extracts physical parameters for a specific component using multi-strategy lookups.
 
@@ -357,49 +384,47 @@ class ModelicaParser:
 
         :param declaring_model: The name of the Modelica model where the component is declared.
         :param comp_name: The instance name of the component.
+        :param modifiers: The raw string of modifiers attached to the component instance.
         :return: A dictionary of extracted parameter keys and their float values.
         """
         extracted = {}
         critical_params = {"r_pu", "x_pu", "b_pu", "g_pu"}
 
-        # Iterate over the mapping loaded from JSON
         for pm, pj in self.param_map.items():
             val = None
-            
 
-            # --- STRATEGY 0: ABSOLUTE GROUND TRUTH VIA REGEX ---
-            # Si el parámetro es una impedancia, lo buscamos con fuerza bruta en el texto aplanado
-            # que ya cacheamos en self.flat_model durante el __init__.
-            if pj in critical_params and self.flat_model:
-                # Patrón que busca: nombre_componente.parametro (ignora atributos) = VALOR_NUMERICO
-                # Ej: parameter Real line_4062_4063b.XPu(unit="pu") = 0.051;
-                pattern = rf"{re.escape(comp_name)}\.{re.escape(pm)}\b[^=]*=\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"
-                match = re.search(pattern, self.flat_model)
-                if match:
-                    print(pj, pm, comp_name)
-                    val = float(match.group(1))
-                    print(val)
+            # PRIORITY 1: FLAT MEMORY MAP (Ultra-fast memory scan)
+            val = self._flat_assignments.get(f"{comp_name}.{pm}")
 
-            # --- STRATEGIES 1, 2, 3: FAST CACHE & FALLBACKS ---
+            # PRIORITY 2: SOURCE CODE MAP
             if val is None:
-                # Strategy 1: Flattened Memory Map (Resolved numerical literals)
-                val = self._flat_assignments.get(f"{comp_name}.{pm}")
-
-                # Strategy 2: Source Code Memory Map (TestCase Modifiers)
+                val = self._source_assignments.get(f"{pm}_{comp_name}")
                 if val is None:
-                    # Pattern A: Nordic style (param_comp)
-                    val = self._source_assignments.get(f"{pm}_{comp_name}")
-                    # Pattern B: IEEE 57 / Hierarchical style (comp.param)
-                    if val is None:
-                        val = self._source_assignments.get(f"{comp_name}.{pm}")
+                    val = self._source_assignments.get(f"{comp_name}.{pm}")
 
-                # Strategy 3: Individual API calls (Fallback for complex math or global variables)
-                if val is None or isinstance(val, str):
-                    raw = self.conn.get_modifier_value(declaring_model, comp_name, pm)
-                    if not raw:
-                        raw = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
-                    if raw:
-                        val = self._resolve_val(raw)
+            # PRIORITY 3: OMC KERNEL EVALUATION (The Golden Standard from the Old Code)
+            if val is None:
+                raw_api = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
+                if raw_api:
+                    resolved = self._resolve_val(raw_api)
+                    if resolved is not None:
+                        val = resolved  # FIX: Removed float() wrapper to preserve complex number objects
+
+            # PRIORITY 4: EXPLICIT MODIFIERS (Regex fallback from the Old Code)
+            if val is None:
+                raw_mod = self._extract_raw_value_from_modifiers(modifiers, pm)
+                if raw_mod:
+                    resolved = self._resolve_val(raw_mod)
+                    if resolved is not None:
+                        val = resolved  # FIX: Removed float() wrapper to preserve complex number objects
+
+            # PRIORITY 5: AST MODIFIER FALLBACK (Deep recursive scan)
+            if val is None:
+                raw_ast = self.conn.get_modifier_value(declaring_model, comp_name, pm)
+                if raw_ast:
+                    resolved = self._resolve_val(raw_ast)
+                    if resolved is not None:
+                        val = resolved  # FIX: Removed float() wrapper to preserve complex number objects
 
             # --- ASSIGNMENT & ALIAS PROTECTION ---
             if val is not None:
@@ -409,17 +434,36 @@ class ModelicaParser:
                 # Sign correction
                 final_val = abs(numeric_val) if pj in ["p_pu", "p"] else numeric_val
 
-                # PROTECCIÓN contra el solapamiento de alias nulos
+                # PROTECTION against null alias overlapping
                 if pj in extracted and pj in critical_params:
                     if final_val == 0.0 and extracted[pj] != 0.0:
+                        continue
+
+                # --- NOMINAL_V PROTECTION FILTER ---
+                if pj == "nominal_v":
+                    # If the value is 1.0, 0.0, or 1.1, it is highly likely a per-unit value
+                    # from a base class. We discard it to force voltage discovery in the Converter.
+                    if final_val <= 1.1:
                         continue
 
                 extracted[pj] = final_val
 
         # --- SPECIAL HANDLING: COMPLEX POWER (s0Pu, s10Pu, s20Pu) ---
         for s_param in ["s0Pu", "s10Pu", "s20Pu"]:
-            p_val = self._flat_assignments.get(f"{comp_name}.{s_param}.re")
-            q_val = self._flat_assignments.get(f"{comp_name}.{s_param}.im")
+            p_val = None
+            q_val = None
+
+            complex_str = self._extract_raw_value_from_modifiers(modifiers, s_param)
+            if complex_str:
+                res_cplx = self._resolve_val(complex_str)
+                if isinstance(res_cplx, complex):
+                    p_val = abs(res_cplx.real)
+                    q_val = res_cplx.imag
+
+            if p_val is None:
+                p_val = self._flat_assignments.get(f"{comp_name}.{s_param}.re")
+            if q_val is None:
+                q_val = self._flat_assignments.get(f"{comp_name}.{s_param}.im")
 
             if p_val is None:
                 p_val = self._source_assignments.get(f"{comp_name}.{s_param}")
