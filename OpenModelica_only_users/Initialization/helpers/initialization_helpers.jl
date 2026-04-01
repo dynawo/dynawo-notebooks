@@ -33,6 +33,10 @@ function parse_component(raw::String)
     return comp_class, comp_name
 end
 
+# ------------------------------------------------------------
+# Low-Level String Scanners
+# ------------------------------------------------------------
+
 function _unwrap_code_modifier(mod_raw::String)
     s = strip(mod_raw)
     if s == "{}"
@@ -42,6 +46,91 @@ function _unwrap_code_modifier(mod_raw::String)
     s = replace(s, r"^\{\$Code\(\(" => "")
     s = replace(s, r"\)\)\}$" => "")
     return strip(s)
+end
+
+"""
+    _strip_modelica_comments(s::AbstractString) -> String
+
+Remove Modelica line and block comments from `s`.
+
+Comment markers inside quoted strings are kept literal, and newlines are
+preserved so adjacent tokens do not get glued together.
+"""
+function _strip_modelica_comments(s::AbstractString)
+    isempty(s) && return ""
+
+    out = IOBuffer()
+    in_str = false
+    escaped = false
+    in_line_comment = false
+    in_block_comment = false
+
+    i = firstindex(s)
+    while i <= lastindex(s)
+        c = s[i]
+        next_i = nextind(s, i)
+        next_c = next_i <= lastindex(s) ? s[next_i] : nothing
+
+        if in_line_comment
+            # Keep line breaks so the next token stays on its own line.
+            if c == '\n'
+                in_line_comment = false
+                write(out, c)
+            end
+            i = nextind(s, i)
+            continue
+        end
+
+        if in_block_comment
+            if c == '*' && next_c == '/'
+                in_block_comment = false
+                i = nextind(s, next_i)
+            else
+                if c == '\n'
+                    write(out, c)
+                end
+                i = nextind(s, i)
+            end
+            continue
+        end
+
+        if in_str
+            write(out, c)
+            if escaped
+                escaped = false
+            elseif c == '\\'
+                escaped = true
+            elseif c == '"'
+                in_str = false
+            end
+            i = nextind(s, i)
+            continue
+        end
+
+        if c == '"'
+            in_str = true
+            write(out, c)
+            i = nextind(s, i)
+            continue
+        end
+
+        if c == '/' && next_c == '/'
+            in_line_comment = true
+            i = nextind(s, next_i)
+            continue
+        end
+
+        if c == '/' && next_c == '*'
+            in_block_comment = true
+            i = nextind(s, next_i)
+            continue
+        end
+
+        write(out, c)
+        i = nextind(s, i)
+    end
+
+    return strip(String(take!(out)))
 end
 
 function _split_top_level_commas(s::AbstractString)
@@ -88,6 +177,7 @@ function _split_top_level_commas(s::AbstractString)
             brace = max(brace - 1, 0)
         end
 
+        # Split only when the comma is outside nested delimiters and strings.
         if c == ',' && paren == 0 && bracket == 0 && brace == 0
             push!(parts, strip(String(take!(buf))))
         else
@@ -147,7 +237,7 @@ function _find_top_level_equal(part::AbstractString)
 end
 
 function parse_modifier_dict(mod_raw::String)
-    s = _unwrap_code_modifier(mod_raw)
+    s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     isempty(s) && return Dict{String, String}()
     parts = _split_top_level_commas(s)
 
@@ -167,7 +257,7 @@ function parse_modifier_dict(mod_raw::String)
 end
 
 function parse_call_modifier_dict(mod_raw::String)
-    s = _unwrap_code_modifier(mod_raw)
+    s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     isempty(s) && return Dict{String, String}()
     parts = _split_top_level_commas(s)
 
@@ -219,35 +309,32 @@ function get_initializable_components(components, init_params)
     return initializable
 end
 
-function extract_component_initialization_values(aux_session, component, param_pairs, model)
+function _read_result_value(aux_session, full_name::AbstractString)
+    isempty(aux_session.resultfile) && error("Auxiliary session has no result file. Run simulate(...) before extracting initialization values.")
+    values = getSolutions(aux_session, String(full_name))
+    series = values[1]
+    isempty(series) && error("No values found in $(aux_session.resultfile) for $(full_name)")
+    return Float64(series[end])
+end
+
+function extract_component_initialization_values(aux_session, component, param_pairs)
     init_component = component * "_INIT"
     values = Dict{String, Float64}()
-    wd = getWorkDirectory(aux_session)
-    exe = joinpath(wd, model)
 
     for (init_var, dynamic_var) in param_pairs
         full_name = init_component * "." * init_var
-
-        try
-            values[dynamic_var] = getContinuous(aux_session, [full_name])[1]
-        catch
-            out = read(Cmd(`$exe -output=$full_name`; dir = wd), String)
-            pattern = Regex(replace(full_name, "." => "\\.") * "=([-\\d\\.eE\\+]+)")
-            m = match(pattern, out)
-            m === nothing && error("Could not extract $full_name from auxiliary output")
-            values[dynamic_var] = parse(Float64, m.captures[1])
-        end
+        values[dynamic_var] = _read_result_value(aux_session, full_name)
     end
 
     return values
 end
 
-function extract_all_initialization_values(aux_session, aux_model, initializable_components, init_params)
+function extract_all_initialization_values(aux_session, initializable_components, init_params)
     values_by_component = Dict{String, Dict{String, Float64}}()
 
     for (component, info) in initializable_components
         param_pairs = init_params[info["class"]]
-        values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs, aux_model)
+        values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs)
     end
 
     return values_by_component
@@ -270,6 +357,7 @@ function build_modifier_assignments(info, param_pairs, values)
         modifiers[field] = string(values[field])
     end
 
+    # Rebuild Complex(...) modifiers from the extracted .re/.im values.
     for base in complex_bases
         real_key = base * ".re"
         imag_key = base * ".im"
