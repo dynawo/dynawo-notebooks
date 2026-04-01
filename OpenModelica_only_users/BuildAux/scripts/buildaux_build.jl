@@ -40,6 +40,31 @@ function _code_modification_from_assignments(assignments::Vector{String})
 end
 
 """
+    _existing_modifier_assignments(c) -> Vector{String}
+
+Serialize parsed modifier dictionaries back into Modelica modification fragments.
+"""
+function _existing_modifier_assignments(c::Dict{String, Any})
+    assignments = String[]
+
+    raw_mods = c["modifiers"]
+    if isa(raw_mods, Dict)
+        for (k, v) in raw_mods
+            push!(assignments, "$(k) = $(v)")
+        end
+    end
+
+    raw_calls = c["call_modifiers"]
+    if isa(raw_calls, Dict)
+        for (k, v) in raw_calls
+            push!(assignments, "$(k)($(v))")
+        end
+    end
+
+    return assignments
+end
+
+"""
     _build_slack_replacement_assignments(omc, model, components, comp_name, mods, call_mods) -> Vector{String}
 
 Build the modifier list for the slack replacement to `InfiniteBus`.
@@ -137,24 +162,37 @@ function apply_replacements!(
 
         # Build the replacement assignments
         extra_raw = haskey(spec, "extra_modifiers_raw") ? spec["extra_modifiers_raw"]::Vector{String} : String[]
+        expanded_extra_raw = [replace(s, "{COMP}" => comp_name) for s in extra_raw]
 
         assignments = String[]
         for (new_param, old_param) in write_map
-            if haskey(call_mods, old_param)
-                push!(assignments, "$(new_param)($(call_mods[old_param]))")
+            # Allow a leading "-" in replacement mappings, e.g. "-P0Pu",
+            # to flip the sign of the copied source modifier/value.
+            should_flip_sign = startswith(old_param, "-")
+            source_param = should_flip_sign ? old_param[2:end] : old_param
+
+            if haskey(call_mods, source_param)
+                if should_flip_sign
+                    error("Signed call-style replacements are not supported for $comp_name.$source_param")
+                end
+                push!(assignments, "$(new_param)($(call_mods[source_param]))")
                 continue
             end
 
-            if haskey(mods, old_param)
-                push!(assignments, "$(new_param) = $(mods[old_param])")
-                continue
+            rhs = if haskey(mods, source_param)
+                mods[source_param]
+            else
+                string(get_comp_param_value(omc, model, components, comp_name, source_param))
             end
 
-            val = get_comp_param_value(omc, model, components, comp_name, old_param)
-            push!(assignments, "$(new_param) = $(val)")
+            if should_flip_sign
+                rhs = "-(" * rhs * ")"
+            end
+
+            push!(assignments, "$(new_param) = $(rhs)")
         end
 
-        append!(assignments, extra_raw)
+        append!(assignments, expanded_extra_raw)
 
         # Build the modification string and update the component
         mod_str = _code_modification_from_assignments(assignments)
@@ -217,6 +255,47 @@ function _resolve_init_spec(
 end
 
 """
+    _load_init_mode(omc, model, components, comp_name, base_class) -> Symbol
+
+Decide how a Dynawo load should be initialized.
+
+Returns:
+- `:pq_init` when `PRefPu` and `QRefPu` have resolvable initialization values
+- `:direct_complex` when the load already has explicit `s0Pu`, `u0Pu`, and `i0Pu`
+- `:not_load` for non-load components
+"""
+function _load_init_mode(
+    omc,
+    model::String,
+    components::Dict{String, Dict{String, Any}},
+    comp_name::String,
+    base_class::String,
+)
+    if !startswith(base_class, "Dynawo.Electrical.Loads.")
+        return :not_load
+    end
+
+    raw_mods = components[comp_name]["modifiers"]
+    has_direct_complex =
+        isa(raw_mods, Dict) &&
+        haskey(raw_mods, "s0Pu") &&
+        haskey(raw_mods, "u0Pu") &&
+        haskey(raw_mods, "i0Pu")
+
+    p_ref = strip(resolve_load_ref_value(omc, model, comp_name, "PRefPu"))
+    q_ref = strip(resolve_load_ref_value(omc, model, comp_name, "QRefPu"))
+    has_pq_init = !isempty(p_ref) && !isempty(q_ref)
+
+    if has_pq_init
+        return :pq_init
+    elseif has_direct_complex
+        return :direct_complex
+    end
+
+    error("Load $model.$comp_name has neither resolvable PRefPu/QRefPu initialization nor explicit s0Pu/u0Pu/i0Pu")
+end
+
+"""
     add_init_models!(omc, model, aux_model, INIT_MODELS, INIT_MODEL_BY_COMPONENT, components, SLACK_COMPONENT)
 
 Add INIT components described in `INIT_MODELS` to `aux_model`.
@@ -243,6 +322,11 @@ function add_init_models!(
         end
         spec = spec::Dict{String, Any}
 
+        load_mode = _load_init_mode(omc, model, components, base_comp, base_class)
+        if load_mode == :direct_complex
+            continue
+        end
+
         suffix = spec["init_component_suffix"]::String
         init_name = base_comp * suffix
         init_class = spec["init_class"]::String
@@ -254,13 +338,19 @@ function add_init_models!(
         # Copy values from the base component
         assignments = String[]
         for (init_param, base_param) in write_map
+            if startswith(base_param, "@aux.")
+                aux_field = base_param[6:end]
+                push!(assignments, "$(init_param) = $(base_comp).$(aux_field)")
+                continue
+            end
+
             if is_slack && (init_param == "P0Pu" || init_param == "Q0Pu")
                 continue
             end
 
             val = ""
 
-            if startswith(base_class, "Dynawo.Electrical.Loads.") && (base_param == "PRefPu" || base_param == "QRefPu")
+            if load_mode == :pq_init && (base_param == "PRefPu" || base_param == "QRefPu")
                 val = resolve_load_ref_value(omc, model, base_comp, base_param)
             else
                 val = string(get_comp_param_value(omc, model, components, base_comp, base_param))
@@ -327,12 +417,18 @@ function apply_LF_modifiers!(
             continue
         end
 
+        load_mode = _load_init_mode(omc, model, components, base_comp, base_class)
+        if load_mode == :direct_complex
+            continue
+        end
+
         extra_raw = spec["LF_modifiers_raw"]::Vector{String}
         isempty(extra_raw) && continue
 
         # Keep the class already present in the auxiliary model
         current_aux_class = aux_class_map[base_comp]
-        mod_str = _code_modification_from_assignments(extra_raw)
+        mod_assignments = vcat(_existing_modifier_assignments(c), extra_raw)
+        mod_str = _code_modification_from_assignments(mod_assignments)
 
         om_send(
             omc,
@@ -343,7 +439,7 @@ function apply_LF_modifiers!(
 end
 
 """
-    add_init_equations!(omc, aux_model, components, INIT_MODELS, INIT_MODEL_BY_COMPONENT, SLACK_COMPONENT)
+    add_init_equations!(omc, model, aux_model, components, INIT_MODELS, INIT_MODEL_BY_COMPONENT, SLACK_COMPONENT)
 
 Build and inject an `initial equation` block into `aux_model`.
 
@@ -351,6 +447,7 @@ Equations are generated from `init_equations` mappings in `INIT_MODELS`.
 """
 function add_init_equations!(
     omc,
+    model::String,
     aux_model::String,
     components::Dict{String, Dict{String, Any}},
     INIT_MODELS::Dict{String, Any},
@@ -367,6 +464,12 @@ function add_init_equations!(
             continue
         end
         spec = spec::Dict{String, Any}
+
+        load_mode = _load_init_mode(omc, model, components, base_name, base_class)
+        if load_mode == :direct_complex
+            continue
+        end
+
         suffix = spec["init_component_suffix"]::String
         init_name = base_name * suffix
 
@@ -380,11 +483,16 @@ function add_init_equations!(
         # Write the mapped init equations
         eqmap = spec["init_equations"]::Dict{String, String}
         for (init_var, base_var) in eqmap
-            push!(lines, "$init_name.$init_var = $base_name.$base_var;")
+            # Support signed init-equation mappings like "-QGenPu".
+            should_flip_sign = startswith(base_var, "-")
+            source_var = should_flip_sign ? base_var[2:end] : base_var
+            rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
+            push!(lines, "$init_name.$init_var = $rhs;")
         end
     end
 
     # Build and inject the block
+    length(lines) == 1 && return nothing
     block = join(lines, "\n")
     om_send(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
 end

@@ -51,11 +51,12 @@ end
 """
     resolve_load_ref_value(omc, model::String, comp::String, field::String) -> String
 
-For loads: get numeric value assigned via equations like
+For loads: get numeric value assigned via plain equations like
 loadPQ1.PRefPu = PrefPu_load_01.setPoint;
 PrefPu_load_01.setPoint = loadPQ1.PRefPu;
 
-If the right-hand side is `X.setPoint`, this returns `X.Value0`.
+If the right-hand side is `X.setPoint` or `X.step`, this returns `X.Value0`.
+Derivative and `when` equations are ignored.
 Returns `""` when no matching equation is found.
 """
 function resolve_load_ref_value(omc, model::String, comp::String, field::String)
@@ -63,10 +64,13 @@ function resolve_load_ref_value(omc, model::String, comp::String, field::String)
     neq = sendExpression(omc, "getEquationItemsCount($model)")
     for i in 1:neq
         eqi = String(sendExpression(omc, "getNthEquationItem($model, $i)", parsed = false))
-        eqi = replace(eqi, "\"" => "")
+        eqi = strip(replace(eqi, "\"" => ""))
+
+        startswith(eqi, "when ") && continue
+        occursin("der(", eqi) && continue
 
         occursin("=", eqi) || continue
-        parts = split(strip(eqi), "=", limit = 2)
+        parts = split(eqi, "=", limit = 2)
         length(parts) == 2 || continue
 
         lhs = strip(replace(parts[1], ";" => ""))
@@ -81,7 +85,7 @@ function resolve_load_ref_value(omc, model::String, comp::String, field::String)
             continue
         end
 
-        m = match(r"^([A-Za-z_]\w*)\.setPoint$", other)
+        m = match(r"^([A-Za-z_]\w*)\.(setPoint|step)$", other)
         if m !== nothing
             sp = m.captures[1]
             return string(sendExpression(omc, "getComponentModifierValue($model, $sp.Value0)"))

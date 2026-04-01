@@ -22,10 +22,25 @@ const REPLACEMENTS = Dict{String, Any}(
         )
     ),
 
+    "Dynawo.Electrical.Sources.InertialGrid.InertialGrid" => Dict(
+        "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta",
+        "write_modifiers" => Dict(
+            "PGen0Pu" => "P0Pu",
+        ),
+        "extra_modifiers_raw" => [
+            "Alpha = 0",
+            "Beta = 0",
+            "QGen0Pu = 0",
+            "U0Pu = 1",
+            "u0Pu = Complex(1, 0)",
+            "i0Pu = Modelica.ComplexMath.conj(Complex({COMP}.PGen0Pu, {COMP}.QGen0Pu) / {COMP}.u0Pu)",
+        ]
+    ),
+
     "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronous" => Dict(
         "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers" => Dict(
-            "PGen0Pu" => "P0Pu",
+            "PGen0Pu" => "-P0Pu",
             "U0Pu"    => "U0Pu",
         )
     ),
@@ -100,11 +115,9 @@ const INIT_MODELS = Dict{String, Any}(
                     "MdPuEfd" => "MdPPuEfd",
                     "MqPu" => "MqPPu",
                     "MrcPu" => "MrcPPu",
-                    "MsalPu" => "MsalPu",
                     "P0Pu" => "P0Pu",
                     "PNomAlt" => "PNomAlt",
                     "PNomTurb" => "PNomTurb",
-                    "Q0Pu" => "Q0Pu",
                     "RDPu" => "RDPPu",
                     "RQ1Pu" => "RQ1PPu",
                     "RQ2Pu" => "RQ2PPu",
@@ -119,7 +132,6 @@ const INIT_MODELS = Dict{String, Any}(
                     "UNom" => "UNom",
                     "UNomHV" => "UNomHV",
                     "UNomLV" => "UNomLV",
-                    "UPhase0" => "UPhase0",
                     "XTfPu" => "XTfPu",
                     "md" => "md",
                     "mq" => "mq",
@@ -133,7 +145,7 @@ const INIT_MODELS = Dict{String, Any}(
                 ],
 
                 "init_equations" => Dict(
-                    "Q0Pu"    => "QGenPu",
+                    "Q0Pu"    => "-QGenPu",
                     "UPhase0" => "UPhase",
                 )
             ),
@@ -186,7 +198,7 @@ const INIT_MODELS = Dict{String, Any}(
                 ],
 
                 "init_equations" => Dict(
-                    "Q0Pu"    => "QGenPu",
+                    "Q0Pu"    => "-QGenPu",
                     "UPhase0" => "UPhase",
                 )
             ),
@@ -241,7 +253,7 @@ const INIT_MODELS = Dict{String, Any}(
                 ],
 
                 "init_equations" => Dict(
-                    "Q0Pu"    => "QGenPu",
+                    "Q0Pu"    => "-QGenPu",
                     "UPhase0" => "UPhase",
                 )
             )
@@ -261,6 +273,37 @@ const INIT_MODELS = Dict{String, Any}(
             "U0Pu(start = 1, fixed = false)",
             "UPhase0(start = 0, fixed = false)",
             
+        ],
+
+        "init_equations" => Dict(
+            "i0Pu.re" => "i0Pu.re",
+            "i0Pu.im" => "i0Pu.im",
+            "s0Pu.re" => "s0Pu.re",
+            "s0Pu.im" => "s0Pu.im",
+            "u0Pu.re" => "u0Pu.re",
+            "u0Pu.im" => "u0Pu.im",
+        ),
+
+        "LF_modifiers_raw" => [
+            "i0Pu(re(fixed = false), im(fixed = false))",
+            "s0Pu(re(fixed = false), im(fixed = false))",
+            "u0Pu(re(fixed = false), im(fixed = false))",
+        ],
+    ),
+
+    "Dynawo.Electrical.Loads.LoadZIP" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRefPu",
+            "Q0Pu" => "QRefPu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "U0Pu(start = 1, fixed = false)",
+            "UPhase0(start = 0, fixed = false)",
+
         ],
 
         "init_equations" => Dict(

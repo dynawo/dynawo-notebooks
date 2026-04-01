@@ -56,6 +56,66 @@ function patch_aux_equations!(aux_file::String)
     txt = replace(txt, "  der(generatorSynchronous.lambdaQ2Pu) = 0;" => "")
     txt = replace(txt, "  der(generatorSynchronous.theta) = 0;" => "")
     txt = replace(txt, "  der(generatorSynchronous.omegaPu) = 0;" => "")
+
+    # DoubleInertialGrid / DIGrid cleanup after replacing InertialGrid components.
+    txt = replace(
+        txt,
+        r"(?m)^\s*Dynawo\.Types\.Frequency\s+deltaFrequency\b.*\n" => "",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*deltaFrequency\s*=\s*inertialGrid1\.reducedOrderSFR\.deltaFrequency\s*-\s*inertialGrid2\.reducedOrderSFR\.deltaFrequency\s*;\s*\n" => "",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*inertialGrid1\.injectorURI\.switchOffSignal[123]\.value\s*=\s*false\s*;\s*\n" => "",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*inertialGrid2\.injectorURI\.switchOffSignal1\.value\s*=\s*false\s*;\s*$" => "  inertialGrid2.switchOffSignal1.value = false;",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*inertialGrid2\.injectorURI\.switchOffSignal2\.value\s*=\s*false\s*;\s*$" => "  inertialGrid2.switchOffSignal2.value = false;",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*inertialGrid2\.injectorURI\.switchOffSignal3\.value\s*=\s*false\s*;\s*$" => "  inertialGrid2.switchOffSignal3.value = false;",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*der\(inertialGrid1\.reducedOrderSFR\.PspPu\)\s*=\s*0\s*;\s*\n" => "",
+    )
+    txt = replace(
+        txt,
+        r"(?m)^\s*der\(inertialGrid2\.reducedOrderSFR\.PspPu\)\s*=\s*0\s*;\s*\n" => "",
+    )
+
+    # Make DIGrid loadPQ static in the auxiliary model.
+    txt = replace(
+        txt,
+        "  Dynawo.Electrical.Controls.Basics.Step PrefPu_loadPQ(Value0 = 0, Height = 1, tStep = 10);" =>
+        "  Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_loadPQ(Value0 = 0);",
+    )
+    txt = replace(
+        txt,
+        "  loadPQ.PRefPu = PrefPu_loadPQ.step;" =>
+        "  loadPQ.PRefPu = PrefPu_loadPQ.setPoint;",
+    )
+    txt = replace(
+        txt,
+        r"(?ms)^\s*when\s+time\s*>\s*10\s+then\s*\n\s*loadPQ\.deltaP\s*=\s*.*?;\s*\n\s*end\s+when;\s*\n" => "",
+    )
+    txt = replace(
+        txt,
+        "  der(loadPQ.QRefPu) = 0;" =>
+        "  der(loadPQ.PRefPu) = 0;\n  der(loadPQ.QRefPu) = 0;",
+    )
+    txt = replace(
+        txt,
+        "  loadPQ.deltaQ = 0;" =>
+        "  loadPQ.deltaP = 0;\n  loadPQ.deltaQ = 0;",
+    )
     write(aux_file, txt)
     return nothing
 end
