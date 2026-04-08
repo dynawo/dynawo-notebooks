@@ -60,5 +60,6 @@
     "QGenMaxPu": "q_max_pu",
     "rhoMax": "rho_max",
     "rhoMin": "rho_min",
-    "NbTap": "n_tap"
+    "NbTap": "n_tap",
+    "rTfoPu": "ratio"
 }

@@ -123,7 +123,7 @@ class PowsyblConverter:
                             v = l_info.get("nominal_v")
                             break
 
-                # 2.6 Naming convention fallback using external JSON rules (IMPLEMENTED)
+                # 2.6 Naming convention fallback using external JSON rules
                 if not v or v == 0.0:
                     for prefix, mapped_voltage in voltage_mapping.items():
                         if prefix != "default" and prefix in bid:
@@ -136,8 +136,8 @@ class PowsyblConverter:
                 # Force 'v' to be a float. If the parser extracted a weird string, fallback safely.
                 try:
                     v = float(v)
-                    # --- CRITICAL FIX 3: Auto-convert Volts to kV for PyPowSyBl ---
-                    # Ensures that any raw value (like 69000.0) gets correctly interpreted as 69.0 kV
+                    # --- CRITICAL FIX: Auto-convert Volts to kV for PyPowSyBl ---
+                    # Ensures that any raw value (e.g., 69000.0) is correctly interpreted as 69.0 kV
                     if v > 1000.0:
                         v = v / 1000.0
                 except (ValueError, TypeError):
@@ -199,17 +199,17 @@ class PowsyblConverter:
         un = bus_v.get(b1, 225.0)
         z_base = (un**2) / sn
 
-        # CRITICAL FIX: Determine if the Modelica component expects per-unit values
-        model_type = info.get("modelica_type", "").lower()
-        is_pu = "pu" in model_type or "perunit" in model_type
+        # Determine if the Modelica component uses per-unit values based on parameter availability
+        is_pu = "r_pu" in info or "x_pu" in info
 
-        raw_r = info.get("r_pu", 0.0)
-        raw_x = info.get("x_pu", 0.001)
-        raw_b = info.get("b_pu", 0.0)
-        raw_g = info.get("g_pu", 0.0)
+        # Safely extract either the per-unit or physical values
+        raw_r = info.get("r_pu", info.get("r", 0.0))
+        raw_x = info.get("x_pu", info.get("x", 0.001))
+        raw_b = info.get("b_pu", info.get("b", 0.0))
+        raw_g = info.get("g_pu", info.get("g", 0.0))
 
         if is_pu:
-            # IEEE57 style: Convert p.u. to Ohms/Siemens
+            # IEEE 57 style: Convert per-unit to Ohms/Siemens
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
             b_sie = raw_b / z_base
@@ -220,6 +220,8 @@ class PowsyblConverter:
             x_ohm = raw_x
             b_sie = raw_b
             g_sie = raw_g
+
+        print(str(lid), r_ohm, x_ohm)  # Debug print to verify line parameters
 
         network.create_lines(
             id=str(lid),
@@ -286,13 +288,19 @@ class PowsyblConverter:
             if "q_pu" in info:
                 target_q = info["q_pu"] * sn
 
+        # Robust voltage extraction: prevent 0.0 propagation which crashes PyPowSyBl
+        # If the bus_v map returned 0.0, we override it with a safe default base voltage
+        base_v = bus_v.get(bid)
+        if not base_v or base_v == 0.0:
+            base_v = 130.0  # Typical safe fallback for IEEE 57
+
         network.create_generators(
             id=str(gid),
             voltage_level_id=f"VL_{bid}",
             bus_id=str(bid),
             target_p=abs(p_mw),
             target_q=target_q,
-            target_v=info.get("u_pu", 1.0) * bus_v.get(bid, 225.0),
+            target_v=info.get("u_pu", 1.0) * base_v,
             voltage_regulator_on=is_regulator_on,
             min_p=-9999.0 if is_slack else abs(p_mw),
             max_p=9999.0 if is_slack else abs(p_mw),
@@ -358,7 +366,7 @@ class PowsyblConverter:
 
     @staticmethod
     def _create_transformer(
-        network: pp.network.Network, tid: str, info: Dict, bus_v: Dict, bus_to_sub: Dict
+        network: pp.network.Network, tid: str, info: Dict, bus_v: Dict, bus_to_sub: Dict = None
     ) -> None:
         """
         Creates a 2-winding transformer in the PyPowSyBl network.
@@ -368,34 +376,22 @@ class PowsyblConverter:
         :param tid: The unique identifier for the transformer.
         :param info: Dictionary containing the transformer's parameters.
         :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
-        :param bus_to_sub: Dictionary mapping bus IDs to their parent substation ID.
         """
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
             return
 
-        # --- CRITICAL FIX 4: Dynamic Base Voltage Prioritization ---
-        # We first try to get the real nominal voltage parsed from Modelica parameters.
-        # This prevents the Z_base from exploding when using default or non-matching rules.
-        un1 = info.get("nominal_v") or info.get("rated_u1")
-        if not un1:
-            un1 = bus_v.get(b1, 225.0)
+        un1 = bus_v.get(b1, 225.0)
+        un2 = bus_v.get(b2, 225.0)
 
-        un2 = info.get("rated_u2") or info.get("nominal_v")
-        if not un2:
-            un2 = bus_v.get(b2, 225.0)
-
-        # Auto-convert Volts to kV for PyPowSyBl if extracted raw as > 1000
+        # Scale down voltages from Volts to kV if necessary
         if un1 > 1000.0:
             un1 = un1 / 1000.0
         if un2 > 1000.0:
             un2 = un2 / 1000.0
 
-        # --- CRITICAL FIX 5: Transformer Z_base isolation ---
-        # Z_base for transformers MUST use their own nominal apparent power (SnNom)
         sn_comp = info.get("sn_nom", 100.0)
 
-        # EXACT RATIO (rho) CALCULATION
         base_ratio = info.get("ratio", 1.0)
         tap_pos = info.get("tap0", 6.0)
         n_tap = info.get("n_tap", 13.0)
@@ -409,7 +405,29 @@ class PowsyblConverter:
             effective_ratio = base_ratio * (rho_min + tap_pos * step_size)
 
         rated_u1_effective = un1 * effective_ratio
-        z_base = (un1**2) / sn_comp
+
+        # --- CRITICAL FIX: Transformer Z_base MUST use rated_u1_effective, not un1 ---
+        # PyPowSyBl expects ohmic impedances to be referred strictly to the primary ratedU1 side.
+        z_base = (rated_u1_effective**2) / sn_comp
+
+        is_pu = "r_pu" in info or "x_pu" in info
+
+        raw_r = info.get("r_pu", info.get("r", 0.0))
+        raw_x = info.get("x_pu", info.get("x", 0.001))
+        raw_b = info.get("b_pu", info.get("b", 0.0))
+        raw_g = info.get("g_pu", info.get("g", 0.0))
+
+        if is_pu:
+            # Convert per-unit to Ohms and Siemens based on the transformer's specific base
+            r_ohm = raw_r * z_base
+            x_ohm = raw_x * z_base
+            b_sie = raw_b / z_base
+            g_sie = raw_g / z_base
+        else:
+            r_ohm = raw_r
+            x_ohm = raw_x
+            b_sie = raw_b
+            g_sie = raw_g
 
         network.create_2_windings_transformers(
             id=str(tid),
@@ -417,11 +435,11 @@ class PowsyblConverter:
             bus1_id=str(b1),
             voltage_level2_id=f"VL_{b2}",
             bus2_id=str(b2),
-            r=info.get("r_pu", 0.0) * z_base,
-            x=info.get("x_pu", 0.1) * z_base,
-            g=info.get("g_pu", 0.0) / z_base,
-            b=info.get("b_pu", 0.0) / z_base,
+            rated_s=sn_comp,
             rated_u1=rated_u1_effective,
             rated_u2=un2,
-            rated_s=sn_comp,
+            r=r_ohm,
+            x=x_ohm,
+            g=g_sie,
+            b=b_sie,
         )
