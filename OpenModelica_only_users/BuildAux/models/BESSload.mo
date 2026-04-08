@@ -145,7 +145,7 @@ model BESSload "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A 
   Dynawo.Electrical.Lines.Line lineFeeder(BPu = 0, GPu = 0, RPu = 0, XPu = 0.00001) annotation(
     Placement(transformation(origin = {-54, -12}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
     
-  Dynawo.Electrical.Loads.LoadPQ loadPQ1(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ loadPQ1() annotation(
     Placement(transformation(origin = {-90, 19}, extent = {{-10, -10}, {10, 10}})));
 
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_01(Value0 = 0.20);

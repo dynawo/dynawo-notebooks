@@ -162,7 +162,6 @@ function apply_replacements!(
 
         # Build the replacement assignments
         extra_raw = haskey(spec, "extra_modifiers_raw") ? spec["extra_modifiers_raw"]::Vector{String} : String[]
-        expanded_extra_raw = [replace(s, "{COMP}" => comp_name) for s in extra_raw]
 
         assignments = String[]
         for (new_param, old_param) in write_map
@@ -192,7 +191,7 @@ function apply_replacements!(
             push!(assignments, "$(new_param) = $(rhs)")
         end
 
-        append!(assignments, expanded_extra_raw)
+        append!(assignments, extra_raw)
 
         # Build the modification string and update the component
         mod_str = _code_modification_from_assignments(assignments)

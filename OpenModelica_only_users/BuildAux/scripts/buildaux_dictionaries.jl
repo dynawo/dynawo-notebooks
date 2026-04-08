@@ -3,7 +3,7 @@
 
 module BuildAuxDictionaries
 
-export REPLACEMENTS, INIT_MODELS
+export REPLACEMENTS, AUX_ALLOWED_REFS, INIT_MODELS
 
 const REPLACEMENTS = Dict{String, Any}(
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource" => Dict(
@@ -22,18 +22,25 @@ const REPLACEMENTS = Dict{String, Any}(
         )
     ),
 
+    "Dynawo.Electrical.Controls.Basics.Step" => Dict(
+        "new_class" => "Dynawo.Electrical.Controls.Basics.SetPoint",
+        "write_modifiers" => Dict(
+            "Value0" => "Value0",
+        )
+    ),
+
     "Dynawo.Electrical.Sources.InertialGrid.InertialGrid" => Dict(
         "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta",
         "write_modifiers" => Dict(
             "PGen0Pu" => "P0Pu",
+            "QGen0Pu" => "Q0Pu",
         ),
         "extra_modifiers_raw" => [
             "Alpha = 0",
             "Beta = 0",
-            "QGen0Pu = 0",
-            "U0Pu = 1",
-            "u0Pu = Complex(1, 0)",
-            "i0Pu = Modelica.ComplexMath.conj(Complex({COMP}.PGen0Pu, {COMP}.QGen0Pu) / {COMP}.u0Pu)",
+            "U0Pu(fixed = false)",
+            "u0Pu(re(fixed = false), im(fixed = false))",
+            "i0Pu(re(fixed = false), im(fixed = false))",
         ]
     ),
 
@@ -41,22 +48,6 @@ const REPLACEMENTS = Dict{String, Any}(
         "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers" => Dict(
             "PGen0Pu" => "-P0Pu",
-            "U0Pu"    => "U0Pu",
-        )
-    ),
-
-    "Dynawo.Examples.Nordic.Components.GeneratorWithControl.GeneratorSynchronousThreeWindingsWithControl" => Dict(
-        "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
-        "write_modifiers" => Dict(
-            "PGen0Pu" => "P0Pu",
-            "U0Pu"    => "U0Pu",
-        )
-    ),
-
-    "Dynawo.Examples.Nordic.Components.GeneratorWithControl.GeneratorSynchronousFourWindingsWithControl" => Dict(
-        "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
-        "write_modifiers" => Dict(
-            "PGen0Pu" => "P0Pu",
             "U0Pu"    => "U0Pu",
         )
     ),
@@ -69,6 +60,62 @@ const REPLACEMENTS = Dict{String, Any}(
             "u0Pu(re(fixed = false), im(fixed = false))",
         ]
     )
+)
+
+const AUX_ALLOWED_REFS = Dict{String, Vector{String}}(
+    "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed" => [
+        ".terminal",
+        ".running",
+        ".switchOffSignal1",
+        ".switchOffSignal2",
+        ".switchOffSignal3",
+        ".PGen0Pu",
+        ".QGen0Pu",
+        ".U0Pu",
+        ".u0Pu",
+        ".i0Pu",
+        ".PGen",
+        ".PGenPu",
+        ".QGenPu",
+        ".SGenPu",
+        ".UPu",
+        ".UPhase",
+    ],
+
+    "Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta" => [
+        ".terminal",
+        ".running",
+        ".switchOffSignal1",
+        ".switchOffSignal2",
+        ".switchOffSignal3",
+        ".PGen0Pu",
+        ".QGen0Pu",
+        ".U0Pu",
+        ".u0Pu",
+        ".i0Pu",
+        ".PGen",
+        ".PGenPu",
+        ".QGenPu",
+        ".SGenPu",
+        ".UPu",
+        ".Alpha",
+        ".Beta",
+    ],
+
+    "Dynawo.Electrical.Buses.InfiniteBus" => [
+        ".terminal",
+        ".UPu",
+        ".UPhase",
+        ".UNom",
+        ".UPuVar",
+        ".UPhaseVar",
+        ".U",
+    ],
+
+    "Dynawo.Electrical.Controls.Basics.SetPoint" => [
+        ".Value0",
+        ".setPoint",
+    ],
 )
 
 const INIT_MODELS = Dict{String, Any}(
