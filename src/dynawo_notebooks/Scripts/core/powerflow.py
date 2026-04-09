@@ -95,10 +95,10 @@ class PowerFlowRunner:
                 )
 
             # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
-            # NOTE: Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization
+            # Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
-                voltage_init_mode=pp.loadflow.VoltageInitMode.DC_VALUES,
+                voltage_init_mode=pp.loadflow.VoltageInitMode.UNIFORM_VALUES,
             )
 
             # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
@@ -120,17 +120,70 @@ class PowerFlowRunner:
                 logger.warning(f"WARNING: Load flow DID NOT CONVERGE. Status: {status}")
 
                 # Safely extract details using the correct ComponentResult attributes
-                if hasattr(main_result, "status_text") and main_result.status_text:
-                    logger.warning(f"Status Details: {main_result.status_text}")
+                status_text = (
+                    main_result.status_text
+                    if hasattr(main_result, "status_text") and main_result.status_text
+                    else "None"
+                )
+                iterations = (
+                    main_result.iteration_count
+                    if hasattr(main_result, "iteration_count")
+                    else "Unknown"
+                )
+                ref_bus = (
+                    main_result.reference_bus_id
+                    if hasattr(main_result, "reference_bus_id") and main_result.reference_bus_id
+                    else "None"
+                )
 
-                if hasattr(main_result, "iteration_count"):
-                    logger.warning(f"Iterations performed: {main_result.iteration_count}")
+                if status_text != "None":
+                    logger.warning(f"Status Details: {status_text}")
 
-                if hasattr(main_result, "reference_bus_id") and main_result.reference_bus_id:
-                    logger.warning(f"Reference Bus (Slack) used: {main_result.reference_bus_id}")
+                if iterations != "Unknown":
+                    logger.warning(f"Iterations performed: {iterations}")
+
+                if ref_bus != "None":
+                    logger.warning(f"Reference Bus (Slack) used: {ref_bus}")
                 else:
                     logger.warning(
                         "No Reference Bus (Slack) was detected. Calculation cannot start."
+                    )
+
+                # --- DETAILED DIVERGENCE LOGGING ---
+                # Generate a comprehensive diagnostic file 'powerflow.log' capturing the network state
+                # and solver metrics when the AC Load Flow fails to converge.
+                try:
+                    with open("powerflow.log", "w", encoding="utf-8") as log_file:
+                        log_file.write("=== OPENLOADFLOW DIVERGENCE REPORT ===\n")
+                        log_file.write(f"Status: {status}\n")
+                        log_file.write(f"Status Details: {status_text}\n")
+                        log_file.write(f"Iterations: {iterations}\n")
+                        log_file.write(f"Slack Bus: {ref_bus}\n\n")
+
+                        # Extract PyPowSyBl solver metrics (Iterative errors, mismatches, etc.)
+                        log_file.write("--- SOLVER METRICS ---\n")
+                        for i, res in enumerate(results):
+                            log_file.write(f"Synchronous Component {i}:\n")
+                            for attr in dir(res):
+                                # Filter out private methods and built-ins to safely dump attributes
+                                if not attr.startswith("_") and not callable(getattr(res, attr)):
+                                    log_file.write(f"  {attr}: {getattr(res, attr)}\n")
+                        log_file.write("\n")
+
+                        # Dump the network state to observe voltage collapses or limit violations
+                        log_file.write("--- GENERATORS STATE ---\n")
+                        log_file.write(network.get_generators().to_string() + "\n\n")
+
+                        log_file.write("--- BUSES VOLTAGE STATE ---\n")
+                        # Using pandas to_string() ensures all columns are written to the text file
+                        log_file.write(network.get_buses().to_string() + "\n\n")
+
+                    logger.info(
+                        "Detailed divergence report saved successfully to 'powerflow.log'."
+                    )
+                except Exception as log_err:
+                    logger.error(
+                        f"Failed to generate 'powerflow.log' divergence report: {log_err}"
                     )
 
                 return False

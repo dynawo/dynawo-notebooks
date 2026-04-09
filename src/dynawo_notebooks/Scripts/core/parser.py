@@ -352,7 +352,7 @@ class ModelicaParser:
         match = pattern.search(s)
         if match:
             raw_val = match.group(1).strip()
-            # CLEANUP: Remove trailing comments or descriptions
+            # Clean up trailing comments or descriptions
             clean_val = raw_val.split('"')[0].split("/*")[0].split("//")[0].strip()
             return clean_val if clean_val else None
         return None
@@ -377,14 +377,20 @@ class ModelicaParser:
         if not val_str or depth > 5:
             return None
 
-        # CRITICAL FIX: Truncate Modelica docstrings and inline comments BEFORE processing.
-        # This completely strips out text like '"Resistance in pu (base SnRef)"'
-        # so they don't break the Python eval() function.
+        # Truncate Modelica docstrings and inline comments before processing.
+        # This removes descriptive text (e.g., '"Resistance in pu (base SnRef)"')
+        # to prevent syntax errors during Python eval().
         clean = val_str.split('"')[0].split("//")[0].split("/*")[0].strip()
         clean = clean.replace("'", "")
 
-        # Resolve the system base explicitly to avoid syntax errors with dot-notation
         clean = clean.replace("SystemBase.SnRef", "100.0")
+
+        # Convert Modelica power operator (^) to Python (**)
+        clean = clean.replace("^", "**")
+
+        # Convert Nordic impedance bases to their mathematical representation (V^2 / S)
+        # Example: XBase_130 becomes ((130**2)/100.0)
+        clean = re.sub(r"XBase_(\d+)", r"((\1**2)/100.0)", clean)
 
         try:
             return float(clean)
@@ -398,7 +404,6 @@ class ModelicaParser:
                 continue
 
             # Optimized variable lookup using both source and flat maps.
-            # No need for SnRef checks here anymore due to the explicit replace above.
             var_val = self._source_assignments.get(var)
             if var_val is None:
                 var_val = self._flat_assignments.get(var)
@@ -437,30 +442,32 @@ class ModelicaParser:
     ) -> Dict[str, float]:
         """
         Extracts physical parameters for a specific component using multi-strategy lookups.
-
-        This method prioritizes pre-built memory maps (Flattened and Source) to bypass
-        OMC communication latency. It implements a priority-based heuristic for
-        variable extraction to balance speed with absolute precision.
-
-        :param declaring_model: The name of the Modelica model where the component is declared.
-        :param comp_name: The instance name of the component.
-        :param modifiers: The raw string of modifiers attached to the component instance.
-        :return: A dictionary of extracted parameter keys and their float values.
+        Checks both local dot-notation (g01.P0Pu) and top-level aliases (P0Pu_g01).
         """
         extracted = {}
         extraction_priority = {}  # Tracks priority of extracted variables (1 is highest)
-        critical_params = {"r_pu", "x_pu", "b_pu", "g_pu"}
+        critical_params = {"r_pu", "x_pu", "b_pu", "g_pu", "r", "x", "b", "g"}
+
+        # --- Parameter Constraints: Values that must be strictly positive ---
         positive_only_params = {"u_pu", "nominal_v", "sn_nom", "ratio", "rated_u1", "rated_u2"}
 
         for pm, pj in self.param_map.items():
             val = None
             current_priority = 99
 
-            raw_flat = self._flat_assignments.get(f"{comp_name}.{pm}")
-            raw_src = self._source_assignments.get(f"{comp_name}.{pm}")
-            if raw_src is None:
-                raw_src = self._source_assignments.get(f"{pm}_{comp_name}")
+            # Generate the two standard Dynawo naming conventions
+            dot_notation = f"{comp_name}.{pm}"  # e.g., g01.P0Pu
+            top_level_alias = f"{pm}_{comp_name}"  # e.g., P0Pu_g01
 
+            raw_flat = self._flat_assignments.get(dot_notation)
+            if raw_flat is None:
+                raw_flat = self._flat_assignments.get(top_level_alias)
+
+            raw_src = self._source_assignments.get(dot_notation)
+            if raw_src is None:
+                raw_src = self._source_assignments.get(top_level_alias)
+
+            # --- VOLTAGE DEDUCTION ---
             for raw_text in [raw_src, raw_flat]:
                 if raw_text and isinstance(raw_text, str) and "ZBASE" in raw_text:
                     match = re.search(r"ZBASE(\d+)_(\d+)", raw_text)
@@ -468,11 +475,7 @@ class ModelicaParser:
                         extracted["_deduced_v"] = float(f"{match.group(1)}.{match.group(2)}")
                         break
 
-            # --- PRIORITY SYSTEM ---
-            # PRIORITY 1: EXPLICIT SOURCE CODE OVERRIDES (e.g., equations in test cases)
-            raw_src = self._source_assignments.get(f"{comp_name}.{pm}")
-            if raw_src is None:
-                raw_src = self._source_assignments.get(f"{pm}_{comp_name}")
+            # PRIORITY 1: EXPLICIT SOURCE CODE OVERRIDES
             if raw_src is not None:
                 resolved = self._resolve_val(raw_src, pj, comp_name)
                 if resolved is not None:
@@ -481,31 +484,34 @@ class ModelicaParser:
 
             # PRIORITY 2: SIMULATION VALUES (Evaluated by OMC)
             if val is None:
-                try:
-                    sim_val = self.conn.get_simulation_value(f"{comp_name}.{pm}")
-                    if sim_val is not None:
-                        val = float(sim_val)
-                        current_priority = 2
-                except Exception:
-                    pass
+                for query_str in [dot_notation, top_level_alias]:
+                    try:
+                        sim_val = self.conn.get_simulation_value(query_str)
+                        if sim_val is not None:
+                            val = float(sim_val)
+                            current_priority = 2
+                            break
+                    except Exception:
+                        pass
 
-            # PRIORITY 3: FLAT MEMORY MAP (Ultra-fast memory scan with full math expressions)
+            # PRIORITY 3: FLAT MEMORY MAP
             if val is None:
-                raw_flat = self._flat_assignments.get(f"{comp_name}.{pm}")
                 if raw_flat is not None:
                     resolved = self._resolve_val(raw_flat, pj, comp_name)
                     if resolved is not None:
                         val = resolved
                         current_priority = 3
 
-            # PRIORITY 4: OMC KERNEL EVALUATION (The Golden Standard from the Old Code)
+            # PRIORITY 4: OMC KERNEL EVALUATION (Top-Level Overrides resolution)
             if val is None:
-                raw_api = self.conn.get_parameter_value(self.model_name, f"{comp_name}.{pm}")
-                if raw_api:
-                    resolved = self._resolve_val(raw_api, pj, comp_name)
-                    if resolved is not None:
-                        val = resolved
-                        current_priority = 4
+                for query_str in [dot_notation, top_level_alias]:
+                    raw_api = self.conn.get_parameter_value(self.model_name, query_str)
+                    if raw_api:
+                        resolved = self._resolve_val(raw_api, pj, comp_name)
+                        if resolved is not None:
+                            val = resolved
+                            current_priority = 4
+                            break
 
             # PRIORITY 5: EXPLICIT MODIFIERS
             if val is None:
@@ -525,35 +531,23 @@ class ModelicaParser:
                         val = resolved
                         current_priority = 6
 
-            # --- ASSIGNMENT & ALIAS OVERWRITE PROTECTION ---
+            # --- ASSIGNMENT & ALIAS OVERRIDE PROTECTION ---
             if val is not None:
                 numeric_val = val.real if isinstance(val, complex) else float(val)
                 final_val = abs(numeric_val) if pj in ["p_pu", "p"] else numeric_val
 
-                # 🛑 THE SHIELD: Prevent 0.0 from destroying voltage/base values! 🛑
                 if final_val == 0.0 and pj in positive_only_params:
                     continue
-
-                # --- SHUNT SUSCEPTANCE CORRECTION ---
-                # Modelica uses negative B for capacitors (Q injected = -B * V^2)
-                # PyPowSyBl expects positive B for capacitors (Q injected = B * V^2)
-                # if pj == "b_pu" and "shunt" in comp_name.lower():
-                #     final_val = -final_val
 
                 if pj in extracted and pj in critical_params:
                     if final_val == 0.0 and extracted[pj] != 0.0:
                         continue
 
-                if pj == "nominal_v" and final_val <= 1.1:
-                    continue
-
-                # Only assign if this extraction method is MORE or EQUALLY reliable than the previous one
                 best_prio = extraction_priority.get(pj, 99)
                 if current_priority < best_prio:
                     extracted[pj] = final_val
                     extraction_priority[pj] = current_priority
                 elif current_priority == best_prio:
-                    # Prevent later aliases of the same priority from overriding the first match
                     if pj not in extracted:
                         extracted[pj] = final_val
                         extraction_priority[pj] = current_priority
@@ -584,7 +578,6 @@ class ModelicaParser:
                 if raw_p_src is not None:
                     p_val = self._resolve_val(raw_p_src, "p_pu", comp_name)
 
-            # Prevent overriding if higher priority scalar parameters (like PRefPu) already set it
             if p_val is not None and "p_pu" not in extracted:
                 extracted["p_pu"] = abs(float(p_val))
             if q_val is not None and "q_pu" not in extracted:

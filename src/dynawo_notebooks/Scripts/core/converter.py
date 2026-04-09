@@ -61,7 +61,7 @@ class PowsyblConverter:
         # Load external configuration for voltage naming conventions
         voltage_mapping = PowsyblConverter._load_voltage_mapping()
 
-        # 1. SUBSTATION GROUPING LOGIC
+        # 1. Substation Grouping Logic
         # PyPowSyBl requires both sides of a transformer to be in the same Substation.
         # We use a mapping to group buses that are connected via transformers.
         bus_to_sub = {bid: bid for bid in data.get("buses", {})}
@@ -82,7 +82,7 @@ class PowsyblConverter:
         for sub_id in unique_subs:
             network.create_substations(id=f"Sub_{sub_id}")
 
-        # 2. VOLTAGE DISCOVERY & CREATION
+        # 2. Voltage Discovery & Creation
         # Dynawo buses often don't have explicit Un. We discover it from connected equipment.
         bus_nominal_v = {}
         if "buses" in data:
@@ -133,11 +133,11 @@ class PowsyblConverter:
                     if not v or v == 0.0:
                         v = voltage_mapping.get("default", 225.0)
 
-                # Force 'v' to be a float. If the parser extracted a weird string, fallback safely.
+                # Force 'v' to be a float. Fallback safely if extraction fails.
                 try:
                     v = float(v)
-                    # --- CRITICAL FIX: Auto-convert Volts to kV for PyPowSyBl ---
-                    # Ensures that any raw value (e.g., 69000.0) is correctly interpreted as 69.0 kV
+                    # Auto-convert Volts to kV for PyPowSyBl compliance
+                    # Ensures that raw values (e.g., 69000.0) are interpreted as 69.0 kV
                     if v > 1000.0:
                         v = v / 1000.0
                 except (ValueError, TypeError):
@@ -160,23 +160,23 @@ class PowsyblConverter:
 
                 network.create_buses(id=bid, voltage_level_id=f"VL_{bid}")
 
-        # 3. LINES
+        # 3. Lines
         for lid, info in data.get("lines", {}).items():
             PowsyblConverter._create_line(network, lid, info, bus_nominal_v)
 
-        # 4. GENERATORS
+        # 4. Generators
         for gid, info in data.get("generators", {}).items():
             PowsyblConverter._create_generator(network, gid, info, bus_nominal_v)
 
-        # 5. LOADS
+        # 5. Loads
         for lid, info in data.get("loads", {}).items():
             PowsyblConverter._create_load(network, lid, info, bus_nominal_v)
 
-        # 6. SHUNTS
+        # 6. Shunts
         for sid, info in data.get("shunts", {}).items():
             PowsyblConverter._create_shunt(network, sid, info, bus_nominal_v)
 
-        # 7. TRANSFORMERS
+        # 7. Transformers
         for tid, info in data.get("transformers", {}).items():
             PowsyblConverter._create_transformer(network, tid, info, bus_nominal_v, bus_to_sub)
 
@@ -221,7 +221,8 @@ class PowsyblConverter:
             b_sie = raw_b
             g_sie = raw_g
 
-        print(str(lid), r_ohm, x_ohm)  # Debug print to verify line parameters
+        r_ohm = max(r_ohm, 1e-5)
+        x_ohm = max(x_ohm, 1e-5)
 
         network.create_lines(
             id=str(lid),
@@ -288,11 +289,11 @@ class PowsyblConverter:
             if "q_pu" in info:
                 target_q = info["q_pu"] * sn
 
-        # Robust voltage extraction: prevent 0.0 propagation which crashes PyPowSyBl
-        # If the bus_v map returned 0.0, we override it with a safe default base voltage
+        # Robust voltage extraction: Prevent 0.0 propagation to avoid solver crashes
+        # Provide a standard base voltage fallback if the parsed value is zero or missing
         base_v = bus_v.get(bid)
         if not base_v or base_v == 0.0:
-            base_v = 130.0  # Typical safe fallback for IEEE 57
+            base_v = 130.0
 
         network.create_generators(
             id=str(gid),
@@ -406,8 +407,8 @@ class PowsyblConverter:
 
         rated_u1_effective = un1 * effective_ratio
 
-        # --- CRITICAL FIX: Transformer Z_base MUST use rated_u1_effective, not un1 ---
-        # PyPowSyBl expects ohmic impedances to be referred strictly to the primary ratedU1 side.
+        # Calculate Z_base strictly using the effective primary rated voltage.
+        # PyPowSyBl requires ohmic impedances to be referred to the primary ratedU1 side.
         z_base = (rated_u1_effective**2) / sn_comp
 
         is_pu = "r_pu" in info or "x_pu" in info
@@ -428,6 +429,9 @@ class PowsyblConverter:
             x_ohm = raw_x
             b_sie = raw_b
             g_sie = raw_g
+
+        r_ohm = max(r_ohm, 1e-5)
+        x_ohm = max(x_ohm, 1e-5)
 
         network.create_2_windings_transformers(
             id=str(tid),

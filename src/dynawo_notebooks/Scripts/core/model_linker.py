@@ -42,7 +42,6 @@ def link_models(network, parsed_models_json_path):
 
     mapping = pp.dynamic.ModelMapping()
 
-    # Strategy Definition
     # Dictionary structure:
     # Keys: Category name representing the equipment type.
     # Values: Tuple containing (Network Getter Function, List of Candidate API Methods, Default Fallback Modelica Type)
@@ -89,7 +88,6 @@ def link_models(network, parsed_models_json_path):
                 break
 
         if not mapping_method:
-            # If no method is found, log a warning and skip to the next category
             logger.warning(
                 f"SKIP: Category '{category}' - No valid mapping method found in this PyPowSybl version. "
                 f"Tried: {method_candidates}"

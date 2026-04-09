@@ -2,3 +2,5 @@
 *_outputs/
 *__pycache__/
 *grid_export*.*
+*.log
+*compare_parameters*

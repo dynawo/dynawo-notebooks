@@ -45,7 +45,7 @@ class NetworkVisualizer:
             for sub_id in substations:
                 try:
                     # SLD explicitly plots internal buses, generators, and shunts
-                    # FIXED: Using 'container_id' as per the latest PyPowSyBl API
+                    # Uses 'container_id' as per the latest PyPowSyBl API
                     diagrams[sub_id] = network.get_single_line_diagram(container_id=sub_id)
                     logger.debug(f"Successfully generated SLD for {sub_id}.")
                 except Exception as e:

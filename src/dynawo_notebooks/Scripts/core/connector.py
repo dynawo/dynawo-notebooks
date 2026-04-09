@@ -36,7 +36,7 @@ class OMCConnector:
             logger.critical(f"Failed to connect to OMC: {e}")
             raise e
 
-        # --- CACHE SYSTEM: Caching mechanisms to significantly improve performance ---
+        # Caching mechanisms to improve query performance
         self._list_cache = {}
         self._param_cache = {}
 
@@ -100,9 +100,7 @@ class OMCConnector:
             if res and "Error" not in str(res):
                 return str(res)
         except Exception as e:
-            logger.warning(
-                "OMC could not flatten the model (likely due to unbound parameters). Falling back to AST parsing."
-            )
+            logger.warning("OMC could not flatten the model. Falling back to AST parsing.")
         return None
 
     def get_components(self, model_name: str) -> List[Any]:
@@ -235,7 +233,7 @@ class OMCConnector:
                     break
                 value_str += char
 
-            # CLEANUP: Strip out strings and comments to leave clean math/values
+            # Strip out strings and comments to leave clean math/values
             val = value_str.strip()
             val = val.split('"')[0].split("/*")[0].split("//")[0].strip()
             return val if val else None
