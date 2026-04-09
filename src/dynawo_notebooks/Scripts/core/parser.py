@@ -537,8 +537,8 @@ class ModelicaParser:
                 # --- SHUNT SUSCEPTANCE CORRECTION ---
                 # Modelica uses negative B for capacitors (Q injected = -B * V^2)
                 # PyPowSyBl expects positive B for capacitors (Q injected = B * V^2)
-                if pj == "b_pu" and "shunt" in comp_name.lower():
-                    final_val = -final_val
+                # if pj == "b_pu" and "shunt" in comp_name.lower():
+                #     final_val = -final_val
 
                 if pj in extracted and pj in critical_params:
                     if final_val == 0.0 and extracted[pj] != 0.0:
