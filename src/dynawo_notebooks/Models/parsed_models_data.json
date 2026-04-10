@@ -1,0 +1,546 @@
+{
+    "models_with_init_name": {
+        "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronous": [
+            "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronousExt3W_INIT",
+            "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronousExt4W_INIT",
+            "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronousInt_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRProportionalIntegral": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRProportionalIntegral_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverProportional": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPV.HvdcPV": [
+            "Dynawo.Electrical.HVDC.HvdcPV.HvdcPV_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.BaseControls.ACEmulationVariableK": [
+            "Dynawo.Electrical.HVDC.BaseControls.ACEmulationVariableK_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac1a": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac1a_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.IEEEG1": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St5c": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St15c_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Standard.Pss2b": [
+            "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Pss_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.StatorCurrentLimiters.Standard.Scl1c": [
+            "Dynawo.Electrical.Controls.Machines.StatorCurrentLimiters.Standard.Scl1c_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPV.HvdcPVDiagramPQ": [
+            "Dynawo.Electrical.HVDC.HvdcPV.HvdcPVDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.BaseControls.ACEmulation": [
+            "Dynawo.Electrical.HVDC.BaseControls.ACEmulation_INIT",
+            "Dynawo.Electrical.HVDC.BaseControls.ACEmulationSet_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource2": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPV.HvdcPVDangling": [
+            "Dynawo.Electrical.HVDC.HvdcPV.HvdcPVDangling_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.ReactivePowerControlLoops.ReactivePowerControlLoop2": [
+            "Dynawo.Electrical.Controls.Machines.ReactivePowerControlLoops.ReactivePowerControlLoop_INIT"
+        ],
+        "Dynawo.Electrical.Loads.ElectronicLoad": [
+            "Dynawo.Electrical.Loads.Load_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St7b": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St7c_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Standard.Pss2a": [
+            "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Pss_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.UnderExcitationLimiters.Standard.Uel2c": [
+            "Dynawo.Electrical.Controls.Machines.UnderExcitationLimiters.Standard.Uel2c_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRProportional": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRProportional_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQPropDiagramPQ": [
+            "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQPropDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta": [
+            "Dynawo.Electrical.Machines.Simplified.GeneratorSimplified_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemoteDiagramPQSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemoteDiagramPQSFR_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSourceNoPlantControl": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaMotorSimplified": [
+            "Dynawo.Electrical.Loads.LoadAlphaBetaMotorSimplified_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.IEEX2A": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Exciter_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVPropRemoteModeHandling": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPV": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVQNomAltPar_INIT",
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.SCRX": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.SCRX_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.MAXEX2": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.MAXEX2_INIT"
+        ],
+        "Dynawo.Electrical.Wind.WECC.WTG4ACurrentSource2": [
+            "Dynawo.Electrical.Wind.WECC.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Machines.OmegaRef.GeneratorPV": [
+            "Dynawo.Electrical.Machines.OmegaRef.GeneratorPV_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVDiagramPQSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVDiagramPQSFR_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPV.HvdcPVDanglingDiagramPQ": [
+            "Dynawo.Electrical.HVDC.HvdcPV.HvdcPVDanglingDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Dc1a": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Exciter_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WPP.WPP4ACurrentSource2015": [
+            "Dynawo.Electrical.Wind.IEC.WPP.WPP4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Buses.InfiniteBusWithImpedance": [
+            "Dynawo.Electrical.Buses.InfiniteBusWithImpedance_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBeta": [
+            "Dynawo.Electrical.Loads.LoadConnect_INIT",
+            "Dynawo.Electrical.Loads.Load_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerVariableTap": [
+            "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerVariableTapI_INIT",
+            "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerVariableTapPQ_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac7b": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac7b_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Standard.Pss3b": [
+            "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Pss_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQProp": [
+            "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQProp_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St6c": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Stxc_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Standard.Pss6c": [
+            "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Pss_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel2c": [
+            "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel23c_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhi": [
+            "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhi_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaRestorativeNetwork": [
+            "Dynawo.Electrical.Loads.Load_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St9c": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Stxc_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Standard.Pss2c": [
+            "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Pss_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQPropDangling": [
+            "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQPropDangling_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVRemote": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadPQ": [
+            "Dynawo.Electrical.Loads.Load_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.BbSex1": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Exciter_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Hydraulic.HyGov": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St5b": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St15c_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaThreeMotorFifthOrder": [
+            "Dynawo.Electrical.Loads.LoadAlphaBetaThreeMotorFifthOrder_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcVsc.HvdcVscDanglingP": [
+            "Dynawo.Electrical.HVDC.HvdcVsc.HvdcVscDanglingP_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaTwoMotorSimplified": [
+            "Dynawo.Electrical.Loads.LoadAlphaBetaTwoMotorSimplified_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVSFR_INIT"
+        ],
+        "Dynawo.Electrical.Sources.Converter": [
+            "Dynawo.Electrical.Sources.Converter_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Converters.GridFormingControlDispatchableVirtualOscillatorControl": [
+            "Dynawo.Electrical.Controls.Converters.GridFormingControl_INIT"
+        ],
+        "Dynawo.Electrical.Buses.InfiniteBusFromTable": [
+            "Dynawo.Electrical.Buses.InfiniteBusFromTable_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersFixedTap.GeneratorTransformer": [
+            "Dynawo.Electrical.Transformers.TransformersFixedTap.GeneratorTransformer_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVRemoteModeHandling": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersFixedTap.TransformerFixedRatioAndPhase": [
+            "Dynawo.Electrical.Transformers.TransformersFixedTap.TransformerFixedRatioAndPhase_INIT"
+        ],
+        "Dynawo.Electrical.Wind.WECC.WTG4ACurrentSource1": [
+            "Dynawo.Electrical.Wind.WECC.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQPropDanglingDiagramPQ": [
+            "Dynawo.Electrical.HVDC.HvdcPQProp.HvdcPQPropDanglingDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.ExAc1": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.ExAc1_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhiDangling": [
+            "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhi_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel5c": [
+            "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel23c_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcVsc.HvdcVsc": [
+            "Dynawo.Electrical.HVDC.HvdcVsc.HvdcVsc_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel3c": [
+            "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel23c_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVProp": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource1": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersVariableTapControlled.TransformerVariableTapControlled": [
+            "Dynawo.Electrical.Transformers.TransformersVariableTapControlled.TransformerVariableTapIControlled_INIT",
+            "Dynawo.Electrical.Transformers.TransformersVariableTapControlled.TransformerVariableTapPQControlled_INIT"
+        ],
+        "Dynawo.Electrical.BESS.WECC.BESSCurrentSource": [
+            "Dynawo.Electrical.BESS.WECC.BESS_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVTfoDiagramPQ": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVTfoDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.ReactivePowerControlLoops.ReactivePowerControlLoop": [
+            "Dynawo.Electrical.Controls.Machines.ReactivePowerControlLoops.ReactivePowerControlLoop_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersFixedTap.NetworkTransformer": [
+            "Dynawo.Electrical.Transformers.TransformersFixedTap.NetworkTransformer_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St4b": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St4b_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.GovSteamEu": [
+            "Dynawo.Electrical.Controls.Machines.Governors.GovernorPmPGen_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVDiagramPQ": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVQNomAltParDiagram_INIT",
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.StatorCurrentLimiters.Standard.Scl2c": [
+            "Dynawo.Electrical.Controls.Machines.StatorCurrentLimiters.Standard.Scl2c_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRDTRI8": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRDTRI8_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverDTRI8": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource3NoPlantControl": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVPropModeHandling": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVPropRemote": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerRatioTapChanger": [
+            "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerRatioTapChanger_INIT"
+        ],
+        "Dynawo.Electrical.Shunts.ShuntBWithSections": [
+            "Dynawo.Electrical.Shunts.ShuntBWithSections_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVTfo": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVTfo_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPQPropDiagramPQSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPQPropDiagramPQSFR_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaMotorFifthOrder": [
+            "Dynawo.Electrical.Loads.LoadAlphaBetaMotorFifthOrder_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPQPropSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPQPropSFR_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVProp": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVProp_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Generic.GovCt2": [
+            "Dynawo.Electrical.Controls.Machines.Governors.GovernorPmPGen_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WPP.WPP4ACurrentSource2020": [
+            "Dynawo.Electrical.Wind.IEC.WPP.WPP4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource4NoPlantControl": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.SEXS": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Exciter_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.TGov1": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerPhaseTapChanger": [
+            "Dynawo.Electrical.Transformers.TransformersVariableTap.TransformerPhaseTapChanger_INIT"
+        ],
+        "Dynawo.Electrical.BESS.WECC.BESSCurrentSourceNoPlantControl": [
+            "Dynawo.Electrical.BESS.WECC.BESS_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.IEEEG2": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPV": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Machines.OmegaRef.GeneratorPVDiagramPQ": [
+            "Dynawo.Electrical.Machines.OmegaRef.GeneratorPV_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Converters.GridFormingControlDroopControl": [
+            "Dynawo.Electrical.Controls.Converters.GridFormingControl_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WT.WT4BCurrentSource2020": [
+            "Dynawo.Electrical.Wind.IEC.WT.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemote": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemote_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Converters.EpriGFM.EpriGFM": [
+            "Dynawo.Electrical.Controls.Converters.EpriGFM.EpriGFM_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.GovSteam1": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.GovSteam1_INIT"
+        ],
+        "Dynawo.Electrical.Machines.OmegaRef.GeneratorPQ": [
+            "Dynawo.Electrical.Machines.OmegaRef.GeneratorPQ_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCPVModeHandling": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCPV_INIT"
+        ],
+        "Dynawo.Electrical.Wind.WECC.WTG3CurrentSource1": [
+            "Dynawo.Electrical.Wind.WECC.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed": [
+            "Dynawo.Electrical.Machines.Simplified.GeneratorSimplified_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPQProp": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPQProp_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhiDanglingDiagramPQ": [
+            "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhi_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Converters.GridFormingControlMatchingControl": [
+            "Dynawo.Electrical.Controls.Converters.GridFormingControl_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhiDiagramPQ": [
+            "Dynawo.Electrical.HVDC.HvdcPTanPhi.HvdcPTanPhi_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPQPropDiagramPQ": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPQPropDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVPropSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVPropSFR_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemoteSFR": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemoteSFR_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Transformers.TapChanger": [
+            "Dynawo.Electrical.Controls.Transformers.TapChanger_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac8b": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac168_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WT.WT4BCurrentSource2015": [
+            "Dynawo.Electrical.Wind.IEC.WT.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Transformers.PhaseShifterP": [
+            "Dynawo.Electrical.Controls.Transformers.PhaseShifterP_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WPP.WPP4BCurrentSource2020": [
+            "Dynawo.Electrical.Wind.IEC.WPP.WPP4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Wind.WECC.WT4BCurrentSource": [
+            "Dynawo.Electrical.Wind.WECC.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Sources.InjectorBG": [
+            "Dynawo.Electrical.Sources.InjectorBG_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative": [
+            "Dynawo.Electrical.Loads.LoadAlphaBetaRestorativeLimitsRecalc_INIT",
+            "Dynawo.Electrical.Loads.Load_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.UnderExcitationLimiters.Standard.Uel1": [
+            "Dynawo.Electrical.Controls.Machines.UnderExcitationLimiters.Standard.Uel1_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WPP.WPP4BCurrentSource2015": [
+            "Dynawo.Electrical.Wind.IEC.WPP.WPP4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.VRKundur": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Exciter_INIT"
+        ],
+        "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemoteDiagramPQ": [
+            "Dynawo.Electrical.Machines.SignalN.GeneratorPVRemoteDiagramPQ_INIT"
+        ],
+        "Dynawo.Electrical.StaticVarCompensators.SVarCStandard": [
+            "Dynawo.Electrical.StaticVarCompensators.SVarCStandard_INIT"
+        ],
+        "Dynawo.Electrical.Wind.WECC.WTG4BCurrentSource": [
+            "Dynawo.Electrical.Wind.WECC.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WT.WT4ACurrentSource2015": [
+            "Dynawo.Electrical.Wind.IEC.WT.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Transformers.PhaseShifterI": [
+            "Dynawo.Electrical.Controls.Transformers.PhaseShifterI_INIT"
+        ],
+        "Dynawo.Electrical.Wind.IEC.WT.WT4ACurrentSource2020": [
+            "Dynawo.Electrical.Wind.IEC.WT.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Wind.WECC.WT4ACurrentSource": [
+            "Dynawo.Electrical.Wind.WECC.WT4CurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac6a": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac168_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Voltage.SecondaryVoltageControl.Simplified.SecondaryVoltageControl": [
+            "Dynawo.Electrical.Controls.Voltage.SecondaryVoltageControl.Simplified.SecondaryVoltageControl_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac7c": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.Ac78c_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St6b": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.St6b_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadAlphaBetaTwoMotorFifthOrder": [
+            "Dynawo.Electrical.Loads.LoadAlphaBetaTwoMotorFifthOrder_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel4c": [
+            "Dynawo.Electrical.Controls.Machines.OverExcitationLimiters.Standard.Oel4c_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Standard.IEEET1": [
+            "Dynawo.Electrical.Controls.Machines.VoltageRegulators.Exciter_INIT"
+        ],
+        "Dynawo.Electrical.Buses.BusWithInit": [
+            "Dynawo.Electrical.Buses.Bus_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource2NoPlantControl": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource1NoPlantControl": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.HVDC.HvdcVsc.HvdcVscDanglingUDc": [
+            "Dynawo.Electrical.HVDC.HvdcVsc.HvdcVscDanglingUDc_INIT"
+        ],
+        "Dynawo.Electrical.Loads.LoadZIP": [
+            "Dynawo.Electrical.Loads.Load_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource3": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Hydraulic.GovHydro4": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Governor_INIT"
+        ],
+        "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource4": [
+            "Dynawo.Electrical.Photovoltaics.WECC.PVVoltageSource_INIT"
+        ],
+        "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.TGov3": [
+            "Dynawo.Electrical.Controls.Machines.Governors.Standard.Steam.TGov3_INIT"
+        ]
+    },
+    "models_missing_init_name": [
+        "Dynawo.NonElectrical.Blocks.NonLinear.PIAntiWindUpTable",
+        "Dynawo.Electrical.Controls.Voltage.TapChangerBlocking5",
+        "Dynawo.Electrical.Events.VariableImpedantFault",
+        "Dynawo.Electrical.Transformers.TransformersFixedTap.TransformerFixedRatio",
+        "Dynawo.Electrical.Controls.Basics.SetPoint",
+        "Dynawo.NonElectrical.Blocks.NonLinear.ConditionalForward",
+        "Dynawo.Electrical.Events.Event.SingleBooleanEvent",
+        "Dynawo.Electrical.Controls.Basics.SineWave",
+        "Dynawo.Electrical.Events.Event.EventConnectedStatus",
+        "Dynawo.Electrical.Events.Event.EventQuadripoleDisconnection",
+        "Dynawo.Electrical.Controls.Frequency.SignalN",
+        "Dynawo.Electrical.Controls.Basics.Step",
+        "Dynawo.Electrical.Controls.Current.PhaseShifterBlockingI",
+        "Dynawo.Electrical.Events.Event.DoubleRealEvent",
+        "Modelica.Blocks.Sources.Ramp",
+        "Dynawo.Electrical.Controls.Voltage.TapChangerBlocking2",
+        "Dynawo.Electrical.Events.NodeFault",
+        "Dynawo.Electrical.Buses.Bus",
+        "Dynawo.Electrical.Controls.Machines.Protections.UVA",
+        "Dynawo.Electrical.Controls.Machines.Protections.LVRT4Points",
+        "Dynawo.Electrical.Controls.Protections.DistanceProtectionLineFourZonesWithBlinder",
+        "Dynawo.Electrical.Controls.Machines.Protections.OVA",
+        "Dynawo.Electrical.Controls.Voltage.TapChangerBlocking1",
+        "Dynawo.Electrical.Controls.Basics.IntegerTable",
+        "Dynawo.Electrical.Events.Event.SingleRealEvent",
+        "Dynawo.Electrical.Buses.InfiniteBus",
+        "Dynawo.Electrical.Controls.Protections.DistanceProtectionLineFourZones",
+        "Dynawo.Electrical.Controls.Machines.Protections.LossOfSynchronismProtection",
+        "Dynawo.Electrical.Controls.Voltage.TapChangerBlocking4",
+        "Dynawo.Electrical.Controls.Loads.LoadShedding",
+        "Dynawo.Electrical.Controls.Current.CurrentLimitAutomaton",
+        "Dynawo.Electrical.Controls.Protections.DistanceProtectionLineTwoZonesWithBlinder",
+        "Dynawo.Electrical.Controls.Basics.BooleanTable",
+        "Dynawo.Electrical.Controls.Basics.IntegerDoubleStep",
+        "Dynawo.Electrical.Controls.Protections.DistanceProtectionLineTwoZones",
+        "Dynawo.Electrical.Controls.Current.CurrentLimitAutomatonTwoLevels",
+        "Dynawo.Electrical.Controls.Frequency.SecondaryFrequencyRegulation",
+        "Dynawo.Electrical.Controls.Utilities.Measurements",
+        "Dynawo.Electrical.Controls.Protections.UFLS3Steps",
+        "Dynawo.NonElectrical.Blocks.Continuous.DiscreteIntegrator",
+        "Dynawo.Electrical.Controls.Basics.CombiTimeTable",
+        "Dynawo.Electrical.Controls.Basics.DoubleStep",
+        "Dynawo.Electrical.Buses.InfiniteBusWithVariations",
+        "Dynawo.NonElectrical.Blocks.Continuous.WeightedDifference",
+        "Dynawo.Electrical.Controls.Voltage.VRRemote",
+        "Dynawo.Electrical.Events.LineFault",
+        "Dynawo.Electrical.Controls.Generic.GenericAutomaton",
+        "Dynawo.Electrical.Controls.Machines.Protections.SpeedProtection",
+        "Dynawo.Electrical.Controls.Machines.Protections.LVRT10Points",
+        "Dynawo.Electrical.Sources.InertialGrid.InertialGrid",
+        "Dynawo.Electrical.Controls.Voltage.TapChangerBlocking3",
+        "Dynawo.Electrical.Lines.Line",
+        "Dynawo.Electrical.Shunts.ShuntB",
+        "Dynawo.Electrical.Controls.Machines.PowerSystemStabilizers.Standard.PssKundur",
+        "Dynawo.Electrical.Events.Event.EventQuadripoleConnection",
+        "Dynawo.Electrical.Controls.Protections.UFLS10Steps",
+        "Dynawo.Electrical.Controls.HVDC.PowerTransferHVDCEmulation"
+    ]
+}
