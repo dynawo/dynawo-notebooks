@@ -1,4 +1,5 @@
 *venv*/
+*:Zone.Identifier
 *_outputs/
 *__pycache__/
 *grid_export*.*
