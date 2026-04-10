@@ -425,7 +425,7 @@ class NetworkParameterComparator:
                 cols_to_round = [c for c in df.columns if c != "ID"]
                 df[cols_to_round] = df[cols_to_round].round(6)
 
-                filepath = f"{output_prefix}{name}.csv"
+                filepath = f"{output_prefix}_{name}.csv"
                 df.to_csv(filepath, index=False)
                 logger.info(f"Audit report saved: {filepath}")
 

@@ -208,21 +208,18 @@ class PowsyblConverter:
         raw_b = info.get("b_pu", info.get("b", 0.0))
         raw_g = info.get("g_pu", info.get("g", 0.0))
 
+        raw_r = max(float(raw_r), 1e-6)
+
         if is_pu:
-            # IEEE 57 style: Convert per-unit to Ohms/Siemens
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
             b_sie = raw_b / z_base
             g_sie = raw_g / z_base
         else:
-            # Nordic style: Values are already in physical Ohms/Siemens
             r_ohm = raw_r
             x_ohm = raw_x
             b_sie = raw_b
             g_sie = raw_g
-
-        r_ohm = max(r_ohm, 1e-5)
-        x_ohm = max(x_ohm, 1e-5)
 
         network.create_lines(
             id=str(lid),
@@ -338,11 +335,26 @@ class PowsyblConverter:
         :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
         """
         bid = info.get("bus")
-        un, sn = bus_v.get(bid, 225.0), info.get("sn_nom", 100.0)
-        b_pu = info.get("b_pu", 0.0)
-        q_pu = info.get("q_pu", b_pu)
-        q_mvar = q_pu * sn
-        b_s = q_mvar / (un**2) if un != 0 else 0.0
+
+        un = bus_v.get(bid, 225.0)
+        sn = info.get("sn_nom", 100.0)
+
+        # Normalització de tensió a kV
+        if un > 1000.0:
+            un = un / 1000.0
+
+        z_base = (un**2) / sn if sn != 0 else 1.0
+
+        is_pu = "b_pu" in info or "g_pu" in info
+        raw_b = info.get("b_pu", info.get("b", 0.0))
+        raw_g = info.get("g_pu", info.get("g", 0.0))
+
+        if is_pu:
+            b_sie = -float(raw_b) / z_base
+            g_sie = float(raw_g) / z_base
+        else:
+            b_sie = -float(raw_b)
+            g_sie = float(raw_g)
 
         shunt_df = pd.DataFrame(
             {
@@ -357,8 +369,8 @@ class PowsyblConverter:
         linear_model_df = pd.DataFrame(
             {
                 "id": [str(sid)],
-                "g_per_section": [0.0],
-                "b_per_section": [b_s],
+                "g_per_section": [g_sie],
+                "b_per_section": [b_sie],
                 "max_section_count": [1],
             }
         ).set_index("id")
@@ -418,8 +430,9 @@ class PowsyblConverter:
         raw_b = info.get("b_pu", info.get("b", 0.0))
         raw_g = info.get("g_pu", info.get("g", 0.0))
 
+        raw_r = max(float(raw_r), 1e-6)
+
         if is_pu:
-            # Convert per-unit to Ohms and Siemens based on the transformer's specific base
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
             b_sie = raw_b / z_base
@@ -429,9 +442,6 @@ class PowsyblConverter:
             x_ohm = raw_x
             b_sie = raw_b
             g_sie = raw_g
-
-        r_ohm = max(r_ohm, 1e-5)
-        x_ohm = max(x_ohm, 1e-5)
 
         network.create_2_windings_transformers(
             id=str(tid),

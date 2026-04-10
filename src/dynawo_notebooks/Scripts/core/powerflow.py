@@ -98,7 +98,7 @@ class PowerFlowRunner:
             # Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
-                voltage_init_mode=pp.loadflow.VoltageInitMode.UNIFORM_VALUES,
+                voltage_init_mode=pp.loadflow.VoltageInitMode.DC_VALUES,
             )
 
             # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
