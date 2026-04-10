@@ -51,7 +51,7 @@ class PowerFlowRunner:
         The network object is updated in-place with the mathematical results.
 
         :param network: The PyPowSyBl network object to be analyzed.
-        :param export_path: The directory where divergence logs should be saved.
+        :param export_path: Target directory to save the divergence log if the load flow fails.
         :return: True if the load flow converged successfully, False otherwise.
         """
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
@@ -81,22 +81,20 @@ class PowerFlowRunner:
             # Introduce specific OpenLoadFlow provider parameters to prevent solver
             # failure upon large initial power mismatches and to disable distributed slack.
             provider_params = {
-                "open-load-flow.no-load-flow-if-mismatch-is-too-big": "false",
-                "open-load-flow.distributed-slack": "false",
+                "maxNewtonRaphsonIterations": "100",  # MUST be a string for PyPowSyBl C++ backend
             }
 
             if slack_bus_id:
                 provider_params.update(
                     {
                         "slackBusSelectionMode": "NAME",
-                        "slackBusesIds": slack_bus_id,
-                        "open-load-flow.slack-bus-selection-mode": "NAME",
-                        "open-load-flow.slack-buses-ids": slack_bus_id,
+                        "slackBusesIds": str(slack_bus_id),
                     }
                 )
 
             # 3. Configure Global Load Flow Parameters
             # Utilizing the DC_VALUES initialization mode to approximate a stable starting point
+            # for highly stressed networks (like Nordic).
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
                 voltage_init_mode=pp.loadflow.VoltageInitMode.DC_VALUES,
@@ -188,9 +186,7 @@ class PowerFlowRunner:
                         f"Detailed divergence report saved successfully to '{log_filepath}'."
                     )
                 except Exception as log_err:
-                    logger.error(
-                        f"Failed to generate 'powerflow.log' divergence report: {log_err}"
-                    )
+                    logger.error(f"Failed to generate divergence report: {log_err}")
 
                 return False
 

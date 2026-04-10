@@ -196,6 +196,8 @@ class NetworkParameterComparator:
         Extracts parameters from the three pipeline stages, converts physical XIIDM
         values back to per-unit (p.u.), and exports the results to CSV files.
         """
+        import os
+
         logger.info("Initiating parameter audit across multiple CSV files...")
 
         # 1. Load the intermediate JSON topology
@@ -253,12 +255,18 @@ class NetworkParameterComparator:
 
             if lid in lines_df.index:
                 l_row = lines_df.loc[lid]
-                z_base = get_vl_base(l_row["voltage_level1_id"])
-                # Revert from physical Ohms/Siemens to per-unit
-                x_r = l_row["r"] / z_base
-                x_x = l_row["x"] / z_base
-                x_b = (l_row["b1"] + l_row["b2"]) * z_base
-                x_g = (l_row["g1"] + l_row["g2"]) * z_base
+                z_base = get_vl_base(l_row.get("voltage_level1_id"))
+
+                # Revert from physical Ohms/Siemens to per-unit using .get() for safety
+                r_phys = l_row.get("r", np.nan)
+                x_phys = l_row.get("x", np.nan)
+                b_phys = l_row.get("b1", 0.0) + l_row.get("b2", 0.0)
+                g_phys = l_row.get("g1", 0.0) + l_row.get("g2", 0.0)
+
+                x_r = r_phys / z_base if pd.notna(r_phys) else np.nan
+                x_x = x_phys / z_base if pd.notna(x_phys) else np.nan
+                x_b = b_phys * z_base
+                x_g = g_phys * z_base
 
             lines_rows.append(
                 {
@@ -287,16 +295,21 @@ class NetworkParameterComparator:
 
             if tid in tfos_df.index:
                 t_row = tfos_df.loc[tid]
-                # XIIDM transformer bases refer to the primary side with the tap ratio applied
-                z_base = (t_row["rated_u1"] ** 2) / t_row["rated_s"]
-                x_r = t_row["r"] / z_base
-                x_x = t_row["x"] / z_base
-                x_b = t_row["b"] * z_base
-                x_g = t_row["g"] * z_base
+                rated_u1 = t_row.get("rated_u1", np.nan)
+                rated_s = t_row.get("rated_s", 100.0)
 
-                # Calculate the applied tap ratio
-                un1 = get_vl_vnom(t_row["voltage_level1_id"])
-                x_ratio = t_row["rated_u1"] / un1 if un1 != 0 else np.nan
+                if pd.notna(rated_u1) and rated_s > 0:
+                    z_base = (rated_u1**2) / rated_s
+                    r_phys = t_row.get("r", np.nan)
+                    x_phys = t_row.get("x", np.nan)
+
+                    x_r = r_phys / z_base if pd.notna(r_phys) else np.nan
+                    x_x = x_phys / z_base if pd.notna(x_phys) else np.nan
+                    x_b = t_row.get("b", 0.0) * z_base
+                    x_g = t_row.get("g", 0.0) * z_base
+
+                    un1 = get_vl_vnom(t_row.get("voltage_level1_id"))
+                    x_ratio = rated_u1 / un1 if un1 != 0 else np.nan
 
             tfos_rows.append(
                 {
@@ -328,9 +341,11 @@ class NetworkParameterComparator:
 
             if lid in loads_df.index:
                 l_row = loads_df.loc[lid]
-                # PyPowSyBl stores power in MW/MVar. Convert to p.u. (100 MVA Base)
-                x_p = l_row["p0"] / 100.0
-                x_q = l_row["q0"] / 100.0
+                p0 = l_row.get("p0", np.nan)
+                q0 = l_row.get("q0", np.nan)
+
+                x_p = p0 / 100.0 if pd.notna(p0) else np.nan
+                x_q = q0 / 100.0 if pd.notna(q0) else np.nan
 
             loads_rows.append(
                 {
@@ -353,10 +368,16 @@ class NetworkParameterComparator:
 
             if gid in gens_df.index:
                 g_row = gens_df.loc[gid]
-                x_p = g_row["target_p"] / 100.0
-                x_q = g_row["target_q"] / 100.0
-                un_g = get_vl_vnom(g_row["voltage_level_id"])
-                x_v = g_row["target_v"] / un_g if un_g != 0 else np.nan
+                target_p = g_row.get("target_p", np.nan)
+                target_q = g_row.get("target_q", np.nan)
+                target_v = g_row.get("target_v", np.nan)
+
+                x_p = target_p / 100.0 if pd.notna(target_p) else np.nan
+                x_q = target_q / 100.0 if pd.notna(target_q) else np.nan
+
+                un_g = get_vl_vnom(g_row.get("voltage_level_id"))
+                if pd.notna(target_v) and un_g != 0:
+                    x_v = target_v / un_g
 
             gens_rows.append(
                 {
@@ -384,6 +405,7 @@ class NetworkParameterComparator:
                 s_row = shunts_df.loc[sid]
                 z_base = get_vl_base(s_row.get("voltage_level_id"))
 
+                # Safely handle 'b_per_section' vs 'b' variants across different PyPowSyBl versions
                 b_val = s_row.get("b_per_section", s_row.get("b", np.nan))
                 g_val = s_row.get("g_per_section", s_row.get("g", np.nan))
 
