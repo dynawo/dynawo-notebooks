@@ -45,12 +45,13 @@ class PowerFlowRunner:
             return ["infinite", "slack", "gen1", "g20"]
 
     @staticmethod
-    def run_ac_loadflow(network: pp.network.Network) -> bool:
+    def run_ac_loadflow(network: pp.network.Network, export_path: str = ".") -> bool:
         """
         Executes the AC Load Flow on the provided PyPowSyBl network.
         The network object is updated in-place with the mathematical results.
 
         :param network: The PyPowSyBl network object to be analyzed.
+        :param export_path: The directory where divergence logs should be saved.
         :return: True if the load flow converged successfully, False otherwise.
         """
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
@@ -59,7 +60,7 @@ class PowerFlowRunner:
         valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
 
         try:
-            # 1. AUTO-DETECT THE SLACK BUS (IMPLEMENTED VIA JSON MAPPING)
+            # 1. Auto-detect the Slack Bus via JSON mapping
             slack_bus_id = None
             try:
                 gens_df = network.get_generators()
@@ -76,7 +77,7 @@ class PowerFlowRunner:
             except Exception as e:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
-            # 2. CONFIGURE PROVIDER PARAMETERS (OpenLoadFlow)
+            # 2. Configure Provider Parameters
             # Introduce specific OpenLoadFlow provider parameters to prevent solver
             # failure upon large initial power mismatches and to disable distributed slack.
             provider_params = {
@@ -94,14 +95,14 @@ class PowerFlowRunner:
                     }
                 )
 
-            # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
-            # Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization
+            # 3. Configure Global Load Flow Parameters
+            # Utilizing the DC_VALUES initialization mode to approximate a stable starting point
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
                 voltage_init_mode=pp.loadflow.VoltageInitMode.DC_VALUES,
             )
 
-            # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
+            # 4. Execute the Load Flow Calculation
             results = pp.loadflow.run_ac(network, parameters=lf_params)
 
             # results is a list of ComponentResult (one for each synchronous area)
@@ -149,11 +150,16 @@ class PowerFlowRunner:
                         "No Reference Bus (Slack) was detected. Calculation cannot start."
                     )
 
-                # --- DETAILED DIVERGENCE LOGGING ---
+                # --- Detailed Divergence Logging ---
                 # Generate a comprehensive diagnostic file 'powerflow.log' capturing the network state
                 # and solver metrics when the AC Load Flow fails to converge.
                 try:
-                    with open("powerflow.log", "w", encoding="utf-8") as log_file:
+                    if not os.path.exists(export_path):
+                        os.makedirs(export_path)
+
+                    log_filepath = os.path.join(export_path, "powerflow.log")
+
+                    with open(log_filepath, "w", encoding="utf-8") as log_file:
                         log_file.write("=== OPENLOADFLOW DIVERGENCE REPORT ===\n")
                         log_file.write(f"Status: {status}\n")
                         log_file.write(f"Status Details: {status_text}\n")
@@ -179,7 +185,7 @@ class PowerFlowRunner:
                         log_file.write(network.get_buses().to_string() + "\n\n")
 
                     logger.info(
-                        "Detailed divergence report saved successfully to 'powerflow.log'."
+                        f"Detailed divergence report saved successfully to '{log_filepath}'."
                     )
                 except Exception as log_err:
                     logger.error(
