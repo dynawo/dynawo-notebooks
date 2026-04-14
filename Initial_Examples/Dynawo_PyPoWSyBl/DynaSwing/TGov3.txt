@@ -1,0 +1,9 @@
+#1
+double FValve(3,2)
+  0       0
+  0.3     0.8
+  1       1
+double FValveInv(3,2)
+  0       0
+  0.8     0.3
+  1       1
