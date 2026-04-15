@@ -486,11 +486,11 @@ class PowsyblConverter:
             rtc_df = pd.DataFrame(
                 {
                     "id": [str(tid)],
-                    "transformer_id": [str(tid)],
-                    "low_tap_position": [0],
-                    "tap_position": [int(tap_pos)],
-                    "high_tap_position": [int(n_tap) - 1],
+                    "low_tap": [0],
+                    "tap": [int(tap_pos)],
                     "regulating": [False],
+                    "target_deadband": [0],
+                    "oltc": [True if n_tap > 1 else False],
                 }
             ).set_index("id")
 
@@ -502,15 +502,14 @@ class PowsyblConverter:
             for i in range(int(n_tap)):
                 steps_data.append(
                     {
-                        "id": f"{tid}_step_{i}",
-                        "tap_changer_id": str(tid),
+                        "id": str(tid),
                         "rho": rho_min + (i * step_size),
-                        "r": 0.0,
-                        "x": 0.0,
-                        "g": 0.0,
-                        "b": 0.0,
+                        "r": r_ohm,
+                        "x": x_ohm,
+                        "g": g_sie,
+                        "b": b_sie,
                     }
                 )
 
             steps_df = pd.DataFrame(steps_data).set_index("id")
-            network.create_ratio_tap_changer_steps(steps_df)
+            network.update_ratio_tap_changer_steps(steps_df)
