@@ -180,8 +180,7 @@ class PowsyblConverter:
             abs(info.get("p", info.get("p_pu", 0.0) * info.get("sn_nom", 100.0)))
             for info in data.get("generators", {}).values()
         )
-        estimated_mismatch = max(total_load_p - total_gen_p, 100.0)  # Garantim un mínim
-        # --- FI MODIFICACIÓ ---
+        estimated_mismatch = max(total_load_p - total_gen_p, 100.0)  # Ensure a minimum threshold
 
         # 4. Generators
         for gid, info in data.get("generators", {}).items():
@@ -276,17 +275,16 @@ class PowsyblConverter:
 
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
 
-        # --- INICI MODIFICACIÓ: Detecció de Slack robusta ---
+        # Robust slack detection
         is_slack = False
         valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
         gid_str = str(gid).lower()
 
-        # Comprovem directament si aquest ID conté la nomenclatura de Slack
+        # Check directly if this ID contains the slack nomenclature
         if any(identifier in gid_str for identifier in valid_slack_identifiers):
             is_slack = True
-        # --- FI MODIFICACIÓ ---
 
-        # Injecció del Warm Start per evitar salts inassumibles a la Jacobiana
+        # Warm start injection to prevent unacceptable jumps in the Jacobian matrix
         if is_slack and p_mw == 0.0:
             p_mw = slack_warm_start_mw
 
@@ -321,12 +319,12 @@ class PowsyblConverter:
             max_p=9999.0 if is_slack else abs(p_mw),
         )
 
-        # Garantim que cap màquina quedi ofegada reactivament. En xarxes de transport (Nordic 32),
-        # hi ha condensadors síncrons (P=0 MW) que proveeixen suport vital de tensió.
-        # Forcem un "sòl" de 800 MVA per evitar oscil·lacions de la Jacobiana durant el Flat Start.
+        # Ensure no machine is reactively depleted. In transmission networks (e.g., Nordic 32),
+        # synchronous condensers (P=0 MW) provide vital voltage support.
+        # Enforce an 800 MVA floor to prevent Jacobian oscillations during Flat Start.
         effective_sn = max(float(sn), abs(p_mw) / 0.85, 800.0)
 
-        # Corba de capabilitat basada en la grandària efectiva
+        # Capability curve based on effective size
         q_max_default = effective_sn * 0.80
         q_min_default = -effective_sn * 0.50
 
