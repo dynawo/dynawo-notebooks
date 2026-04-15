@@ -319,29 +319,9 @@ class PowsyblConverter:
             max_p=9999.0 if is_slack else abs(p_mw),
         )
 
-        # Ensure no machine is reactively depleted. In transmission networks (e.g., Nordic 32),
-        # synchronous condensers (P=0 MW) provide vital voltage support.
-        # Enforce an 800 MVA floor to prevent Jacobian oscillations during Flat Start.
-        effective_sn = max(float(sn), abs(p_mw) / 0.85, 800.0)
-
         # Capability curve based on effective size
-        q_max_default = effective_sn * 0.80
-        q_min_default = -effective_sn * 0.50
-
-        if is_slack:
-            min_q_val = -9999.0
-            max_q_val = 9999.0
-        else:
-            min_q_val = (
-                info.get("q_min", info.get("q_min_pu", -0.50) * effective_sn)
-                if "q_min" in info or "q_min_pu" in info
-                else q_min_default
-            )
-            max_q_val = (
-                info.get("q_max", info.get("q_max_pu", 0.80) * effective_sn)
-                if "q_max" in info or "q_max_pu" in info
-                else q_max_default
-            )
+        min_q_val = -99999.0
+        max_q_val = 99999.0
 
         q_limits_df = pd.DataFrame(
             {"id": [str(gid)], "min_q": [min_q_val], "max_q": [max_q_val]}
@@ -458,10 +438,13 @@ class PowsyblConverter:
         rho_max = info.get("rho_max")
         rho_min = info.get("rho_min")
 
-        rated_u1_base = un1 * base_ratio
+        # To match the Modelica multiplier (V2 = V1 * un2/un1 * ratio),
+        # in PyPowSyBl we must DIVIDE ratedU1 by the ratio.
+        rated_u1_base = un1 / base_ratio if base_ratio != 0.0 else un1
 
-        # Calculate Z_base strictly using the original primary rated voltage.
-        # PyPowSyBl requires ohmic impedances to be referred to the primary ratedU1 side.
+        # Z_base calculation. By using (un1/ratio), this formula effectively cancels
+        # out the `ratio^2` factor that OpenModelica injects by default into
+        # its X_pu, resulting in the exact real physical Ohms.
         z_base = (rated_u1_base**2) / sn_comp
 
         is_pu = "r_pu" in info or "x_pu" in info
