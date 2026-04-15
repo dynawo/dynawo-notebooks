@@ -148,43 +148,43 @@ model FullDynamicModel_auxiliary "Nordic test grid with buses, lines, shunts, lo
     Placement(visible = true, transformation(origin = {-75, 137}, extent = {{-5, -5}, {5, 5}}, rotation = -90)));
   Dynawo.Electrical.Transformers.TransformersFixedTap.TransformerFixedRatio trafo_g20_4072(BPu = 0, GPu = 0, RPu = 0, XPu = 0.15*1.05^2*(100/4500.0), rTfoPu = 1.05) annotation(
     Placement(visible = true, transformation(origin = {-75, 73}, extent = {{-5, -5}, {5, 5}}, rotation = 90)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g01(PGen0Pu = P0Pu_g01, U0Pu = U0Pu_g01) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g01(PGen0Pu = -(P0Pu_g01), U0Pu = U0Pu_g01) annotation(
     Placement(visible = true, transformation(origin = {25, 79}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g02(PGen0Pu = P0Pu_g02, U0Pu = U0Pu_g02) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g02(PGen0Pu = -(P0Pu_g02), U0Pu = U0Pu_g02) annotation(
     Placement(visible = true, transformation(origin = {75, 151}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g03(PGen0Pu = P0Pu_g03, U0Pu = U0Pu_g03) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g03(PGen0Pu = -(P0Pu_g03), U0Pu = U0Pu_g03) annotation(
     Placement(visible = true, transformation(origin = {85, 79}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g04(PGen0Pu = P0Pu_g04, U0Pu = U0Pu_g04) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g04(PGen0Pu = -(P0Pu_g04), U0Pu = U0Pu_g04) annotation(
     Placement(visible = true, transformation(origin = {-85, 30}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g05(PGen0Pu = P0Pu_g05, U0Pu = U0Pu_g05) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g05(PGen0Pu = -(P0Pu_g05), U0Pu = U0Pu_g05) annotation(
     Placement(visible = true, transformation(origin = {-45, 71}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g06(PGen0Pu = P0Pu_g06, U0Pu = U0Pu_g06) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g06(PGen0Pu = -(P0Pu_g06), U0Pu = U0Pu_g06) annotation(
     Placement(visible = true, transformation(origin = {35, -60}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g07(PGen0Pu = P0Pu_g07, U0Pu = U0Pu_g07) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g07(PGen0Pu = -(P0Pu_g07), U0Pu = U0Pu_g07) annotation(
     Placement(visible = true, transformation(origin = {-53, -39}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g08(PGen0Pu = P0Pu_g08, U0Pu = U0Pu_g08) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g08(PGen0Pu = -(P0Pu_g08), U0Pu = U0Pu_g08) annotation(
     Placement(visible = true, transformation(origin = {-77, 0}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g09(PGen0Pu = P0Pu_g09, U0Pu = U0Pu_g09) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g09(PGen0Pu = -(P0Pu_g09), U0Pu = U0Pu_g09) annotation(
     Placement(visible = true, transformation(origin = {-25, 151}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g10(PGen0Pu = P0Pu_g10, U0Pu = U0Pu_g10) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g10(PGen0Pu = -(P0Pu_g10), U0Pu = U0Pu_g10) annotation(
     Placement(visible = true, transformation(origin = {-35, 79}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g11(PGen0Pu = P0Pu_g11, U0Pu = U0Pu_g11) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g11(PGen0Pu = -(P0Pu_g11), U0Pu = U0Pu_g11) annotation(
     Placement(visible = true, transformation(origin = {35, 72}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g12(PGen0Pu = P0Pu_g12, U0Pu = U0Pu_g12) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g12(PGen0Pu = -(P0Pu_g12), U0Pu = U0Pu_g12) annotation(
     Placement(visible = true, transformation(origin = {-4, 41}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g13(PGen0Pu = P0Pu_g13, U0Pu = U0Pu_g13) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g13(PGen0Pu = -(P0Pu_g13), U0Pu = U0Pu_g13) annotation(
     Placement(visible = true, transformation(origin = {-70, -29}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g14(PGen0Pu = P0Pu_g14, U0Pu = U0Pu_g14) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g14(PGen0Pu = -(P0Pu_g14), U0Pu = U0Pu_g14) annotation(
     Placement(visible = true, transformation(origin = {50, -30}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g15(PGen0Pu = P0Pu_g15, U0Pu = U0Pu_g15) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g15(PGen0Pu = -(P0Pu_g15), U0Pu = U0Pu_g15) annotation(
     Placement(visible = true, transformation(origin = {80, -89}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g16(PGen0Pu = P0Pu_g16, U0Pu = U0Pu_g16) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g16(PGen0Pu = -(P0Pu_g16), U0Pu = U0Pu_g16) annotation(
     Placement(visible = true, transformation(origin = {20, -109}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g17(PGen0Pu = P0Pu_g17, U0Pu = U0Pu_g17) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g17(PGen0Pu = -(P0Pu_g17), U0Pu = U0Pu_g17) annotation(
     Placement(visible = true, transformation(origin = {-78, -88}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g18(PGen0Pu = P0Pu_g18, U0Pu = U0Pu_g18) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g18(PGen0Pu = -(P0Pu_g18), U0Pu = U0Pu_g18) annotation(
     Placement(visible = true, transformation(origin = {-95, -151}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g19(PGen0Pu = P0Pu_g19, U0Pu = U0Pu_g19) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed g19(PGen0Pu = -(P0Pu_g19), U0Pu = U0Pu_g19) annotation(
     Placement(visible = true, transformation(origin = {-75, 151}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
   Dynawo.Electrical.Buses.InfiniteBus g20(UPu = U0Pu_g20, UPhase = UPhase0_g20) annotation(
     Placement(visible = true, transformation(origin = {-75, 60}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
@@ -606,45 +606,45 @@ equation
   connect(g19.terminal, bus_BG19.terminal) annotation(
     Line(points = {{-75, 151}, {-75, 145}}, color = {0, 0, 255}));
 initial equation
-  g11_INIT.Q0Pu = g11.QGenPu;
+  g11_INIT.Q0Pu = -(g11.QGenPu);
   g11_INIT.UPhase0 = g11.UPhase;
-  g05_INIT.Q0Pu = g05.QGenPu;
+  g05_INIT.Q0Pu = -(g05.QGenPu);
   g05_INIT.UPhase0 = g05.UPhase;
-  g16_INIT.Q0Pu = g16.QGenPu;
+  g16_INIT.Q0Pu = -(g16.QGenPu);
   g16_INIT.UPhase0 = g16.UPhase;
-  g14_INIT.Q0Pu = g14.QGenPu;
+  g14_INIT.Q0Pu = -(g14.QGenPu);
   g14_INIT.UPhase0 = g14.UPhase;
-  g06_INIT.Q0Pu = g06.QGenPu;
+  g06_INIT.Q0Pu = -(g06.QGenPu);
   g06_INIT.UPhase0 = g06.UPhase;
-  g08_INIT.Q0Pu = g08.QGenPu;
+  g08_INIT.Q0Pu = -(g08.QGenPu);
   g08_INIT.UPhase0 = g08.UPhase;
-  g12_INIT.Q0Pu = g12.QGenPu;
+  g12_INIT.Q0Pu = -(g12.QGenPu);
   g12_INIT.UPhase0 = g12.UPhase;
-  g09_INIT.Q0Pu = g09.QGenPu;
+  g09_INIT.Q0Pu = -(g09.QGenPu);
   g09_INIT.UPhase0 = g09.UPhase;
-  g03_INIT.Q0Pu = g03.QGenPu;
+  g03_INIT.Q0Pu = -(g03.QGenPu);
   g03_INIT.UPhase0 = g03.UPhase;
-  g10_INIT.Q0Pu = g10.QGenPu;
+  g10_INIT.Q0Pu = -(g10.QGenPu);
   g10_INIT.UPhase0 = g10.UPhase;
-  g02_INIT.Q0Pu = g02.QGenPu;
+  g02_INIT.Q0Pu = -(g02.QGenPu);
   g02_INIT.UPhase0 = g02.UPhase;
   g20_INIT.P0Pu = Modelica.ComplexMath.real(g20.terminal.V*Modelica.ComplexMath.conj(g20.terminal.i));
   g20_INIT.Q0Pu = Modelica.ComplexMath.imag(g20.terminal.V*Modelica.ComplexMath.conj(g20.terminal.i));
-  g18_INIT.Q0Pu = g18.QGenPu;
+  g18_INIT.Q0Pu = -(g18.QGenPu);
   g18_INIT.UPhase0 = g18.UPhase;
-  g04_INIT.Q0Pu = g04.QGenPu;
+  g04_INIT.Q0Pu = -(g04.QGenPu);
   g04_INIT.UPhase0 = g04.UPhase;
-  g15_INIT.Q0Pu = g15.QGenPu;
+  g15_INIT.Q0Pu = -(g15.QGenPu);
   g15_INIT.UPhase0 = g15.UPhase;
-  g13_INIT.Q0Pu = g13.QGenPu;
+  g13_INIT.Q0Pu = -(g13.QGenPu);
   g13_INIT.UPhase0 = g13.UPhase;
-  g07_INIT.Q0Pu = g07.QGenPu;
+  g07_INIT.Q0Pu = -(g07.QGenPu);
   g07_INIT.UPhase0 = g07.UPhase;
-  g17_INIT.Q0Pu = g17.QGenPu;
+  g17_INIT.Q0Pu = -(g17.QGenPu);
   g17_INIT.UPhase0 = g17.UPhase;
-  g01_INIT.Q0Pu = g01.QGenPu;
+  g01_INIT.Q0Pu = -(g01.QGenPu);
   g01_INIT.UPhase0 = g01.UPhase;
-  g19_INIT.Q0Pu = g19.QGenPu;
+  g19_INIT.Q0Pu = -(g19.QGenPu);
   g19_INIT.UPhase0 = g19.UPhase;
   annotation(
     preferredView = "diagram",

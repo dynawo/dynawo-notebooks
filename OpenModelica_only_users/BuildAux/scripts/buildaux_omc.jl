@@ -186,24 +186,6 @@ function get_all_components(omc, model)
 end
 
 """
-    _get_component_class_map(omc, model) -> Dict{String,String}
-
-Return a map `component_name => component_class` for `model`.  Helper for the function apply_LF_modifiers!
-"""
-function _get_component_class_map(omc, model::String)
-    n = sendExpression(omc, "getComponentCount($model)")
-    class_map = Dict{String, String}()
-
-    for i in 1:n
-        raw = sendExpression(omc, "getNthComponent($model, $i)", parsed = false)
-        comp_class, comp_name = parse_component(raw)
-        class_map[String(comp_name)] = String(comp_class)
-    end
-
-    return class_map
-end
-
-"""
     get_comp_param_value(omc, model, components, comp_name, param) -> Any
 
 Return `param` value for `comp_name` in `model`.

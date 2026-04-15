@@ -8,7 +8,6 @@ using ..BuildAuxOmc:
     om_send,
     resolve_load_ref_value,
     get_all_components,
-    _get_component_class_map,
     get_comp_param_value
 
 using ..BuildAuxParse:
@@ -394,7 +393,9 @@ end
 Apply optional `LF_modifiers_raw` to base components in `aux_model`.
 
 Only components whose class appears in `INIT_MODELS` are considered.
-The current auxiliary class is preserved so previous replacements are not lost.
+Existing modifiers are read from the current auxiliary model state, so
+previous replacements are preserved without reintroducing modifiers from
+the original class.
 """
 function apply_LF_modifiers!(
     omc,
@@ -403,7 +404,7 @@ function apply_LF_modifiers!(
     INIT_MODELS::Dict{String, Any},
     components::Dict{String, Dict{String, Any}},
 )
-    aux_class_map = _get_component_class_map(omc, aux_model)
+    aux_components = get_all_components(omc, aux_model)
 
     for (base_comp, c) in components
         base_class = c["class"]::String
@@ -424,9 +425,30 @@ function apply_LF_modifiers!(
         extra_raw = spec["LF_modifiers_raw"]::Vector{String}
         isempty(extra_raw) && continue
 
-        # Keep the class already present in the auxiliary model
-        current_aux_class = aux_class_map[base_comp]
-        mod_assignments = vcat(_existing_modifier_assignments(c), extra_raw)
+        if !haskey(aux_components, base_comp)
+            error("Component $base_comp not found in $aux_model while applying LF modifiers")
+        end
+
+        aux_c = aux_components[base_comp]
+        current_aux_class = aux_c["class"]::String
+        existing_assignments = _existing_modifier_assignments(aux_c)
+
+        lf_keys = Set{String}()
+        for raw in extra_raw
+            m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
+            m === nothing && error("Could not extract LF modifier name from: $raw")
+            push!(lf_keys, m.captures[1])
+        end
+
+        kept_assignments = String[]
+        for raw in existing_assignments
+            m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
+            m === nothing && error("Could not extract existing modifier name from: $raw")
+            m.captures[1] in lf_keys && continue
+            push!(kept_assignments, raw)
+        end
+
+        mod_assignments = vcat(kept_assignments, extra_raw)
         mod_str = _code_modification_from_assignments(mod_assignments)
 
         om_send(
