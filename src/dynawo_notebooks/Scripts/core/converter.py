@@ -443,7 +443,7 @@ class PowsyblConverter:
         rated_u1_base = un1 / base_ratio if base_ratio != 0.0 else un1
 
         # Z_base calculation. By using (un1/ratio), this formula effectively cancels
-        # out the `ratio^2` factor that OpenModelica injects by default into
+        # out the ratio^2 factor that OpenModelica injects by default into
         # its X_pu, resulting in the exact real physical Ohms.
         z_base = (rated_u1_base**2) / sn_comp
 
@@ -489,8 +489,6 @@ class PowsyblConverter:
                     "low_tap": [0],
                     "tap": [int(tap_pos)],
                     "regulating": [False],
-                    "target_deadband": [0],
-                    "oltc": [True if n_tap > 1 else False],
                 }
             ).set_index("id")
 
