@@ -449,7 +449,14 @@ class ModelicaParser:
         critical_params = {"r_pu", "x_pu", "b_pu", "g_pu", "r", "x", "b", "g"}
 
         # --- Parameter Constraints: Values that must be strictly positive ---
-        positive_only_params = {"u_pu", "nominal_v", "sn_nom", "ratio", "rated_u1", "rated_u2"}
+        positive_only_params = {
+            "u_pu",
+            "nominal_v",
+            "sn_nom",
+            "ratio",
+            "rated_u1",
+            "rated_u2",
+        }
 
         for pm, pj in self.param_map.items():
             val = None
@@ -469,10 +476,19 @@ class ModelicaParser:
 
             # --- VOLTAGE DEDUCTION ---
             for raw_text in [raw_src, raw_flat]:
-                if raw_text and isinstance(raw_text, str) and "ZBASE" in raw_text:
-                    match = re.search(r"ZBASE(\d+)_(\d+)", raw_text)
-                    if match:
-                        extracted["_deduced_v"] = float(f"{match.group(1)}.{match.group(2)}")
+                if raw_text and isinstance(raw_text, str):
+                    # Check for ZBASE (e.g., ZBASE130_0)
+                    match_zbase = re.search(r"ZBASE(\d+)_(\d+)", raw_text, re.IGNORECASE)
+                    if match_zbase:
+                        extracted["_deduced_v"] = float(
+                            f"{match_zbase.group(1)}.{match_zbase.group(2)}"
+                        )
+                        break
+
+                    # Check for XBase (e.g., XBase_130)
+                    match_xbase = re.search(r"XBase_(\d+)", raw_text, re.IGNORECASE)
+                    if match_xbase:
+                        extracted["_deduced_v"] = float(match_xbase.group(1))
                         break
 
             # PRIORITY 1: EXPLICIT SOURCE CODE OVERRIDES

@@ -12,7 +12,7 @@ import json
 import logging
 import pandas as pd
 import pypowsybl as pp
-from typing import Dict, Set
+from typing import Any, Dict, Set
 from dynawo_notebooks.Scripts.core.powerflow import PowerFlowRunner
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,9 @@ class PowsyblConverter:
     """
 
     @staticmethod
-    def _load_voltage_mapping(filename: str = "voltage_mapping.json") -> Dict[str, float]:
+    def _load_voltage_mapping(
+        filename: str = "voltage_mapping.json",
+    ) -> Dict[str, float]:
         """
         Loads the voltage mapping dictionary from an external JSON configuration file.
         Provides a safe fallback to default values if the configuration file is missing.
@@ -45,7 +47,13 @@ class PowsyblConverter:
             logger.warning(
                 f"Failed to load voltage mapping from {filepath}. Using defaults. Error: {e}"
             )
-            return {"bus_4": 400.0, "bus_2": 220.0, "bus_1": 130.0, "BG": 20.0, "default": 225.0}
+            return {
+                "bus_4": 400.0,
+                "bus_2": 220.0,
+                "bus_1": 130.0,
+                "BG": 20.0,
+                "default": 225.0,
+            }
 
     @staticmethod
     def build_network(data: Dict) -> pp.network.Network:
@@ -85,65 +93,70 @@ class PowsyblConverter:
         # 2. Voltage Discovery & Creation
         # Dynawo buses often don't have explicit Un. We discover it from connected equipment.
         bus_nominal_v = {}
+
+        def is_valid_kv(vol: Any) -> bool:
+            try:
+                # High Voltage grids do not operate at <= 1.5 kV.
+                # Anything below this is flagged as a per-unit value needing discovery.
+                return vol is not None and float(vol) > 1.5
+            except (ValueError, TypeError):
+                return False
+
         if "buses" in data:
             for bid, info in data["buses"].items():
                 # 2.1 Try to get explicit voltage
                 v = info.get("nominal_v")
 
                 # 2.2 Discovery from Transformers (rated_u1/u2)
-                if not v or v == 0.0:
+                # Overrides '1.0' pu values to find the true physical base
+                if not is_valid_kv(v):
                     for tid, t_info in data.get("transformers", {}).items():
-                        if t_info.get("bus1") == bid and t_info.get("rated_u1"):
+                        if t_info.get("bus1") == bid and is_valid_kv(t_info.get("rated_u1")):
                             v = t_info.get("rated_u1")
                             break
-                        if t_info.get("bus2") == bid and t_info.get("rated_u2"):
+                        if t_info.get("bus2") == bid and is_valid_kv(t_info.get("rated_u2")):
                             v = t_info.get("rated_u2")
                             break
 
                 # 2.3 Discovery from Generators (nominal_v)
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for gid, g_info in data.get("generators", {}).items():
-                        if g_info.get("bus") == bid and g_info.get("nominal_v"):
+                        if g_info.get("bus") == bid and is_valid_kv(g_info.get("nominal_v")):
                             v = g_info.get("nominal_v")
                             break
 
                 # 2.4 Discovery from Loads
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for lid, l_info in data.get("loads", {}).items():
-                        if l_info.get("bus") == bid and l_info.get("nominal_v"):
+                        if l_info.get("bus") == bid and is_valid_kv(l_info.get("nominal_v")):
                             v = l_info.get("nominal_v")
                             break
 
                 # 2.5 Discovery from Lines
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for lid, l_info in data.get("lines", {}).items():
-                        if (l_info.get("bus1") == bid or l_info.get("bus2") == bid) and l_info.get(
-                            "nominal_v"
-                        ):
+                        if (
+                            l_info.get("bus1") == bid or l_info.get("bus2") == bid
+                        ) and is_valid_kv(l_info.get("nominal_v")):
                             v = l_info.get("nominal_v")
                             break
 
                 # 2.6 Naming convention fallback using external JSON rules
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for prefix, mapped_voltage in voltage_mapping.items():
                         if prefix != "default" and prefix in bid:
                             v = mapped_voltage
                             break
-                    # If it still hasn't found a match, apply the default voltage
-                    if not v or v == 0.0:
+                    # Final safety net
+                    if not is_valid_kv(v):
                         v = voltage_mapping.get("default", 225.0)
 
-                # Force 'v' to be a float. Fallback safely if extraction fails.
+                # Ensure proper formatting to kV
                 try:
                     v = float(v)
-                    # Auto-convert Volts to kV for PyPowSyBl compliance
-                    # Ensures that raw values (e.g., 69000.0) are interpreted as 69.0 kV
                     if v > 1000.0:
                         v = v / 1000.0
                 except (ValueError, TypeError):
-                    logger.warning(
-                        f"Could not cast voltage '{v}' to float for bus {bid}. Using default."
-                    )
                     v = float(voltage_mapping.get("default", 225.0))
 
                 bus_nominal_v[bid] = v
@@ -153,8 +166,8 @@ class PowsyblConverter:
                     id=f"VL_{bid}",
                     substation_id=f"Sub_{sub_assigned}",
                     nominal_v=v,
-                    low_voltage_limit=v * 0.8,  # Minimum voltage limit (80%)
-                    high_voltage_limit=v * 1.2,  # Maximum voltage limit (120%)
+                    low_voltage_limit=v * 0.8,
+                    high_voltage_limit=v * 1.2,
                     topology_kind="BUS_BREAKER",
                 )
 
@@ -350,6 +363,7 @@ class PowsyblConverter:
         raw_g = info.get("g_pu", info.get("g", 0.0))
 
         if is_pu:
+            # Explicit sign inversion for CIM compliance (-float)
             b_sie = -float(raw_b) / z_base
             g_sie = float(raw_g) / z_base
         else:
@@ -379,7 +393,11 @@ class PowsyblConverter:
 
     @staticmethod
     def _create_transformer(
-        network: pp.network.Network, tid: str, info: Dict, bus_v: Dict, bus_to_sub: Dict = None
+        network: pp.network.Network,
+        tid: str,
+        info: Dict,
+        bus_v: Dict,
+        bus_to_sub: Dict = None,
     ) -> None:
         """
         Creates a 2-winding transformer in the PyPowSyBl network.

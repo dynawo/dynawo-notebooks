@@ -154,9 +154,9 @@ class PowerFlowRunner:
                 try:
                     if not os.path.exists(export_path):
                         os.makedirs(export_path)
-                        
+
                     log_filepath = os.path.join(export_path, "powerflow.log")
-                    
+
                     with open(log_filepath, "w", encoding="utf-8") as log_file:
                         log_file.write("=== OPENLOADFLOW DIVERGENCE REPORT ===\n")
                         log_file.write(f"Status: {status}\n")
@@ -186,9 +186,7 @@ class PowerFlowRunner:
                         f"Detailed divergence report saved successfully to '{log_filepath}'."
                     )
                 except Exception as log_err:
-                    logger.error(
-                        f"Failed to generate divergence report: {log_err}"
-                    )
+                    logger.error(f"Failed to generate divergence report: {log_err}")
 
                 return False
 
