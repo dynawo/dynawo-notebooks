@@ -368,6 +368,12 @@ function add_init_models!(
 
         # Add slack or target extras
         if is_slack
+            val = string(get_comp_param_value(omc, model, components, base_comp, "UPhase0"))
+            if isempty(strip(val))
+                error("Empty value for $model.$base_comp.UPhase0 while building $init_name.UPhase0")
+            end
+
+            push!(assignments, "UPhase0 = $(val)")
             append!(assignments, [
                 "P0Pu(fixed = false)",
                 "Q0Pu(fixed = false)",
