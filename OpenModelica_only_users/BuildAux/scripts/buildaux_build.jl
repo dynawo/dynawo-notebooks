@@ -551,9 +551,40 @@ function collect_cleanup_component_names(components::Dict{String, Dict{String, A
 end
 
 """
+    _has_switch_off_signal_equation(omc, aux_model, switch_signal) -> Bool
+
+Return `true` if `switch_signal.value` already appears on either side of an
+equation in `aux_model`.
+"""
+function _has_switch_off_signal_equation(omc, aux_model::String, switch_signal::String)
+    target = switch_signal * ".value"
+    neq = sendExpression(omc, "getEquationItemsCount($aux_model)")
+
+    for i in 1:neq
+        eqi = String(sendExpression(omc, "getNthEquationItem($aux_model, $i)", parsed = false))
+        eqi = strip(replace(eqi, "\"" => ""))
+        occursin("=", eqi) || continue
+
+        parts = split(eqi, "=", limit = 2)
+        length(parts) == 2 || continue
+
+        lhs = strip(replace(parts[1], ";" => ""))
+        rhs = strip(replace(parts[2], ";" => ""))
+
+        if lhs == target || rhs == target
+            return true
+        end
+    end
+
+    return false
+end
+
+"""
     delete_connections!(omc, aux_model, components; global_targets=nothing) -> Set{String}
 
 Delete all connections in `aux_model` that touch a cleanup-target component.
+If the deleted connection leaves a switch-off connector unconnected, add a
+neutral `switchOffSignalN.value = false` equation for the surviving endpoint.
 Returns the set of effective target component names.
 
 Iterates connections backwards because deleting connections reindexes the connection list.
@@ -566,6 +597,7 @@ function delete_connections!(
 )
     local_targets = collect_cleanup_component_names(components)
     cleanup_targets = isnothing(global_targets) ? local_targets : union(local_targets, global_targets)
+    deleted_switch_signals = Set{String}()
 
     count = sendExpression(omc, "getConnectionCount($aux_model)")
 
@@ -577,8 +609,26 @@ function delete_connections!(
         to_comp = component_of_connector(to)
 
         if (from_comp in cleanup_targets) || (to_comp in cleanup_targets)
+            if (from_comp in cleanup_targets) && !(to_comp in cleanup_targets)
+                occursin(r"\.switchOffSignal\d+$", to) && push!(deleted_switch_signals, String(to))
+            end
+            if (to_comp in cleanup_targets) && !(from_comp in cleanup_targets)
+                occursin(r"\.switchOffSignal\d+$", from) && push!(deleted_switch_signals, String(from))
+            end
             sendExpression(omc, "deleteConnection($from, $to, $aux_model)")
         end
+    end
+
+    switch_signal_lines = String[]
+    for switch_signal in sort!(collect(deleted_switch_signals))
+        _has_switch_off_signal_equation(omc, aux_model, switch_signal) && continue
+        push!(switch_signal_lines, "$switch_signal.value = false;")
+    end
+
+    # Add false equations for switch-off signals whose event/source connection is deleted.
+    if !isempty(switch_signal_lines)
+        block = "equation\n" * join(switch_signal_lines, "\n")
+        om_send(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
     end
 
     return cleanup_targets

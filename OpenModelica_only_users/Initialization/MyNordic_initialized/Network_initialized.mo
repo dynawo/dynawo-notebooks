@@ -1,4 +1,4 @@
-within MyNordic_auxiliary;
+within MyNordic_initialized;
 
 /*
 * Copyright (c) 2022, RTE (http://www.rte-france.com)
@@ -12,7 +12,7 @@ within MyNordic_auxiliary;
 * This file is part of Dynawo, an hybrid C++/Modelica open source suite
 * of simulation tools for power systems.
 */
-model Network_auxiliary "Nordic test grid with buses and lines"
+model Network_initialized "Nordic test grid with buses and lines"
   Dynawo.Electrical.Buses.Bus bus_B01 annotation(
     Placement(visible = true, transformation(origin = {-55, -105}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Buses.Bus bus_B02 annotation(
@@ -587,4 +587,4 @@ equation
     version = "",
     __OpenModelica_commandLineOptions = "",
     Documentation(info = "<html><head></head><body>This model represents the static network of the Nordic 32 test system. It consists of 74 buses, 52 lines and 11 shunts. Data for the lines have been taken from the&nbsp;<span style=\"font-family: 'MS Shell Dlg 2'; font-size: 12px;\">IEEE Technical Report \"Test Systems for Voltage Stability Analysis and Security Assessment\" from August, 2015</span>.<div><br><div>The model forms the basis for the Nordic 32 test system. It can be extended to add specific transformers, loads or generators.</div></div></body></html>"));
-end Network_auxiliary;
+end Network_initialized;

@@ -24,6 +24,7 @@ equation
   check_UPu_bus_1042 = Modelica.ComplexMath.'abs'(bus_1042.terminal.V);
   check_UPu_bus_4012 = Modelica.ComplexMath.'abs'(bus_4012.terminal.V);
   check_UPu_bus_4062 = Modelica.ComplexMath.'abs'(bus_4062.terminal.V);
+  line_4032_4044.switchOffSignal1.value = false;
   annotation(
     preferredView = "diagram",
     experiment(StartTime = 0, StopTime = 169.8, Tolerance = 0.005, Interval = 0.01),

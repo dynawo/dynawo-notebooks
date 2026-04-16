@@ -335,7 +335,6 @@ equation
   line_4031_4041b.switchOffSignal2.value = false;
   line_4032_4042.switchOffSignal1.value = false;
   line_4032_4042.switchOffSignal2.value = false;
-//line_4032_4044.switchOffSignal1.value = false; // to be disconnected to clear short circuit
   line_4032_4044.switchOffSignal2.value = false;
   line_4041_4044.switchOffSignal1.value = false;
   line_4041_4044.switchOffSignal2.value = false;
