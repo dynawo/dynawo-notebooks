@@ -298,11 +298,32 @@ function get_all_components(omc, model)
     return components
 end
 
-function get_initializable_components(components, init_params)
+function _resolve_init_params(component::String, class::String, init_params, init_model_by_component)
+    haskey(init_params, class) || return nothing
+
+    spec = init_params[class]
+    if isa(spec, Dict) && haskey(spec, "profiles")
+        haskey(init_model_by_component, component) || error("Missing INIT model selection for component $component of class $class")
+        profile_name = init_model_by_component[component]
+        profiles = spec["profiles"]
+        haskey(profiles, profile_name) || error("Unknown INIT profile $profile_name for component $component of class $class")
+        return profiles[profile_name]
+    end
+
+    if haskey(init_model_by_component, component)
+        profile_name = init_model_by_component[component]
+        error("Component $component selects INIT profile $profile_name, but class $class has no profiles")
+    end
+
+    return spec
+end
+
+function get_initializable_components(components, init_params, init_model_by_component = Dict{String, String}())
     initializable = Dict{String, Dict{String, Any}}()
 
     for (component, info) in components
-        haskey(init_params, info["class"]) || continue
+        param_pairs = _resolve_init_params(component, info["class"], init_params, init_model_by_component)
+        isnothing(param_pairs) && continue
         initializable[component] = info
     end
 
@@ -329,11 +350,11 @@ function extract_component_initialization_values(aux_session, component, param_p
     return values
 end
 
-function extract_all_initialization_values(aux_session, initializable_components, init_params)
+function extract_all_initialization_values(aux_session, initializable_components, init_params, init_model_by_component = Dict{String, String}())
     values_by_component = Dict{String, Dict{String, Float64}}()
 
     for (component, info) in initializable_components
-        param_pairs = init_params[info["class"]]
+        param_pairs = _resolve_init_params(component, info["class"], init_params, init_model_by_component)
         values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs)
     end
 
@@ -377,11 +398,11 @@ function build_modifier_assignments(info, param_pairs, values)
     return assignments
 end
 
-function apply_initialization_modifiers!(omc, target_model, initializable_components, init_params, values_by_component)
+function apply_initialization_modifiers!(omc, target_model, initializable_components, init_params, values_by_component, init_model_by_component = Dict{String, String}())
     for (component, info) in initializable_components
         haskey(values_by_component, component) || error("Missing extracted values for $component")
         current_class = info["class"]
-        param_pairs = init_params[current_class]
+        param_pairs = _resolve_init_params(component, current_class, init_params, init_model_by_component)
         assignments = build_modifier_assignments(info, param_pairs, values_by_component[component])
         mod_str = _code_modification_from_assignments(assignments)
         om_send(omc, "updateComponent($component, $current_class, $target_model, modification = $mod_str)", parsed = false)
