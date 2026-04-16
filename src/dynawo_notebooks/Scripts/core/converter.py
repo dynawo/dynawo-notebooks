@@ -233,13 +233,13 @@ class PowsyblConverter:
         if is_pu:
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
-            b_sie = raw_b / z_base
-            g_sie = raw_g / z_base
+            b_sie = -float(raw_b) / z_base
+            g_sie = float(raw_g) / z_base
         else:
             r_ohm = raw_r
             x_ohm = raw_x
-            b_sie = raw_b
-            g_sie = raw_g
+            b_sie = -float(raw_b)
+            g_sie = float(raw_g)
 
         network.create_lines(
             id=str(lid),
@@ -442,10 +442,6 @@ class PowsyblConverter:
         # in PyPowSyBl we must DIVIDE ratedU1 by the ratio.
         rated_u1_base = un1 / base_ratio if base_ratio != 0.0 else un1
 
-        # Fix: Z_base calculation MUST use the nominal Un1 to preserve absolute impedances.
-        # OpenModelica models typically pre-adjust XPu for off-nominal taps natively.
-        z_base = (un1**2) / sn_comp
-
         is_pu = "r_pu" in info or "x_pu" in info
 
         raw_r = info.get("r_pu", info.get("r", 0.0))
@@ -455,16 +451,18 @@ class PowsyblConverter:
 
         raw_r = max(float(raw_r), 1e-6)
 
+        z_base = (rated_u1_base**2) / sn_comp
+
         if is_pu:
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
-            b_sie = raw_b / z_base
-            g_sie = raw_g / z_base
+            b_sie = -float(raw_b) / z_base
+            g_sie = float(raw_g) / z_base
         else:
             r_ohm = raw_r
             x_ohm = raw_x
-            b_sie = raw_b
-            g_sie = raw_g
+            b_sie = -float(raw_b)
+            g_sie = float(raw_g)
 
         network.create_2_windings_transformers(
             id=str(tid),
