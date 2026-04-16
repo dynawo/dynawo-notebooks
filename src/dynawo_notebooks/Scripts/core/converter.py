@@ -442,10 +442,9 @@ class PowsyblConverter:
         # in PyPowSyBl we must DIVIDE ratedU1 by the ratio.
         rated_u1_base = un1 / base_ratio if base_ratio != 0.0 else un1
 
-        # Z_base calculation. By using (un1/ratio), this formula effectively cancels
-        # out the ratio^2 factor that OpenModelica injects by default into
-        # its X_pu, resulting in the exact real physical Ohms.
-        z_base = (rated_u1_base**2) / sn_comp
+        # Fix: Z_base calculation MUST use the nominal Un1 to preserve absolute impedances.
+        # OpenModelica models typically pre-adjust XPu for off-nominal taps natively.
+        z_base = (un1**2) / sn_comp
 
         is_pu = "r_pu" in info or "x_pu" in info
 

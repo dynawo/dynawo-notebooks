@@ -102,15 +102,24 @@ class ModelicaParser:
         """
         Scans the raw source code string once to map all parameter assignments to their expressions.
         """
-        pattern = re.compile(r"\b([\w\.]+)\s*=\s*([^;]+);")
-        return {
-            match.group(1).strip(): match.group(2)
-            .split('"')[0]
-            .split("//")[0]
-            .split("/*")[0]
-            .strip()
-            for match in pattern.finditer(source_str)
-        }
+        assignments = {}
+
+        # 1. Match standard semicolon-terminated assignments
+        pattern_semi = re.compile(r"\b([\w\.]+)\s*=\s*([^;]+);")
+        for match in pattern_semi.finditer(source_str):
+            val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
+            assignments[match.group(1).strip()] = val
+
+        # 2. Match comma or parenthesis-terminated assignments (e.g., inside 'extends' modifiers)
+        # Restricts value characters to math operations to avoid splitting complex function calls
+        pattern_args = re.compile(r"\b([\w\.]+)\s*=\s*([+\-\w\.\s\*\/]+)[,\)]")
+        for match in pattern_args.finditer(source_str):
+            key = match.group(1).strip()
+            if key not in assignments:
+                val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
+                assignments[key] = val
+
+        return assignments
 
     def parse_topology(self) -> Dict[str, Dict]:
         """
