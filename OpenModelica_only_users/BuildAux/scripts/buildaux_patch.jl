@@ -34,6 +34,82 @@ end
 # Post-Save Patches
 # ------------------------------------------------------------
 
+function _strip_modelica_comments(s::AbstractString)
+    isempty(s) && return ""
+
+    out = IOBuffer()
+    in_str = false
+    escaped = false
+    in_line_comment = false
+    in_block_comment = false
+
+    i = firstindex(s)
+    while i <= lastindex(s)
+        c = s[i]
+        next_i = nextind(s, i)
+        next_c = next_i <= lastindex(s) ? s[next_i] : nothing
+
+        if in_line_comment
+            if c == '\n'
+                in_line_comment = false
+                write(out, c)
+            end
+            i = nextind(s, i)
+            continue
+        end
+
+        if in_block_comment
+            if c == '*' && next_c == '/'
+                in_block_comment = false
+                i = nextind(s, next_i)
+            else
+                if c == '\n'
+                    write(out, c)
+                end
+                i = nextind(s, i)
+            end
+            continue
+        end
+
+        if in_str
+            write(out, c)
+            if escaped
+                escaped = false
+            elseif c == '\\'
+                escaped = true
+            elseif c == '"'
+                in_str = false
+            end
+            i = nextind(s, i)
+            continue
+        end
+
+        if c == '"'
+            in_str = true
+            write(out, c)
+            i = nextind(s, i)
+            continue
+        end
+
+        if c == '/' && next_c == '/'
+            in_line_comment = true
+            i = nextind(s, next_i)
+            continue
+        end
+
+        if c == '/' && next_c == '*'
+            in_block_comment = true
+            i = nextind(s, next_i)
+            continue
+        end
+
+        write(out, c)
+        i = nextind(s, i)
+    end
+
+    return strip(String(take!(out)))
+end
+
 function _collect_deleted_component_names(components)
     components === nothing && return Set{String}()
 
@@ -88,7 +164,7 @@ end
 
 function _statement_uses_disallowed_ref(statement::String, allowed_refs_by_component::Dict{String, Set{String}})
     # Ignore comments when checking whether a statement references dead paths.
-    statement_code = replace(statement, r"//.*" => "")
+    statement_code = _strip_modelica_comments(statement)
     stripped_statement = strip(statement_code)
     isempty(stripped_statement) && return false
 
@@ -112,23 +188,36 @@ function _statement_uses_disallowed_ref(statement::String, allowed_refs_by_compo
     return false
 end
 
+function _simple_local_lhs(statement::String)
+    statement_code = _strip_modelica_comments(statement)
+    m = match(r"^\s*([A-Za-z_]\w*)\s*=", statement_code)
+    m === nothing && return nothing
+    return String(m.captures[1])
+end
+
 function _delete_dead_equations(txt::String, components, slack_component::String)
-    components === nothing && return txt
+    components === nothing && return txt, Set{String}()
 
     # Track the interfaces that are allowed to remain after replacements and deletions.
     allowed_refs_by_component = _collect_allowed_component_refs(components, slack_component)
-    isempty(allowed_refs_by_component) && return txt
+    isempty(allowed_refs_by_component) && return txt, Set{String}()
 
     # Rebuild equation sections while dropping statements that reference dead interfaces.
     in_equation_section = false
     statement_lines = String[]
     rewritten_lines = String[]
+    deleted_local_lhs = Set{String}()
     lines = split(txt, "\n"; keepempty = true)
 
     function flush_statement!()
         isempty(statement_lines) && return
         statement = join(statement_lines, "\n")
-        _statement_uses_disallowed_ref(statement, allowed_refs_by_component) || append!(rewritten_lines, statement_lines)
+        if _statement_uses_disallowed_ref(statement, allowed_refs_by_component)
+            lhs = _simple_local_lhs(statement)
+            lhs === nothing || push!(deleted_local_lhs, lhs)
+        else
+            append!(rewritten_lines, statement_lines)
+        end
         empty!(statement_lines)
     end
 
@@ -160,7 +249,31 @@ function _delete_dead_equations(txt::String, components, slack_component::String
     end
 
     flush_statement!()
-    return join(rewritten_lines, "\n")
+    return join(rewritten_lines, "\n"), deleted_local_lhs
+end
+
+function _remove_unused_deleted_lhs_declarations(txt::String, deleted_local_lhs::Set{String})
+    cleaned = txt
+
+    for lhs in deleted_local_lhs
+        escaped_lhs = replace(lhs, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
+        declaration_pattern = Regex(
+            "(?m)^\\s*" *
+            "(?:final\\s+|inner\\s+|outer\\s+|replaceable\\s+|parameter\\s+|constant\\s+|discrete\\s+|input\\s+|output\\s+)*" *
+            "(?:[A-Za-z_]\\w*\\.)*[A-Za-z_]\\w*" *
+            "\\s+" * escaped_lhs * "\\b" *
+            "[^;]*;\\s*\\n?",
+        )
+
+        m = match(declaration_pattern, cleaned)
+        m === nothing && continue
+
+        without_declaration = replace(cleaned, m.match => ""; count = 1)
+        still_used = occursin(Regex("\\b" * escaped_lhs * "\\b"), without_declaration)
+        still_used || (cleaned = without_declaration)
+    end
+
+    return cleaned
 end
 
 function _patch_step_setpoint(txt::String, components)
@@ -255,7 +368,8 @@ function patch_aux_equations!(aux_file::String, slack_component::String = ""; co
     txt = _patch_step_setpoint(txt, components)
 
     # Delete equations that still reference dead interfaces after replacements.
-    txt = _delete_dead_equations(txt, components, slack_component)
+    txt, deleted_local_lhs = _delete_dead_equations(txt, components, slack_component)
+    txt = _remove_unused_deleted_lhs_declarations(txt, deleted_local_lhs)
 
     write(aux_file, txt)
     return nothing
