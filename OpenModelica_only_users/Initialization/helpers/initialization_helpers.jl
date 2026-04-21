@@ -27,8 +27,8 @@ function parse_component(raw::String)
     s = replace(s, "}" => "")
     parts = split(s, ",")
 
-    comp_class = strip(parts[1])
-    comp_name = strip(parts[2])
+    comp_class = String(strip(parts[1]))
+    comp_name = String(strip(parts[2]))
 
     return comp_class, comp_name
 end
@@ -298,7 +298,7 @@ function get_all_components(omc, model)
     return components
 end
 
-function _resolve_init_params(component::String, class::String, init_params, init_model_by_component)
+function _resolve_init_params(component::AbstractString, class::AbstractString, init_params, init_model_by_component)
     haskey(init_params, class) || return nothing
 
     spec = init_params[class]
