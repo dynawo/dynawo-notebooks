@@ -178,7 +178,10 @@ class GridManager:
 
         # Process Buses (Voltage and Angle)
         for bus_id, row in buses.iterrows():
-            data["buses"][bus_id] = {"v_mag_kv": row["v_mag"], "v_angle_deg": row["v_angle"]}
+            data["buses"][bus_id] = {
+                "v_mag_kv": row["v_mag"],
+                "v_angle_deg": row["v_angle"],
+            }
 
         # Process Generators (Dispatched P and Q)
         # Important: run_ac updates p and q values in the generators dataframe

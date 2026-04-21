@@ -33,6 +33,8 @@ class LoadFlowComparator:
         connector: OMCConnector,
         model_name: str,
         parsed_data: Dict[str, Any],
+        export_path: str = None,
+        export_prefix: str = "grid_export",
     ) -> pd.DataFrame:
         """
         Executes an OpenModelica simulation (t=0) and compares the resulting bus
@@ -42,9 +44,18 @@ class LoadFlowComparator:
         :param connector: Active OMCConnector instance for OpenModelica simulation.
         :param model_name: The target Modelica model to simulate.
         :param parsed_data: The extracted topological dictionary containing bus references.
+        :param export_path: Target directory to export the result files.
+        :param export_prefix: Prefix for the exported files.
         :return: A pandas DataFrame containing the comparative metrics and absolute errors.
         """
         logger.info("Initiating cross-platform Load Flow comparison...")
+
+        if export_path:
+            os.makedirs(export_path, exist_ok=True)
+            pps_file = os.path.join(export_path, f"{export_prefix}_PyPowSyBl.xiidm")
+            network.save(pps_file)
+            logger.info(f"PyPowSyBl Load Flow saved to: {pps_file}")
+
         comparison_data = []
         original_dir = connector.get_working_directory()
 
@@ -52,7 +63,12 @@ class LoadFlowComparator:
             connector.set_working_directory(tmpdir)
 
             # 1. Execute OpenModelica Simulation
-            if not connector.simulate_model(model_name, stop_time=0.0):
+            if export_path:
+                om_file = os.path.join(export_path, f"{export_prefix}_Modelica.csv")
+            else:
+                om_file = None
+
+            if not connector.simulate_model(model_name, stop_time=0.0, om_file=om_file):
                 logger.error("Cannot compare: OM Simulation failed.")
                 connector.set_working_directory(original_dir)
                 return pd.DataFrame()
@@ -196,8 +212,6 @@ class NetworkParameterComparator:
         Extracts parameters from the three pipeline stages, converts physical XIIDM
         values back to per-unit (p.u.), and exports the results to CSV files.
         """
-        import os
-
         logger.info("Initiating parameter audit across multiple CSV files...")
 
         # 1. Load the intermediate JSON topology

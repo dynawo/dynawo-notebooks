@@ -102,15 +102,24 @@ class ModelicaParser:
         """
         Scans the raw source code string once to map all parameter assignments to their expressions.
         """
-        pattern = re.compile(r"\b([\w\.]+)\s*=\s*([^;]+);")
-        return {
-            match.group(1).strip(): match.group(2)
-            .split('"')[0]
-            .split("//")[0]
-            .split("/*")[0]
-            .strip()
-            for match in pattern.finditer(source_str)
-        }
+        assignments = {}
+
+        # 1. Match standard semicolon-terminated assignments
+        pattern_semi = re.compile(r"\b([\w\.]+)\s*=\s*([^;]+);")
+        for match in pattern_semi.finditer(source_str):
+            val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
+            assignments[match.group(1).strip()] = val
+
+        # 2. Match comma or parenthesis-terminated assignments (e.g., inside 'extends' modifiers)
+        # Restricts value characters to math operations to avoid splitting complex function calls
+        pattern_args = re.compile(r"\b([\w\.]+)\s*=\s*([+\-\w\.\s\*\/\^\(\)]+)[,\)]")
+        for match in pattern_args.finditer(source_str):
+            key = match.group(1).strip()
+            if key not in assignments:
+                val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
+                assignments[key] = val
+
+        return assignments
 
     def parse_topology(self) -> Dict[str, Dict]:
         """
@@ -434,7 +443,7 @@ class ModelicaParser:
 
         try:
             return eval(py_expr, {"__builtins__": None}, {"Complex": Complex_func})
-        except:
+        except Exception:
             return None
 
     def _extract_parameters(
@@ -449,7 +458,14 @@ class ModelicaParser:
         critical_params = {"r_pu", "x_pu", "b_pu", "g_pu", "r", "x", "b", "g"}
 
         # --- Parameter Constraints: Values that must be strictly positive ---
-        positive_only_params = {"u_pu", "nominal_v", "sn_nom", "ratio", "rated_u1", "rated_u2"}
+        positive_only_params = {
+            "u_pu",
+            "nominal_v",
+            "sn_nom",
+            "ratio",
+            "rated_u1",
+            "rated_u2",
+        }
 
         for pm, pj in self.param_map.items():
             val = None
@@ -469,10 +485,19 @@ class ModelicaParser:
 
             # --- VOLTAGE DEDUCTION ---
             for raw_text in [raw_src, raw_flat]:
-                if raw_text and isinstance(raw_text, str) and "ZBASE" in raw_text:
-                    match = re.search(r"ZBASE(\d+)_(\d+)", raw_text)
-                    if match:
-                        extracted["_deduced_v"] = float(f"{match.group(1)}.{match.group(2)}")
+                if raw_text and isinstance(raw_text, str):
+                    # Check for ZBASE (e.g., ZBASE130_0)
+                    match_zbase = re.search(r"ZBASE(\d+)_(\d+)", raw_text, re.IGNORECASE)
+                    if match_zbase:
+                        extracted["_deduced_v"] = float(
+                            f"{match_zbase.group(1)}.{match_zbase.group(2)}"
+                        )
+                        break
+
+                    # Check for XBase (e.g., XBase_130)
+                    match_xbase = re.search(r"XBase_(\d+)", raw_text, re.IGNORECASE)
+                    if match_xbase:
+                        extracted["_deduced_v"] = float(match_xbase.group(1))
                         break
 
             # PRIORITY 1: EXPLICIT SOURCE CODE OVERRIDES

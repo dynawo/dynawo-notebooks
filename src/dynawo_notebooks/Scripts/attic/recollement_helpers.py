@@ -51,7 +51,8 @@ class Dyd:
             self.root = self.tree.getroot()
         else:
             self.root = etree.Element(
-                "dynamicModelsArchitecture", nsmap={None: "http://www.rte-france.com/dynawo"}
+                "dynamicModelsArchitecture",
+                nsmap={None: "http://www.rte-france.com/dynawo"},
             )
             self.tree = etree.ElementTree(self.root)
 
