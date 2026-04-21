@@ -212,8 +212,6 @@ class NetworkParameterComparator:
         Extracts parameters from the three pipeline stages, converts physical XIIDM
         values back to per-unit (p.u.), and exports the results to CSV files.
         """
-        import os
-
         logger.info("Initiating parameter audit across multiple CSV files...")
 
         # 1. Load the intermediate JSON topology

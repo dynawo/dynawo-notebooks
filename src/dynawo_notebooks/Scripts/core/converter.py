@@ -451,7 +451,9 @@ class PowsyblConverter:
 
         raw_r = max(float(raw_r), 1e-6)
 
-        z_base = (rated_u1_base**2) / sn_comp
+        # Topological fix: Reflect impedance from secondary to primary side
+        # by using the actual referred voltage for the impedance base calculation.
+        z_base = ((un1 * base_ratio) ** 2) / sn_comp if base_ratio != 0.0 else (un1**2) / sn_comp
 
         if is_pu:
             r_ohm = raw_r * z_base

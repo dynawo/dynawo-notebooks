@@ -112,7 +112,7 @@ class ModelicaParser:
 
         # 2. Match comma or parenthesis-terminated assignments (e.g., inside 'extends' modifiers)
         # Restricts value characters to math operations to avoid splitting complex function calls
-        pattern_args = re.compile(r"\b([\w\.]+)\s*=\s*([+\-\w\.\s\*\/]+)[,\)]")
+        pattern_args = re.compile(r"\b([\w\.]+)\s*=\s*([+\-\w\.\s\*\/\^\(\)]+)[,\)]")
         for match in pattern_args.finditer(source_str):
             key = match.group(1).strip()
             if key not in assignments:
@@ -443,7 +443,7 @@ class ModelicaParser:
 
         try:
             return eval(py_expr, {"__builtins__": None}, {"Complex": Complex_func})
-        except:
+        except Exception:
             return None
 
     def _extract_parameters(
