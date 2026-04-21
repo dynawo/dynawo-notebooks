@@ -190,6 +190,86 @@ model FullDynamicModel "Nordic test grid with buses, lines, shunts, loads, trans
     Placement(visible = true, transformation(origin = {-75, 151}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
   Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronous g20(UNom = 15, SNom = 4500.0, PNomTurb = 4275.0, PNomAlt = 4275.0, ExcitationPu = Dynawo.Electrical.Machines.OmegaRef.BaseClasses.GeneratorSynchronousParameters.ExcitationPuType.NoLoad, H = 3.0, DPu = 0, SnTfo = 4500.0, UNomHV = 15, UNomLV = 15, UBaseHV = 15, UBaseLV = 15, RTfPu = 0, XTfPu = 0, md = 0.1, mq = 0.1, nd = 6.0257, nq = 6.0257, U0Pu = U0Pu_g20, UPhase0 = UPhase0_g20) annotation(
     Placement(visible = true, transformation(origin = {-75, 60}, extent = {{-3, -3}, {3, 3}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g01(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {25, 115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g01(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 760.0) annotation(
+    Placement(visible = true, transformation(origin = {25, 43}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g02(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {75, 187}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g02(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 570.0) annotation(
+    Placement(visible = true, transformation(origin = {75, 115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g03(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {85, 115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g03(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 665.0) annotation(
+    Placement(visible = true, transformation(origin = {85, 43}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g04(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 150.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-85, 66}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g04(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 570.0) annotation(
+    Placement(visible = true, transformation(origin = {-85, -6}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g05(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-45, 107}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g05(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 237.5) annotation(
+    Placement(visible = true, transformation(origin = {-45, 35}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g06(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 75.0, tOelMin = -20.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 1) annotation(
+    Placement(visible = true, transformation(origin = {35, -24}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g06(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 360.0) annotation(
+    Placement(visible = true, transformation(origin = {35, -96}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g07(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 75.0, tOelMin = -20.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 1) annotation(
+    Placement(visible = true, transformation(origin = {-53, -3}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g07(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 180.0) annotation(
+    Placement(visible = true, transformation(origin = {-53, -75}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g08(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-77, 36}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g08(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 807.5) annotation(
+    Placement(visible = true, transformation(origin = {-77, -36}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g09(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-25, 187}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g09(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 950.0) annotation(
+    Placement(visible = true, transformation(origin = {-25, 115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g10(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-35, 115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g10(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 760.0) annotation(
+    Placement(visible = true, transformation(origin = {-35, 43}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g11(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -20.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 1) annotation(
+    Placement(visible = true, transformation(origin = {35, 108}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g11(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 285.0) annotation(
+    Placement(visible = true, transformation(origin = {35, 36}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g12(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 75.0, tOelMin = -20.0, EfdMaxPu = 4.0, tLeadPss = 0.20, tLagPss = 0.010, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 15.0, OelMode = 1) annotation(
+    Placement(visible = true, transformation(origin = {-4, 77}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g12(Pm0Pu(fixed = false), KSigma = 0.04, Ki = 0.4, Kp = 2, PNom = 332.5) annotation(
+    Placement(visible = true, transformation(origin = {-4, 5}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g13(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 50.0, IrLimPu = 2.9579, KPss = 0.0, tOelMin = -17.0, EfdMaxPu = 4.0, tLeadPss = 1.00, tLagPss = 1.000, tLeadTgr = 4.0, tLagTgr = 20.0, tDerOmega = 1.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-70, 7}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g13(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 285.0) annotation(
+    Placement(visible = true, transformation(origin = {-70, -65}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g14(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 75.0, tOelMin = -18.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {50, 6}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g14(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 630.0) annotation(
+    Placement(visible = true, transformation(origin = {50, -66}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g15(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 75.0, tOelMin = -18.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {80, -53}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g15(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 1080.0) annotation(
+    Placement(visible = true, transformation(origin = {80, -125}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g16(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 75.0, tOelMin = -18.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {20, -73}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g16(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 630.0) annotation(
+    Placement(visible = true, transformation(origin = {20, -145}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g17(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 150.0, tOelMin = -18.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-78, -52}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g17(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 540.0) annotation(
+    Placement(visible = true, transformation(origin = {-78, -124}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g18(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 120.0, IrLimPu = 3.0618, KPss = 150.0, tOelMin = -18.0, EfdMaxPu = 5.0, tLeadPss = 0.22, tLagPss = 0.012, tLeadTgr = 5.0, tLagTgr = 12.5, tDerOmega = 15.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-95, -115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g18(Pm0Pu(fixed = false), KSigma = 0.00, Ki = 0.0, Kp = 0, PNom = 1080.0) annotation(
+    Placement(visible = true, transformation(origin = {-95, -187}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g19(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 0.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 1.00, tLagPss = 1.000, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 1.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-75, 187}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g19(Pm0Pu(fixed = false), KSigma = 0.08, Ki = 0.4, Kp = 2, PNom = 475.0) annotation(
+    Placement(visible = true, transformation(origin = {-75, 115}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.VoltageRegulators.Simplified.VRNordic vrNordic_g20(Efd0Pu(fixed = false), Ir0Pu(fixed = false), Us0Pu(fixed = false), KTgr = 70.0, IrLimPu = 1.8991, KPss = 0.0, tOelMin = -11.0, EfdMaxPu = 4.0, tLeadPss = 1.00, tLagPss = 1.000, tLeadTgr = 10.0, tLagTgr = 20.0, tDerOmega = 1.0, OelMode = 0) annotation(
+    Placement(visible = true, transformation(origin = {-75, 96}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
+  Dynawo.Electrical.Controls.Machines.Governors.Simplified.GoverNordic goverNordic_g20(Pm0Pu(fixed = false), KSigma = 0.08, Ki = 0.4, Kp = 2, PNom = 4275.0) annotation(
+    Placement(visible = true, transformation(origin = {-75, 24}, extent = {{-8, -8}, {8, 8}}, rotation = 0)));
 
   // g01 electrical values for the load flow
   parameter Dynawo.Types.ActivePowerPu P0Pu_g01;
@@ -311,10 +391,232 @@ model FullDynamicModel "Nordic test grid with buses, lines, shunts, loads, trans
   // g20 parameters for GeneratorSynchronousExt3W_INIT
   parameter GeneratorSynchronousExt3W_INITparams g20_INITparams(RaPu = 0.002, XlPu = 0.15, XdPu = 1.1, XpdPu = 0.25, XppdPu = 0.2, XqPu = 0.7, XppqPu = 0.2, Tpd0 = 5.0, Tppd0 = 0.05, Tppq0 = 0.1, MdPuEfd = 0, UseApproximation = true);
 
+initial equation
+  vrNordic_g01.Efd0Pu = g01.Efd0Pu;
+  vrNordic_g01.Ir0Pu = g01.IRotor0Pu;
+  vrNordic_g01.Us0Pu = g01.UStator0Pu;
+  goverNordic_g01.Pm0Pu = g01.Pm0Pu;
+  vrNordic_g02.Efd0Pu = g02.Efd0Pu;
+  vrNordic_g02.Ir0Pu = g02.IRotor0Pu;
+  vrNordic_g02.Us0Pu = g02.UStator0Pu;
+  goverNordic_g02.Pm0Pu = g02.Pm0Pu;
+  vrNordic_g03.Efd0Pu = g03.Efd0Pu;
+  vrNordic_g03.Ir0Pu = g03.IRotor0Pu;
+  vrNordic_g03.Us0Pu = g03.UStator0Pu;
+  goverNordic_g03.Pm0Pu = g03.Pm0Pu;
+  vrNordic_g04.Efd0Pu = g04.Efd0Pu;
+  vrNordic_g04.Ir0Pu = g04.IRotor0Pu;
+  vrNordic_g04.Us0Pu = g04.UStator0Pu;
+  goverNordic_g04.Pm0Pu = g04.Pm0Pu;
+  vrNordic_g05.Efd0Pu = g05.Efd0Pu;
+  vrNordic_g05.Ir0Pu = g05.IRotor0Pu;
+  vrNordic_g05.Us0Pu = g05.UStator0Pu;
+  goverNordic_g05.Pm0Pu = g05.Pm0Pu;
+  vrNordic_g06.Efd0Pu = g06.Efd0Pu;
+  vrNordic_g06.Ir0Pu = g06.IRotor0Pu;
+  vrNordic_g06.Us0Pu = g06.UStator0Pu;
+  goverNordic_g06.Pm0Pu = g06.Pm0Pu;
+  vrNordic_g07.Efd0Pu = g07.Efd0Pu;
+  vrNordic_g07.Ir0Pu = g07.IRotor0Pu;
+  vrNordic_g07.Us0Pu = g07.UStator0Pu;
+  goverNordic_g07.Pm0Pu = g07.Pm0Pu;
+  vrNordic_g08.Efd0Pu = g08.Efd0Pu;
+  vrNordic_g08.Ir0Pu = g08.IRotor0Pu;
+  vrNordic_g08.Us0Pu = g08.UStator0Pu;
+  goverNordic_g08.Pm0Pu = g08.Pm0Pu;
+  vrNordic_g09.Efd0Pu = g09.Efd0Pu;
+  vrNordic_g09.Ir0Pu = g09.IRotor0Pu;
+  vrNordic_g09.Us0Pu = g09.UStator0Pu;
+  goverNordic_g09.Pm0Pu = g09.Pm0Pu;
+  vrNordic_g10.Efd0Pu = g10.Efd0Pu;
+  vrNordic_g10.Ir0Pu = g10.IRotor0Pu;
+  vrNordic_g10.Us0Pu = g10.UStator0Pu;
+  goverNordic_g10.Pm0Pu = g10.Pm0Pu;
+  vrNordic_g11.Efd0Pu = g11.Efd0Pu;
+  vrNordic_g11.Ir0Pu = g11.IRotor0Pu;
+  vrNordic_g11.Us0Pu = g11.UStator0Pu;
+  goverNordic_g11.Pm0Pu = g11.Pm0Pu;
+  vrNordic_g12.Efd0Pu = g12.Efd0Pu;
+  vrNordic_g12.Ir0Pu = g12.IRotor0Pu;
+  vrNordic_g12.Us0Pu = g12.UStator0Pu;
+  goverNordic_g12.Pm0Pu = g12.Pm0Pu;
+  vrNordic_g13.Efd0Pu = g13.Efd0Pu;
+  vrNordic_g13.Ir0Pu = g13.IRotor0Pu;
+  vrNordic_g13.Us0Pu = g13.UStator0Pu;
+  goverNordic_g13.Pm0Pu = g13.Pm0Pu;
+  vrNordic_g14.Efd0Pu = g14.Efd0Pu;
+  vrNordic_g14.Ir0Pu = g14.IRotor0Pu;
+  vrNordic_g14.Us0Pu = g14.UStator0Pu;
+  goverNordic_g14.Pm0Pu = g14.Pm0Pu;
+  vrNordic_g15.Efd0Pu = g15.Efd0Pu;
+  vrNordic_g15.Ir0Pu = g15.IRotor0Pu;
+  vrNordic_g15.Us0Pu = g15.UStator0Pu;
+  goverNordic_g15.Pm0Pu = g15.Pm0Pu;
+  vrNordic_g16.Efd0Pu = g16.Efd0Pu;
+  vrNordic_g16.Ir0Pu = g16.IRotor0Pu;
+  vrNordic_g16.Us0Pu = g16.UStator0Pu;
+  goverNordic_g16.Pm0Pu = g16.Pm0Pu;
+  vrNordic_g17.Efd0Pu = g17.Efd0Pu;
+  vrNordic_g17.Ir0Pu = g17.IRotor0Pu;
+  vrNordic_g17.Us0Pu = g17.UStator0Pu;
+  goverNordic_g17.Pm0Pu = g17.Pm0Pu;
+  vrNordic_g18.Efd0Pu = g18.Efd0Pu;
+  vrNordic_g18.Ir0Pu = g18.IRotor0Pu;
+  vrNordic_g18.Us0Pu = g18.UStator0Pu;
+  goverNordic_g18.Pm0Pu = g18.Pm0Pu;
+  vrNordic_g19.Efd0Pu = g19.Efd0Pu;
+  vrNordic_g19.Ir0Pu = g19.IRotor0Pu;
+  vrNordic_g19.Us0Pu = g19.UStator0Pu;
+  goverNordic_g19.Pm0Pu = g19.Pm0Pu;
+  vrNordic_g20.Efd0Pu = g20.Efd0Pu;
+  vrNordic_g20.Ir0Pu = g20.IRotor0Pu;
+  vrNordic_g20.Us0Pu = g20.UStator0Pu;
+  goverNordic_g20.Pm0Pu = g20.Pm0Pu;
+
 equation
   g01.switchOffSignal1.value = false;
   g01.switchOffSignal2.value = false;
   g01.switchOffSignal3.value = false;
+  g01.efdPu = vrNordic_g01.efdPu;
+  g01.PmPu = goverNordic_g01.PmPu;
+  goverNordic_g01.omegaPu = g01.omegaPu;
+  goverNordic_g01.PGenPu = g01.PGenPu;
+  vrNordic_g01.IrPu = g01.IRotorPu;
+  vrNordic_g01.omegaPu = g01.omegaPu;
+  vrNordic_g01.UsPu = g01.UStatorPu;
+  g02.efdPu = vrNordic_g02.efdPu;
+  g02.PmPu = goverNordic_g02.PmPu;
+  goverNordic_g02.omegaPu = g02.omegaPu;
+  goverNordic_g02.PGenPu = g02.PGenPu;
+  vrNordic_g02.IrPu = g02.IRotorPu;
+  vrNordic_g02.omegaPu = g02.omegaPu;
+  vrNordic_g02.UsPu = g02.UStatorPu;
+  g03.efdPu = vrNordic_g03.efdPu;
+  g03.PmPu = goverNordic_g03.PmPu;
+  goverNordic_g03.omegaPu = g03.omegaPu;
+  goverNordic_g03.PGenPu = g03.PGenPu;
+  vrNordic_g03.IrPu = g03.IRotorPu;
+  vrNordic_g03.omegaPu = g03.omegaPu;
+  vrNordic_g03.UsPu = g03.UStatorPu;
+  g04.efdPu = vrNordic_g04.efdPu;
+  g04.PmPu = goverNordic_g04.PmPu;
+  goverNordic_g04.omegaPu = g04.omegaPu;
+  goverNordic_g04.PGenPu = g04.PGenPu;
+  vrNordic_g04.IrPu = g04.IRotorPu;
+  vrNordic_g04.omegaPu = g04.omegaPu;
+  vrNordic_g04.UsPu = g04.UStatorPu;
+  g05.efdPu = vrNordic_g05.efdPu;
+  g05.PmPu = goverNordic_g05.PmPu;
+  goverNordic_g05.omegaPu = g05.omegaPu;
+  goverNordic_g05.PGenPu = g05.PGenPu;
+  vrNordic_g05.IrPu = g05.IRotorPu;
+  vrNordic_g05.omegaPu = g05.omegaPu;
+  vrNordic_g05.UsPu = g05.UStatorPu;
+  g06.efdPu = vrNordic_g06.efdPu;
+  g06.PmPu = goverNordic_g06.PmPu;
+  goverNordic_g06.omegaPu = g06.omegaPu;
+  goverNordic_g06.PGenPu = g06.PGenPu;
+  vrNordic_g06.IrPu = g06.IRotorPu;
+  vrNordic_g06.omegaPu = g06.omegaPu;
+  vrNordic_g06.UsPu = g06.UStatorPu;
+  g07.efdPu = vrNordic_g07.efdPu;
+  g07.PmPu = goverNordic_g07.PmPu;
+  goverNordic_g07.omegaPu = g07.omegaPu;
+  goverNordic_g07.PGenPu = g07.PGenPu;
+  vrNordic_g07.IrPu = g07.IRotorPu;
+  vrNordic_g07.omegaPu = g07.omegaPu;
+  vrNordic_g07.UsPu = g07.UStatorPu;
+  g08.efdPu = vrNordic_g08.efdPu;
+  g08.PmPu = goverNordic_g08.PmPu;
+  goverNordic_g08.omegaPu = g08.omegaPu;
+  goverNordic_g08.PGenPu = g08.PGenPu;
+  vrNordic_g08.IrPu = g08.IRotorPu;
+  vrNordic_g08.omegaPu = g08.omegaPu;
+  vrNordic_g08.UsPu = g08.UStatorPu;
+  g09.efdPu = vrNordic_g09.efdPu;
+  g09.PmPu = goverNordic_g09.PmPu;
+  goverNordic_g09.omegaPu = g09.omegaPu;
+  goverNordic_g09.PGenPu = g09.PGenPu;
+  vrNordic_g09.IrPu = g09.IRotorPu;
+  vrNordic_g09.omegaPu = g09.omegaPu;
+  vrNordic_g09.UsPu = g09.UStatorPu;
+  g10.efdPu = vrNordic_g10.efdPu;
+  g10.PmPu = goverNordic_g10.PmPu;
+  goverNordic_g10.omegaPu = g10.omegaPu;
+  goverNordic_g10.PGenPu = g10.PGenPu;
+  vrNordic_g10.IrPu = g10.IRotorPu;
+  vrNordic_g10.omegaPu = g10.omegaPu;
+  vrNordic_g10.UsPu = g10.UStatorPu;
+  g11.efdPu = vrNordic_g11.efdPu;
+  g11.PmPu = goverNordic_g11.PmPu;
+  goverNordic_g11.omegaPu = g11.omegaPu;
+  goverNordic_g11.PGenPu = g11.PGenPu;
+  vrNordic_g11.IrPu = g11.IRotorPu;
+  vrNordic_g11.omegaPu = g11.omegaPu;
+  vrNordic_g11.UsPu = g11.UStatorPu;
+  g12.efdPu = vrNordic_g12.efdPu;
+  g12.PmPu = goverNordic_g12.PmPu;
+  goverNordic_g12.omegaPu = g12.omegaPu;
+  goverNordic_g12.PGenPu = g12.PGenPu;
+  vrNordic_g12.IrPu = g12.IRotorPu;
+  vrNordic_g12.omegaPu = g12.omegaPu;
+  vrNordic_g12.UsPu = g12.UStatorPu;
+  g13.efdPu = vrNordic_g13.efdPu;
+  g13.PmPu = goverNordic_g13.PmPu;
+  goverNordic_g13.omegaPu = g13.omegaPu;
+  goverNordic_g13.PGenPu = g13.PGenPu;
+  vrNordic_g13.IrPu = g13.IRotorPu;
+  vrNordic_g13.omegaPu = g13.omegaPu;
+  vrNordic_g13.UsPu = g13.UStatorPu;
+  g14.efdPu = vrNordic_g14.efdPu;
+  g14.PmPu = goverNordic_g14.PmPu;
+  goverNordic_g14.omegaPu = g14.omegaPu;
+  goverNordic_g14.PGenPu = g14.PGenPu;
+  vrNordic_g14.IrPu = g14.IRotorPu;
+  vrNordic_g14.omegaPu = g14.omegaPu;
+  vrNordic_g14.UsPu = g14.UStatorPu;
+  g15.efdPu = vrNordic_g15.efdPu;
+  g15.PmPu = goverNordic_g15.PmPu;
+  goverNordic_g15.omegaPu = g15.omegaPu;
+  goverNordic_g15.PGenPu = g15.PGenPu;
+  vrNordic_g15.IrPu = g15.IRotorPu;
+  vrNordic_g15.omegaPu = g15.omegaPu;
+  vrNordic_g15.UsPu = g15.UStatorPu;
+  g16.efdPu = vrNordic_g16.efdPu;
+  g16.PmPu = goverNordic_g16.PmPu;
+  goverNordic_g16.omegaPu = g16.omegaPu;
+  goverNordic_g16.PGenPu = g16.PGenPu;
+  vrNordic_g16.IrPu = g16.IRotorPu;
+  vrNordic_g16.omegaPu = g16.omegaPu;
+  vrNordic_g16.UsPu = g16.UStatorPu;
+  g17.efdPu = vrNordic_g17.efdPu;
+  g17.PmPu = goverNordic_g17.PmPu;
+  goverNordic_g17.omegaPu = g17.omegaPu;
+  goverNordic_g17.PGenPu = g17.PGenPu;
+  vrNordic_g17.IrPu = g17.IRotorPu;
+  vrNordic_g17.omegaPu = g17.omegaPu;
+  vrNordic_g17.UsPu = g17.UStatorPu;
+  g18.efdPu = vrNordic_g18.efdPu;
+  g18.PmPu = goverNordic_g18.PmPu;
+  goverNordic_g18.omegaPu = g18.omegaPu;
+  goverNordic_g18.PGenPu = g18.PGenPu;
+  vrNordic_g18.IrPu = g18.IRotorPu;
+  vrNordic_g18.omegaPu = g18.omegaPu;
+  vrNordic_g18.UsPu = g18.UStatorPu;
+  g19.efdPu = vrNordic_g19.efdPu;
+  g19.PmPu = goverNordic_g19.PmPu;
+  goverNordic_g19.omegaPu = g19.omegaPu;
+  goverNordic_g19.PGenPu = g19.PGenPu;
+  vrNordic_g19.IrPu = g19.IRotorPu;
+  vrNordic_g19.omegaPu = g19.omegaPu;
+  vrNordic_g19.UsPu = g19.UStatorPu;
+  g20.efdPu = vrNordic_g20.efdPu;
+  g20.PmPu = goverNordic_g20.PmPu;
+  goverNordic_g20.omegaPu = g20.omegaPu;
+  goverNordic_g20.PGenPu = g20.PGenPu;
+  vrNordic_g20.IrPu = g20.IRotorPu;
+  vrNordic_g20.omegaPu = g20.omegaPu;
+  vrNordic_g20.UsPu = g20.UStatorPu;
   g02.switchOffSignal1.value = false;
   g02.switchOffSignal2.value = false;
   g02.switchOffSignal3.value = false;

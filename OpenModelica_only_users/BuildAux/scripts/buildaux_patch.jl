@@ -119,7 +119,8 @@ function _collect_deleted_component_names(components)
         cls = string(get(c, "class", ""))
         if startswith(cls, "Modelica.Blocks.Sources.") ||
            startswith(cls, "Dynawo.Electrical.Events.") ||
-           startswith(cls, "Dynawo.Electrical.Loads.LoadConnect_INIT")
+           startswith(cls, "Dynawo.Electrical.Loads.LoadConnect_INIT") ||
+           startswith(cls, "Dynawo.Electrical.Controls.Machines.")
             push!(deleted_names, comp_name)
         end
     end

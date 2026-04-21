@@ -532,6 +532,7 @@ const CLEANUP_CLASS_PREFIXES = (
     "Modelica.Blocks.Sources.",
     "Dynawo.Electrical.Events.",
     "Dynawo.Electrical.Loads.LoadConnect_INIT",
+    "Dynawo.Electrical.Controls.Machines.",
 )
 
 """
