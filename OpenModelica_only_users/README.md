@@ -12,7 +12,7 @@ This folder contains two notebook workflows for OpenModelica cases using the Dyn
 - `BuildAux/scripts/`: helper code and replacement dictionaries used by the BuildAux notebooks.
 - `Initialization/Initialization_single.ipynb`: create an initialized dynamic case from an existing auxiliary case.
 - `Initialization/Initialization_package.ipynb`: create an initialized dynamic package from an existing auxiliary package.
-- `Initialization/helpers/`: helper code and parameter dictionaries used by the initialization notebook.
+- `Initialization/scripts/`: helper code and parameter dictionaries used by the initialization notebook.
 
 ## Prerequisites
 
