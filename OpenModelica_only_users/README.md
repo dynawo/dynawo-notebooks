@@ -11,6 +11,7 @@ This folder contains two notebook workflows for OpenModelica cases using the Dyn
 - `BuildAux/BuildAux_package.ipynb`: build an auxiliary package from a package-based case.
 - `BuildAux/scripts/`: helper code and replacement dictionaries used by the BuildAux notebooks.
 - `Initialization/Initialization_single.ipynb`: create an initialized dynamic case from an existing auxiliary case.
+- `Initialization/Initialization_package.ipynb`: create an initialized dynamic package from an existing auxiliary package.
 - `Initialization/helpers/`: helper code and parameter dictionaries used by the initialization notebook.
 
 ## Prerequisites
@@ -28,7 +29,7 @@ Then install the Julia packages used by the notebooks:
 
 ```julia
 using Pkg
-Pkg.add(["IJulia", "OMJulia", "Plots", "DataFrames", "CSV"])
+Pkg.add(["IJulia", "OMJulia", "Plots", "PlotlyJS", "DataFrames", "CSV"])
 ```
 
 You can install the OpenModelica packages `Complex` and `ModelicaServices` with:
@@ -84,7 +85,11 @@ You can change `MODEL_DIR` and the derived paths if your files are stored somewh
 
 ### Initialization
 
-Open `Initialization/Initialization_single.ipynb`.
+Open one of the notebooks in `Initialization/`, depending on your case.
+
+#### `Initialization_single.ipynb`
+
+Use this notebook for a single `.mo` file and its corresponding auxiliary model.
 
 By default, this notebook looks for cases in the local `models/` folder. You can change `MODEL_DIR` and the derived paths if your files are stored somewhere else.
 
@@ -98,3 +103,20 @@ In the configuration cells, set:
 - `PLOT_VARIABLE`: the variable you want to plot after the final simulation
 
 Run the cells in order. The notebook simulates the auxiliary case, transfers the initialization values, and writes the initialized model, which is named `*_initialized`.
+
+#### `Initialization_package.ipynb`
+
+Use this notebook for a package-based case and its corresponding auxiliary package.
+
+By default, this notebook looks for packages in the local `MyNordic/` and `MyNordic_auxiliary/` folders. You can change `MODEL_DIR`, `AUX_DIR`, and the derived paths if your files are stored somewhere else.
+
+In the configuration cells, set:
+
+- `MODEL_DIR`: the folder that contains the original dynamic package
+- `MODELS_PKG_PATH`: the path to the original package `package.mo`
+- `AUX_DIR`: the folder that contains the auxiliary package generated previously with BuildAux
+- `AUX_PACKAGE_FILE`: the path to the auxiliary package `package.mo`
+- `MODEL`: the root dynamic model to initialize, for example `MyNordic.TestCase`
+- `PLOT_VARIABLE`: the variable you want to plot after the final simulation
+
+The notebook derives the initialized package name and paths automatically from `MODEL`. Run the cells in order. The notebook simulates the auxiliary root model, transfers the initialization values across the inheritance chain, and writes the initialized package, which is named `*_initialized`.
