@@ -75,21 +75,45 @@ function _build_slack_replacement_assignments(
     comp_name::String,
     mods::Dict{String, String},
 )
-    function resolve_modifier(target::String, param::String)
+    function get_value(param::String)
         if haskey(mods, param)
-            return "$(target) = $(mods[param])"
+            return strip(mods[param])
         end
-        val = get_comp_param_value(omc, model, components, comp_name, param)
-        if isempty(strip(string(val)))
-            error("Empty value for $model.$comp_name.$param while building slack replacement for $comp_name")
-        end
-        return "$(target) = $(val)"
+        return strip(string(get_comp_param_value(omc, model, components, comp_name, param)))
     end
 
-    return [
-        resolve_modifier("UPu", "U0Pu"),
-        resolve_modifier("UPhase", "UPhase0"),
-    ]
+    u0 = get_value("U0Pu")
+    uphase0 = get_value("UPhase0")
+
+    if !isempty(u0) && !isempty(uphase0)
+        return [
+            "UPu = $(u0)",
+            "UPhase = $(uphase0)",
+        ]
+    end
+
+    u0pu = get_value("u0Pu")
+    if startswith(u0pu, "Complex(") && endswith(u0pu, ")")
+        inner = strip(u0pu[9:end-1])
+        parts = split(inner, ","; limit = 2)
+
+        if length(parts) == 2
+            ure = strip(parts[1])
+            uim = strip(parts[2])
+
+            if !isempty(ure) && !isempty(uim)
+                return [
+                    "UPu = sqrt(($(ure))^2 + ($(uim))^2)",
+                    "UPhase = atan2($(uim), $(ure))",
+                ]
+            end
+        end
+    end
+
+    error(
+        "Could not determine slack voltage for $model.$comp_name. " *
+        "Expected U0Pu/UPhase0 or u0Pu = Complex(re, im)."
+    )
 end
 
 """
