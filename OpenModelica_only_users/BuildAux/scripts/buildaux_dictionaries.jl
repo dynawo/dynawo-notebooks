@@ -60,7 +60,24 @@ const REPLACEMENTS = Dict{String, Any}(
         )
     ),
 
+    "Dynawo.Electrical.Machines.SignalN.GeneratorPV" => Dict(
+        "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
+        "write_modifiers" => Dict(
+            "PGen0Pu" => "-PRef0Pu",
+            "U0Pu"    => "U0Pu",
+        )
+    ),
+
     "Dynawo.Electrical.Loads.LoadAlphaBeta" => Dict(
+        "new_class" => "Dynawo.Electrical.Loads.LoadPQ",
+        "extra_modifiers_raw" => [
+            "i0Pu(re(fixed = false), im(fixed = false))",
+            "s0Pu(re(fixed = false), im(fixed = false))",
+            "u0Pu(re(fixed = false), im(fixed = false))",
+        ]
+    ),
+
+    "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative" => Dict(
         "new_class" => "Dynawo.Electrical.Loads.LoadPQ",
         "extra_modifiers_raw" => [
             "i0Pu(re(fixed = false), im(fixed = false))",
@@ -169,6 +186,32 @@ const INIT_MODELS = Dict{String, Any}(
 
         "init_equations" => Dict(
             "Q0Pu"    => "QGenPu",
+            "UPhase0" => "UPhase",
+        )
+    ),
+
+    "Dynawo.Electrical.Machines.SignalN.GeneratorPV" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRef0Pu",
+            "PMax" => "PMaxPu",
+            "PMin" => "PMinPu",
+            "QMax" => "QMaxPu",
+            "QMin" => "QMinPu",
+            "U0Pu" => "U0Pu",
+            "URef0Pu" => "U0Pu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "Q0Pu(fixed = false)",
+            "UPhase0(fixed = false)",
+        ],
+
+        "init_equations" => Dict(
+            "Q0Pu"    => "-QGenPu",
+            "U0Pu"    => "UPu",
             "UPhase0" => "UPhase",
         )
     ),
@@ -413,6 +456,36 @@ const INIT_MODELS = Dict{String, Any}(
             "U0Pu(start = 1, fixed = false)",
             "UPhase0(start = 0, fixed = false)",
             
+        ],
+
+        "init_equations" => Dict(
+            "i0Pu.re" => "i0Pu.re",
+            "i0Pu.im" => "i0Pu.im",
+            "s0Pu.re" => "s0Pu.re",
+            "s0Pu.im" => "s0Pu.im",
+            "u0Pu.re" => "u0Pu.re",
+            "u0Pu.im" => "u0Pu.im",
+        ),
+
+        "LF_modifiers_raw" => [
+            "i0Pu(re(fixed = false), im(fixed = false))",
+            "s0Pu(re(fixed = false), im(fixed = false))",
+            "u0Pu(re(fixed = false), im(fixed = false))",
+        ],
+    ),
+
+    "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRefPu",
+            "Q0Pu" => "QRefPu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "U0Pu(start = 1, fixed = false)",
+            "UPhase0(start = 0, fixed = false)",
         ],
 
         "init_equations" => Dict(

@@ -64,11 +64,15 @@ function _existing_modifier_assignments(c::Dict{String, Any})
 end
 
 """
-    _build_slack_replacement_assignments(omc, model, components, comp_name, mods, call_mods) -> Vector{String}
+    _get_slack_voltage_expressions(omc, model, components, comp_name, mods) -> NamedTuple
 
-Build the modifier list for the slack replacement to `InfiniteBus`.
+Resolve the slack voltage magnitude and phase expressions.
+
+For each quantity, prefer the explicit scalar modifier/value (`U0Pu`, `UPhase0`).
+If it is missing, fall back to deriving it from `u0Pu = Complex(re, im)`.
+Returns `(upu = ..., uphase = ...)`.
 """
-function _build_slack_replacement_assignments(
+function _get_slack_voltage_expressions(
     omc,
     model::String,
     components::Dict{String, Dict{String, Any}},
@@ -82,38 +86,69 @@ function _build_slack_replacement_assignments(
         return strip(string(get_comp_param_value(omc, model, components, comp_name, param)))
     end
 
-    u0 = get_value("U0Pu")
-    uphase0 = get_value("UPhase0")
-
-    if !isempty(u0) && !isempty(uphase0)
-        return [
-            "UPu = $(u0)",
-            "UPhase = $(uphase0)",
-        ]
-    end
-
     u0pu = get_value("u0Pu")
-    if startswith(u0pu, "Complex(") && endswith(u0pu, ")")
+    has_complex_u0pu = startswith(u0pu, "Complex(") && endswith(u0pu, ")")
+
+    ure = ""
+    uim = ""
+    if has_complex_u0pu
         inner = strip(u0pu[9:end-1])
         parts = split(inner, ","; limit = 2)
 
         if length(parts) == 2
             ure = strip(parts[1])
             uim = strip(parts[2])
-
-            if !isempty(ure) && !isempty(uim)
-                return [
-                    "UPu = sqrt(($(ure))^2 + ($(uim))^2)",
-                    "UPhase = atan2($(uim), $(ure))",
-                ]
-            end
         end
     end
 
-    error(
-        "Could not determine slack voltage for $model.$comp_name. " *
-        "Expected U0Pu/UPhase0 or u0Pu = Complex(re, im)."
+    upu = get_value("U0Pu")
+    if isempty(upu)
+        if !isempty(ure) && !isempty(uim)
+            upu = "sqrt(($(ure))^2 + ($(uim))^2)"
+        else
+            error(
+                "Could not determine slack voltage magnitude for $model.$comp_name. " *
+                "Expected U0Pu or u0Pu = Complex(re, im)."
+            )
+        end
+    end
+
+    uphase = get_value("UPhase0")
+    if isempty(uphase)
+        if !isempty(ure) && !isempty(uim)
+            uphase = "atan2($(uim), $(ure))"
+        else
+            error(
+                "Could not determine slack voltage phase for $model.$comp_name. " *
+                "Expected UPhase0 or u0Pu = Complex(re, im)."
+            )
+        end
+    end
+
+    return (
+        upu = upu,
+        uphase = uphase,
     )
+end
+
+"""
+    _build_slack_replacement_assignments(omc, model, components, comp_name, mods, call_mods) -> Vector{String}
+
+Build the modifier list for the slack replacement to `InfiniteBus`.
+"""
+function _build_slack_replacement_assignments(
+    omc,
+    model::String,
+    components::Dict{String, Dict{String, Any}},
+    comp_name::String,
+    mods::Dict{String, String},
+)
+    voltage = _get_slack_voltage_expressions(omc, model, components, comp_name, mods)
+
+    return [
+        "UPu = $(voltage.upu)",
+        "UPhase = $(voltage.uphase)",
+    ]
 end
 
 """
@@ -392,12 +427,14 @@ function add_init_models!(
 
         # Add slack or target extras
         if is_slack
-            val = string(get_comp_param_value(omc, model, components, base_comp, "UPhase0"))
-            if isempty(strip(val))
-                error("Empty value for $model.$base_comp.UPhase0 while building $init_name.UPhase0")
-            end
-
-            push!(assignments, "UPhase0 = $(val)")
+            voltage = _get_slack_voltage_expressions(
+                omc,
+                model,
+                components,
+                base_comp,
+                Dict{String, String}(),
+            )
+            push!(assignments, "UPhase0 = $(voltage.uphase)")
             append!(assignments, [
                 "P0Pu(fixed = false)",
                 "Q0Pu(fixed = false)",

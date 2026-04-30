@@ -66,6 +66,27 @@ const INIT_PARAMS = Dict{String, Any}(
         ("u0Pu.im", "u0Pu.im"),
     ],
 
+    "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative" => [
+        ("i0Pu.re", "i0Pu.re"),
+        ("i0Pu.im", "i0Pu.im"),
+        ("s0Pu.re", "s0Pu.re"),
+        ("s0Pu.im", "s0Pu.im"),
+        ("u0Pu.re", "u0Pu.re"),
+        ("u0Pu.im", "u0Pu.im"),
+    ],
+
+    "Dynawo.Electrical.Machines.SignalN.GeneratorPV" => [
+        ("P0Pu", "PRef0Pu"),
+        ("PGen0Pu", "PGen0Pu"),
+        ("QGen0Pu", "QGen0Pu"),
+        ("U0Pu", "U0Pu"),
+        ("U0Pu", "URef0Pu"),
+        ("i0Pu.re", "i0Pu.re"),
+        ("i0Pu.im", "i0Pu.im"),
+        ("u0Pu.re", "u0Pu.re"),
+        ("u0Pu.im", "u0Pu.im"),
+    ],
+
     "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronous" => Dict(
         "profiles" => Dict(
             "GeneratorSynchronousInt_INIT" => [
