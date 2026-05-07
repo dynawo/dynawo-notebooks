@@ -594,6 +594,7 @@ const CLEANUP_CLASS_PREFIXES = (
     "Dynawo.Electrical.Events.",
     "Dynawo.Electrical.Loads.LoadConnect_INIT",
     "Dynawo.Electrical.Controls.Machines.",
+    "Dynawo.Electrical.Controls.Frequency.SignalN",
 )
 
 """

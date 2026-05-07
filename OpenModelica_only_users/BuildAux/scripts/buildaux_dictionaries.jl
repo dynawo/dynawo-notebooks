@@ -201,7 +201,7 @@ const INIT_MODELS = Dict{String, Any}(
             "QMax" => "QMaxPu",
             "QMin" => "QMinPu",
             "U0Pu" => "U0Pu",
-            "URef0Pu" => "U0Pu",
+            "URef0Pu" => "URef0Pu",
         ),
 
         "extra_modifiers_raw" => [
@@ -211,7 +211,6 @@ const INIT_MODELS = Dict{String, Any}(
 
         "init_equations" => Dict(
             "Q0Pu"    => "-QGenPu",
-            "U0Pu"    => "UPu",
             "UPhase0" => "UPhase",
         )
     ),

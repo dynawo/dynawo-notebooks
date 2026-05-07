@@ -81,8 +81,7 @@ equation
   LineB13B14.switchOffSignal1.value = false;
   LineB13B14.switchOffSignal2.value = false;
   LineB1B5.switchOffSignal1.value = false;
-  LineB1B5.switchOffSignal2.value = if time < 100 then false else true;
-// Disconnecting line B1B5
+  LineB1B5.switchOffSignal2.value = false;
   LineB1B2.switchOffSignal1.value = false;
   LineB1B2.switchOffSignal2.value = false;
   LineB2B3.switchOffSignal1.value = false;

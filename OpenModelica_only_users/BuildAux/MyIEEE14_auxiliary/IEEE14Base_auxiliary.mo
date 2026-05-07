@@ -67,9 +67,7 @@ model IEEE14Base_auxiliary "Base class for IEEE 14-bus system benchmark formed w
   Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed Gen8(PGen0Pu = -(P0Pu_Gen8), U0Pu = U0Pu_Gen8) annotation(
     Placement(visible = true, transformation(origin = {170, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   // Generators control
-  Dynawo.Electrical.Controls.Frequency.SignalN ModelSignalN;
-  Dynawo.Types.Angle Theta_Bus1;
-  // Loads
+// Loads
   Dynawo.Electrical.Loads.LoadPQ Load2(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {-120, -160}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load2(Value0 = P0Pu_Load2);
@@ -206,8 +204,6 @@ model IEEE14Base_auxiliary "Base class for IEEE 14-bus system benchmark formed w
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen8_INIT(PMin = 0, P0Pu = P0Pu_Gen8, PMax = 2.28, U0Pu = U0Pu_Gen8, URef0Pu = U0Pu_Gen8, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
 equation
 // Generators controls
-  ModelSignalN.thetaRef = Theta_Bus1;
-  Theta_Bus1 = Modelica.ComplexMath.arg(Bus1.terminal.V);
 // Loads references
   Load2.PRefPu = PrefPu_Load2.setPoint;
   Load2.QRefPu = QrefPu_Load2.setPoint;
@@ -378,10 +374,8 @@ initial equation
   Load5_INIT.s0Pu.re = Load5.s0Pu.re;
   Load5_INIT.u0Pu.re = Load5.u0Pu.re;
   Gen2_INIT.Q0Pu = -(Gen2.QGenPu);
-  Gen2_INIT.U0Pu = Gen2.UPu;
   Gen2_INIT.UPhase0 = Gen2.UPhase;
   Gen6_INIT.Q0Pu = -(Gen6.QGenPu);
-  Gen6_INIT.U0Pu = Gen6.UPu;
   Gen6_INIT.UPhase0 = Gen6.UPhase;
   Load11_INIT.u0Pu.im = Load11.u0Pu.im;
   Load11_INIT.i0Pu.im = Load11.i0Pu.im;
@@ -416,7 +410,6 @@ initial equation
   Load14_INIT.s0Pu.re = Load14.s0Pu.re;
   Load14_INIT.u0Pu.re = Load14.u0Pu.re;
   Gen3_INIT.Q0Pu = -(Gen3.QGenPu);
-  Gen3_INIT.U0Pu = Gen3.UPu;
   Gen3_INIT.UPhase0 = Gen3.UPhase;
   Load4_INIT.u0Pu.im = Load4.u0Pu.im;
   Load4_INIT.i0Pu.im = Load4.i0Pu.im;
@@ -425,7 +418,6 @@ initial equation
   Load4_INIT.s0Pu.re = Load4.s0Pu.re;
   Load4_INIT.u0Pu.re = Load4.u0Pu.re;
   Gen8_INIT.Q0Pu = -(Gen8.QGenPu);
-  Gen8_INIT.U0Pu = Gen8.UPu;
   Gen8_INIT.UPhase0 = Gen8.UPhase;
   annotation(
     preferredView = "diagram",
