@@ -68,47 +68,47 @@ model IEEE14Base_auxiliary "Base class for IEEE 14-bus system benchmark formed w
     Placement(visible = true, transformation(origin = {170, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   // Generators control
 // Loads
-  Dynawo.Electrical.Loads.LoadPQ Load2(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load2(i0Pu(re(start = P0Pu_Load2, fixed = false), im(start = -(Q0Pu_Load2), fixed = false)), s0Pu(re(start = P0Pu_Load2, fixed = false), im(start = Q0Pu_Load2, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {-120, -160}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load2(Value0 = P0Pu_Load2);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load2(Value0 = Q0Pu_Load2);
-  Dynawo.Electrical.Loads.LoadPQ Load3(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load3(i0Pu(re(start = P0Pu_Load3, fixed = false), im(start = -(Q0Pu_Load3), fixed = false)), s0Pu(re(start = P0Pu_Load3, fixed = false), im(start = Q0Pu_Load3, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {118, -200}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load3(Value0 = P0Pu_Load3);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load3(Value0 = Q0Pu_Load3);
-  Dynawo.Electrical.Loads.LoadPQ Load4(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load4(i0Pu(re(start = P0Pu_Load4, fixed = false), im(start = -(Q0Pu_Load4), fixed = false)), s0Pu(re(start = P0Pu_Load4, fixed = false), im(start = Q0Pu_Load4, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {90, -88}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load4(Value0 = P0Pu_Load4);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load4(Value0 = Q0Pu_Load4);
-  Dynawo.Electrical.Loads.LoadPQ Load5(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load5(i0Pu(re(start = P0Pu_Load5, fixed = false), im(start = -(Q0Pu_Load5), fixed = false)), s0Pu(re(start = P0Pu_Load5, fixed = false), im(start = Q0Pu_Load5, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {-50, -20}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load5(Value0 = P0Pu_Load5);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load5(Value0 = Q0Pu_Load5);
-  Dynawo.Electrical.Loads.LoadPQ Load6(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load6(i0Pu(re(start = P0Pu_Load6, fixed = false), im(start = -(Q0Pu_Load6), fixed = false)), s0Pu(re(start = P0Pu_Load6, fixed = false), im(start = Q0Pu_Load6, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {0, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load6(Value0 = P0Pu_Load6);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load6(Value0 = Q0Pu_Load6);
-  Dynawo.Electrical.Loads.LoadPQ Load9(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load9(i0Pu(re(start = P0Pu_Load9, fixed = false), im(start = -(Q0Pu_Load9), fixed = false)), s0Pu(re(start = P0Pu_Load9, fixed = false), im(start = Q0Pu_Load9, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {70, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load9(Value0 = P0Pu_Load9);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load9(Value0 = Q0Pu_Load9);
-  Dynawo.Electrical.Loads.LoadPQ Load10(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load10(i0Pu(re(start = P0Pu_Load10, fixed = false), im(start = -(Q0Pu_Load10), fixed = false)), s0Pu(re(start = P0Pu_Load10, fixed = false), im(start = Q0Pu_Load10, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {30, 82}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load10(Value0 = P0Pu_Load10);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load10(Value0 = Q0Pu_Load10);
-  Dynawo.Electrical.Loads.LoadPQ Load11(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load11(i0Pu(re(start = P0Pu_Load11, fixed = false), im(start = -(Q0Pu_Load11), fixed = false)), s0Pu(re(start = P0Pu_Load11, fixed = false), im(start = Q0Pu_Load11, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {10, 120}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load11(Value0 = P0Pu_Load11);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load11(Value0 = Q0Pu_Load11);
-  Dynawo.Electrical.Loads.LoadPQ Load12(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load12(i0Pu(re(start = P0Pu_Load12, fixed = false), im(start = -(Q0Pu_Load12), fixed = false)), s0Pu(re(start = P0Pu_Load12, fixed = false), im(start = Q0Pu_Load12, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {-130, 140}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load12(Value0 = P0Pu_Load12);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load12(Value0 = Q0Pu_Load12);
-  Dynawo.Electrical.Loads.LoadPQ Load13(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load13(i0Pu(re(start = P0Pu_Load13, fixed = false), im(start = -(Q0Pu_Load13), fixed = false)), s0Pu(re(start = P0Pu_Load13, fixed = false), im(start = Q0Pu_Load13, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {-70, 220}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load13(Value0 = P0Pu_Load13);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load13(Value0 = Q0Pu_Load13);
-  Dynawo.Electrical.Loads.LoadPQ Load14(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ Load14(i0Pu(re(start = P0Pu_Load14, fixed = false), im(start = -(Q0Pu_Load14), fixed = false)), s0Pu(re(start = P0Pu_Load14, fixed = false), im(start = Q0Pu_Load14, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {10, 200}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load14(Value0 = P0Pu_Load14);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load14(Value0 = Q0Pu_Load14);
@@ -186,21 +186,10 @@ model IEEE14Base_auxiliary "Base class for IEEE 14-bus system benchmark formed w
   // Shunt
   Dynawo.Electrical.Shunts.ShuntB Bank9(BPu = -0.099769*ZBASE2, i0Pu = Complex(-0.0455016, -0.186237), s0Pu = Complex(0, 0.193446), u0Pu = Complex(1.020247, -0.272201)) annotation(
     Placement(visible = true, transformation(origin = {100, 80}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
-  Dynawo.Electrical.Loads.Load_INIT Load2_INIT(Q0Pu = Q0Pu_Load2, P0Pu = P0Pu_Load2, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load9_INIT(Q0Pu = Q0Pu_Load9, P0Pu = P0Pu_Load9, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load12_INIT(Q0Pu = Q0Pu_Load12, P0Pu = P0Pu_Load12, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load6_INIT(Q0Pu = Q0Pu_Load6, P0Pu = P0Pu_Load6, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load5_INIT(Q0Pu = Q0Pu_Load5, P0Pu = P0Pu_Load5, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen2_INIT(PMin = 0, P0Pu = P0Pu_Gen2, PMax = 10.08, U0Pu = U0Pu_Gen2, URef0Pu = U0Pu_Gen2, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen6_INIT(PMin = 0, P0Pu = P0Pu_Gen6, PMax = 0.744, U0Pu = U0Pu_Gen6, URef0Pu = U0Pu_Gen6, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load11_INIT(Q0Pu = Q0Pu_Load11, P0Pu = P0Pu_Load11, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load13_INIT(Q0Pu = Q0Pu_Load13, P0Pu = P0Pu_Load13, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load10_INIT(Q0Pu = Q0Pu_Load10, P0Pu = P0Pu_Load10, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen1_INIT(PMin = 0, PMax = 10.9, U0Pu = U0Pu_Gen1, URef0Pu = U0Pu_Gen1, QMin = -100, QMax = 100, UPhase0 = atan2(U0Pu_Gen1*Modelica.Math.sin(UPhase0_Gen1), U0Pu_Gen1*Modelica.Math.cos(UPhase0_Gen1)), P0Pu(fixed = false), Q0Pu(fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load3_INIT(Q0Pu = Q0Pu_Load3, P0Pu = P0Pu_Load3, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load14_INIT(Q0Pu = Q0Pu_Load14, P0Pu = P0Pu_Load14, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen3_INIT(PMin = 0, P0Pu = P0Pu_Gen3, PMax = 14.85, U0Pu = U0Pu_Gen3, URef0Pu = U0Pu_Gen3, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT Load4_INIT(Q0Pu = Q0Pu_Load4, P0Pu = P0Pu_Load4, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen8_INIT(PMin = 0, P0Pu = P0Pu_Gen8, PMax = 2.28, U0Pu = U0Pu_Gen8, URef0Pu = U0Pu_Gen8, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
 equation
 // Generators controls
@@ -343,80 +332,14 @@ equation
   connect(Bus13.terminal, LineB6B13.terminal1) annotation(
     Line(points = {{-70, 200}, {-70, 120}, {-60, 120}}, color = {0, 0, 255}));
 initial equation
-  Load2_INIT.u0Pu.im = Load2.u0Pu.im;
-  Load2_INIT.i0Pu.im = Load2.i0Pu.im;
-  Load2_INIT.s0Pu.im = Load2.s0Pu.im;
-  Load2_INIT.i0Pu.re = Load2.i0Pu.re;
-  Load2_INIT.s0Pu.re = Load2.s0Pu.re;
-  Load2_INIT.u0Pu.re = Load2.u0Pu.re;
-  Load9_INIT.u0Pu.im = Load9.u0Pu.im;
-  Load9_INIT.i0Pu.im = Load9.i0Pu.im;
-  Load9_INIT.s0Pu.im = Load9.s0Pu.im;
-  Load9_INIT.i0Pu.re = Load9.i0Pu.re;
-  Load9_INIT.s0Pu.re = Load9.s0Pu.re;
-  Load9_INIT.u0Pu.re = Load9.u0Pu.re;
-  Load12_INIT.u0Pu.im = Load12.u0Pu.im;
-  Load12_INIT.i0Pu.im = Load12.i0Pu.im;
-  Load12_INIT.s0Pu.im = Load12.s0Pu.im;
-  Load12_INIT.i0Pu.re = Load12.i0Pu.re;
-  Load12_INIT.s0Pu.re = Load12.s0Pu.re;
-  Load12_INIT.u0Pu.re = Load12.u0Pu.re;
-  Load6_INIT.u0Pu.im = Load6.u0Pu.im;
-  Load6_INIT.i0Pu.im = Load6.i0Pu.im;
-  Load6_INIT.s0Pu.im = Load6.s0Pu.im;
-  Load6_INIT.i0Pu.re = Load6.i0Pu.re;
-  Load6_INIT.s0Pu.re = Load6.s0Pu.re;
-  Load6_INIT.u0Pu.re = Load6.u0Pu.re;
-  Load5_INIT.u0Pu.im = Load5.u0Pu.im;
-  Load5_INIT.i0Pu.im = Load5.i0Pu.im;
-  Load5_INIT.s0Pu.im = Load5.s0Pu.im;
-  Load5_INIT.i0Pu.re = Load5.i0Pu.re;
-  Load5_INIT.s0Pu.re = Load5.s0Pu.re;
-  Load5_INIT.u0Pu.re = Load5.u0Pu.re;
   Gen2_INIT.Q0Pu = -(Gen2.QGenPu);
   Gen2_INIT.UPhase0 = Gen2.UPhase;
   Gen6_INIT.Q0Pu = -(Gen6.QGenPu);
   Gen6_INIT.UPhase0 = Gen6.UPhase;
-  Load11_INIT.u0Pu.im = Load11.u0Pu.im;
-  Load11_INIT.i0Pu.im = Load11.i0Pu.im;
-  Load11_INIT.s0Pu.im = Load11.s0Pu.im;
-  Load11_INIT.i0Pu.re = Load11.i0Pu.re;
-  Load11_INIT.s0Pu.re = Load11.s0Pu.re;
-  Load11_INIT.u0Pu.re = Load11.u0Pu.re;
-  Load13_INIT.u0Pu.im = Load13.u0Pu.im;
-  Load13_INIT.i0Pu.im = Load13.i0Pu.im;
-  Load13_INIT.s0Pu.im = Load13.s0Pu.im;
-  Load13_INIT.i0Pu.re = Load13.i0Pu.re;
-  Load13_INIT.s0Pu.re = Load13.s0Pu.re;
-  Load13_INIT.u0Pu.re = Load13.u0Pu.re;
-  Load10_INIT.u0Pu.im = Load10.u0Pu.im;
-  Load10_INIT.i0Pu.im = Load10.i0Pu.im;
-  Load10_INIT.s0Pu.im = Load10.s0Pu.im;
-  Load10_INIT.i0Pu.re = Load10.i0Pu.re;
-  Load10_INIT.s0Pu.re = Load10.s0Pu.re;
-  Load10_INIT.u0Pu.re = Load10.u0Pu.re;
   Gen1_INIT.P0Pu = Modelica.ComplexMath.real(Gen1.terminal.V*Modelica.ComplexMath.conj(Gen1.terminal.i));
   Gen1_INIT.Q0Pu = Modelica.ComplexMath.imag(Gen1.terminal.V*Modelica.ComplexMath.conj(Gen1.terminal.i));
-  Load3_INIT.u0Pu.im = Load3.u0Pu.im;
-  Load3_INIT.i0Pu.im = Load3.i0Pu.im;
-  Load3_INIT.s0Pu.im = Load3.s0Pu.im;
-  Load3_INIT.i0Pu.re = Load3.i0Pu.re;
-  Load3_INIT.s0Pu.re = Load3.s0Pu.re;
-  Load3_INIT.u0Pu.re = Load3.u0Pu.re;
-  Load14_INIT.u0Pu.im = Load14.u0Pu.im;
-  Load14_INIT.i0Pu.im = Load14.i0Pu.im;
-  Load14_INIT.s0Pu.im = Load14.s0Pu.im;
-  Load14_INIT.i0Pu.re = Load14.i0Pu.re;
-  Load14_INIT.s0Pu.re = Load14.s0Pu.re;
-  Load14_INIT.u0Pu.re = Load14.u0Pu.re;
   Gen3_INIT.Q0Pu = -(Gen3.QGenPu);
   Gen3_INIT.UPhase0 = Gen3.UPhase;
-  Load4_INIT.u0Pu.im = Load4.u0Pu.im;
-  Load4_INIT.i0Pu.im = Load4.i0Pu.im;
-  Load4_INIT.s0Pu.im = Load4.s0Pu.im;
-  Load4_INIT.i0Pu.re = Load4.i0Pu.re;
-  Load4_INIT.s0Pu.re = Load4.s0Pu.re;
-  Load4_INIT.u0Pu.re = Load4.u0Pu.re;
   Gen8_INIT.Q0Pu = -(Gen8.QGenPu);
   Gen8_INIT.UPhase0 = Gen8.UPhase;
   annotation(
