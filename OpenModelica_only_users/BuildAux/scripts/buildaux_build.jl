@@ -353,6 +353,83 @@ function _load_init_mode(
 end
 
 """
+    _apply_component_modifiers!(omc, aux_model, aux_components, base_comp, replace_keys, extra_raw)
+
+Update one auxiliary component by replacing only the modifiers listed in
+`replace_keys` and preserving all the others.
+"""
+function _apply_component_modifiers!(
+    omc,
+    aux_model::String,
+    aux_components::Dict{String, Dict{String, Any}},
+    base_comp::String,
+    replace_keys::Set{String},
+    extra_raw::Vector{String},
+)
+    isempty(extra_raw) && return nothing
+
+    if !haskey(aux_components, base_comp)
+        error("Component $base_comp not found in $aux_model while applying modifiers")
+    end
+
+    aux_c = aux_components[base_comp]
+    current_aux_class = aux_c["class"]::String
+    existing_assignments = _existing_modifier_assignments(aux_c)
+
+    kept_assignments = String[]
+    for raw in existing_assignments
+        m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
+        m === nothing && error("Could not extract existing modifier name from: $raw")
+        m.captures[1] in replace_keys && continue
+        push!(kept_assignments, raw)
+    end
+
+    mod_assignments = vcat(kept_assignments, extra_raw)
+    mod_str = _code_modification_from_assignments(mod_assignments)
+
+    om_send(
+        omc,
+        "updateComponent($base_comp, $current_aux_class, $aux_model, modification = $mod_str)",
+        parsed = false,
+    )
+end
+
+"""
+    apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp)
+
+Apply custom load-flow modifiers to Dynawo loads so their complex initialization
+variables stay free but receive useful start values derived from P/Q references.
+"""
+function apply_load_LF_modifiers!(
+    omc,
+    model::String,
+    aux_model::String,
+    aux_components::Dict{String, Dict{String, Any}},
+    base_comp::String,
+)
+    p_ref = strip(resolve_load_ref_value(omc, model, base_comp, "PRefPu"))
+    q_ref = strip(resolve_load_ref_value(omc, model, base_comp, "QRefPu"))
+
+    isempty(p_ref) && error("Could not resolve PRefPu for load $model.$base_comp")
+    isempty(q_ref) && error("Could not resolve QRefPu for load $model.$base_comp")
+
+    extra_raw = [
+        "i0Pu(re(start = $p_ref, fixed = false), im(start = -($q_ref), fixed = false))",
+        "s0Pu(re(start = $p_ref, fixed = false), im(start = $q_ref, fixed = false))",
+        "u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))",
+    ]
+
+    _apply_component_modifiers!(
+        omc,
+        aux_model,
+        aux_components,
+        base_comp,
+        Set(["i0Pu", "s0Pu", "u0Pu"]),
+        extra_raw,
+    )
+end
+
+"""
     add_init_models!(omc, model, aux_model, INIT_MODELS, INIT_MODEL_BY_COMPONENT, components, SLACK_COMPONENT)
 
 Add INIT components described in `INIT_MODELS` to `aux_model`.
@@ -371,6 +448,10 @@ function add_init_models!(
 )
     for (base_comp, c) in components
         base_class = c["class"]::String
+
+        if startswith(base_class, "Dynawo.Electrical.Loads.")
+            continue
+        end
 
         # Build the init component settings
         spec = _resolve_init_spec(base_comp, base_class, INIT_MODELS, INIT_MODEL_BY_COMPONENT)
@@ -475,6 +556,12 @@ function apply_LF_modifiers!(
 
     for (base_comp, c) in components
         base_class = c["class"]::String
+        if startswith(base_class, "Dynawo.Electrical.Loads.")
+            apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp)
+            aux_components = get_all_components(omc, aux_model)
+            continue
+        end
+
         if !haskey(INIT_MODELS, base_class)
             continue
         end
@@ -490,16 +577,6 @@ function apply_LF_modifiers!(
         end
 
         extra_raw = spec["LF_modifiers_raw"]::Vector{String}
-        isempty(extra_raw) && continue
-
-        if !haskey(aux_components, base_comp)
-            error("Component $base_comp not found in $aux_model while applying LF modifiers")
-        end
-
-        aux_c = aux_components[base_comp]
-        current_aux_class = aux_c["class"]::String
-        existing_assignments = _existing_modifier_assignments(aux_c)
-
         lf_keys = Set{String}()
         for raw in extra_raw
             m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
@@ -507,22 +584,15 @@ function apply_LF_modifiers!(
             push!(lf_keys, m.captures[1])
         end
 
-        kept_assignments = String[]
-        for raw in existing_assignments
-            m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
-            m === nothing && error("Could not extract existing modifier name from: $raw")
-            m.captures[1] in lf_keys && continue
-            push!(kept_assignments, raw)
-        end
-
-        mod_assignments = vcat(kept_assignments, extra_raw)
-        mod_str = _code_modification_from_assignments(mod_assignments)
-
-        om_send(
+        _apply_component_modifiers!(
             omc,
-            "updateComponent($base_comp, $current_aux_class, $aux_model, modification = $mod_str)",
-            parsed = false,
+            aux_model,
+            aux_components,
+            base_comp,
+            lf_keys,
+            extra_raw,
         )
+        aux_components = get_all_components(omc, aux_model)
     end
 end
 
@@ -547,6 +617,9 @@ function add_init_equations!(
 
     for (base_name, c) in components
         base_class = c["class"]::String
+        if startswith(base_class, "Dynawo.Electrical.Loads.")
+            continue
+        end
         spec = _resolve_init_spec(base_name, base_class, INIT_MODELS, INIT_MODEL_BY_COMPONENT)
         if isnothing(spec)
             continue
