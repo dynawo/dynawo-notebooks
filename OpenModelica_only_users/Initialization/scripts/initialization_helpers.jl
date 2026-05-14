@@ -13,6 +13,7 @@ export
     inherited_classes,
     get_inheritance_chain,
     get_all_components,
+    simulation_flags_without_log_stats,
     get_initializable_components,
     extract_all_initialization_values,
     apply_initialization_modifiers!,

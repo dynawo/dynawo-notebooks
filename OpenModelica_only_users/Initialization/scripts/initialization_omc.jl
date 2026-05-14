@@ -16,6 +16,7 @@ export
     inherited_classes,
     get_inheritance_chain,
     get_all_components,
+    simulation_flags_without_log_stats,
     print_omc_errors,
     run_omc_diagnostic
 
@@ -116,6 +117,34 @@ function get_all_components(omc, model)
     end
 
     return components
+end
+
+"""
+    simulation_flags_without_log_stats(omc, model::String) -> String
+
+Return the model's `__OpenModelica_simulationFlags` annotation as a runtime
+`simflags` string, excluding `lv`. This keeps the user's numerical solver flags
+while avoiding OpenModelica LOG_STATS failures on large DAEmode models.
+"""
+function simulation_flags_without_log_stats(omc, model::String)
+    flag_names = sendExpression(
+        omc,
+        "getAnnotationNamedModifiers($model, \"__OpenModelica_simulationFlags\")",
+    )
+
+    simflag_parts = String[]
+    for flag_name in flag_names
+        flag_name == "lv" && continue
+
+        flag_value = sendExpression(
+            omc,
+            "getAnnotationModifierValue($model, \"__OpenModelica_simulationFlags\", \"$flag_name\")",
+        )
+
+        push!(simflag_parts, "-$flag_name=$flag_value")
+    end
+
+    return join(simflag_parts, " ")
 end
 
 """
