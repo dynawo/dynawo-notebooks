@@ -12,12 +12,11 @@ model BESSload_auxiliary "WECC BESS with REEC-C and REGC-B with a plant controll
     Placement(transformation(origin = {-26, -32}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Lines.Line lineFeeder(BPu = 0, GPu = 0, RPu = 0, XPu = 0.00001) annotation(
     Placement(transformation(origin = {-54, -12}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
-  Dynawo.Electrical.Loads.LoadPQ loadPQ1(i0Pu(re(fixed = false), im(fixed = false)), s0Pu(re(fixed = false), im(fixed = false)), u0Pu(re(fixed = false), im(fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ loadPQ1(i0Pu(re(start = 0.20, fixed = false), im(start = -(0.05), fixed = false)), s0Pu(re(start = 0.20, fixed = false), im(start = 0.05, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(transformation(origin = {-90, 19}, extent = {{-10, -10}, {10, 10}})));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_01(Value0 = 0.20);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_01(Value0 = 0.05);
   Dynawo.Electrical.BESS.WECC.BESS_INIT BESS_INIT(RPu = 0, SNom = 6, P0Pu = -0.03, U0Pu = 1, XPu = 1e-10, Q0Pu(fixed = false), UPhase0(fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT loadPQ1_INIT(Q0Pu = 0.05, P0Pu = 0.20, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
 equation
   line.switchOffSignal1.value = false;
   line.switchOffSignal2.value = false;
@@ -48,12 +47,6 @@ equation
 initial equation
   BESS_INIT.Q0Pu = BESS.QGenPu;
   BESS_INIT.UPhase0 = BESS.UPhase;
-  loadPQ1_INIT.u0Pu.im = loadPQ1.u0Pu.im;
-  loadPQ1_INIT.i0Pu.im = loadPQ1.i0Pu.im;
-  loadPQ1_INIT.s0Pu.im = loadPQ1.s0Pu.im;
-  loadPQ1_INIT.i0Pu.re = loadPQ1.i0Pu.re;
-  loadPQ1_INIT.s0Pu.re = loadPQ1.s0Pu.re;
-  loadPQ1_INIT.u0Pu.re = loadPQ1.u0Pu.re;
   annotation(
     preferredView = "diagram",
     experiment(StartTime = 0, StopTime = 3, Tolerance = 1e-05, Interval = 0.001),

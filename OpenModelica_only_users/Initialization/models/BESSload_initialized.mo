@@ -24,7 +24,7 @@ model BESSload_initialized "WECC BESS with REEC-C and REGC-B with a plant contro
     Placement(transformation(origin = {-26, -32}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Lines.Line lineFeeder(BPu = 0, GPu = 0, RPu = 0, XPu = 0.00001) annotation(
     Placement(transformation(origin = {-54, -12}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
-  Dynawo.Electrical.Loads.LoadPQ loadPQ1(u0Pu = Complex(1.0, 0.0), i0Pu = Complex(0.2, -0.05), s0Pu = Complex(0.2, 0.05)) annotation(
+  Dynawo.Electrical.Loads.LoadPQ loadPQ1(u0Pu = Complex(0.9999999143838794, -4.7520300000000005e-7), i0Pu = Complex(0.19999999336302637, -0.05000009932141138), s0Pu = Complex(0.2, 0.05)) annotation(
     Placement(transformation(origin = {-90, 19}, extent = {{-10, -10}, {10, 10}})));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_01(Value0 = 0.20);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_01(Value0 = 0.05);
