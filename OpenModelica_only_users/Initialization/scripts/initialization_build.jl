@@ -8,7 +8,6 @@ using ..InitializationOmc: om_send
 
 export
     get_initializable_components,
-    extract_load_values,
     extract_all_initialization_values,
     apply_initialization_modifiers!,
     rewrite_initialized_extends
@@ -91,57 +90,15 @@ function extract_component_initialization_values(aux_session, component, param_p
 end
 
 """
-    extract_load_values(aux_session, components) -> Dict{String, Dict{String, Float64}}
-
-Extract load initialization values directly from the auxiliary simulation
-results for every component whose class belongs to `Dynawo.Electrical.Loads.*`.
-The returned dictionary uses the same dynamic variable keys as `INIT_PARAMS`,
-so the standard modifier injection path can reuse it unchanged.
-"""
-function extract_load_values(aux_session, components)
-    values_by_component = Dict{String, Dict{String, Float64}}()
-
-    for (component, info) in components
-        class_name = info["class"]
-        startswith(class_name, "Dynawo.Electrical.Loads.") || continue
-
-        vre = _read_result_value(aux_session, component * ".terminal.V.re")
-        vim = _read_result_value(aux_session, component * ".terminal.V.im")
-        ire = _read_result_value(aux_session, component * ".terminal.i.re")
-        iim = _read_result_value(aux_session, component * ".terminal.i.im")
-
-        v = complex(vre, vim)
-        i = complex(ire, iim)
-        s = v * conj(i)
-
-        values_by_component[component] = Dict(
-            "u0Pu.re" => real(v),
-            "u0Pu.im" => imag(v),
-            "i0Pu.re" => real(i),
-            "i0Pu.im" => imag(i),
-            "s0Pu.re" => real(s),
-            "s0Pu.im" => imag(s),
-        )
-    end
-
-    return values_by_component
-end
-
-"""
     extract_all_initialization_values(aux_session, components, init_params, init_model_by_component = Dict{String, String}())
 
 Extract initialization values for every component that needs to be initialized.
-Load classes under `Dynawo.Electrical.Loads.*` are extracted directly from the
-auxiliary terminal voltage/current results; all other classes keep using the
-companion `<component>_INIT` blocks.
+All classes use their companion `<component>_INIT` blocks.
 """
 function extract_all_initialization_values(aux_session, components, init_params, init_model_by_component = Dict{String, String}())
     values_by_component = Dict{String, Dict{String, Float64}}()
 
-    merge!(values_by_component, extract_load_values(aux_session, components))
-
     for (component, info) in components
-        startswith(info["class"], "Dynawo.Electrical.Loads.") && continue
         param_pairs = _resolve_init_params(component, info["class"], init_params, init_model_by_component)
         isnothing(param_pairs) && continue
         values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs)
