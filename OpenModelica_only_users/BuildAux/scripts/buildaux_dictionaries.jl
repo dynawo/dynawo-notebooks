@@ -144,6 +144,66 @@ const AUX_ALLOWED_REFS = Dict{String, Vector{String}}(
 )
 
 const INIT_MODELS = Dict{String, Any}(
+    "Dynawo.Electrical.Loads.LoadPQ" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRefPu",
+            "Q0Pu" => "QRefPu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "U0Pu(start = 1, fixed = false)",
+            "UPhase0(start = 0, fixed = false)",
+        ],
+
+        "init_equations_raw" => [
+            "{init}.U0Pu = Modelica.ComplexMath.'abs'({base}.terminal.V);",
+            "{init}.UPhase0 = Modelica.ComplexMath.arg({base}.terminal.V);",
+        ],
+    ),
+
+    "Dynawo.Electrical.Loads.LoadAlphaBeta" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRefPu",
+            "Q0Pu" => "QRefPu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "U0Pu(start = 1, fixed = false)",
+            "UPhase0(start = 0, fixed = false)",
+        ],
+
+        "init_equations_raw" => [
+            "{init}.U0Pu = Modelica.ComplexMath.'abs'({base}.terminal.V);",
+            "{init}.UPhase0 = Modelica.ComplexMath.arg({base}.terminal.V);",
+        ],
+    ),
+
+    "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRefPu",
+            "Q0Pu" => "QRefPu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "U0Pu(start = 1, fixed = false)",
+            "UPhase0(start = 0, fixed = false)",
+        ],
+
+        "init_equations_raw" => [
+            "{init}.U0Pu = Modelica.ComplexMath.'abs'({base}.terminal.V);",
+            "{init}.UPhase0 = Modelica.ComplexMath.arg({base}.terminal.V);",
+        ],
+    ),
+
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource" => Dict(
         "init_component_suffix" => "_INIT",
         "init_class" => "Dynawo.Electrical.BESS.WECC.BESS_INIT",

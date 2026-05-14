@@ -449,10 +449,6 @@ function add_init_models!(
     for (base_comp, c) in components
         base_class = c["class"]::String
 
-        if startswith(base_class, "Dynawo.Electrical.Loads.")
-            continue
-        end
-
         # Build the init component settings
         spec = _resolve_init_spec(base_comp, base_class, INIT_MODELS, INIT_MODEL_BY_COMPONENT)
         if isnothing(spec)
@@ -601,7 +597,8 @@ end
 
 Build and inject an `initial equation` block into `aux_model`.
 
-Equations are generated from `init_equations` mappings in `INIT_MODELS`.
+Equations are generated from `init_equations` and `init_equations_raw`
+mappings in `INIT_MODELS`.
 """
 function add_init_equations!(
     omc,
@@ -617,9 +614,6 @@ function add_init_equations!(
 
     for (base_name, c) in components
         base_class = c["class"]::String
-        if startswith(base_class, "Dynawo.Electrical.Loads.")
-            continue
-        end
         spec = _resolve_init_spec(base_name, base_class, INIT_MODELS, INIT_MODEL_BY_COMPONENT)
         if isnothing(spec)
             continue
@@ -642,13 +636,22 @@ function add_init_equations!(
         end
 
         # Write the mapped init equations
-        eqmap = spec["init_equations"]::Dict{String, String}
-        for (init_var, base_var) in eqmap
-            # Support signed init-equation mappings like "-QGenPu".
-            should_flip_sign = startswith(base_var, "-")
-            source_var = should_flip_sign ? base_var[2:end] : base_var
-            rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
-            push!(lines, "$init_name.$init_var = $rhs;")
+        if haskey(spec, "init_equations")
+            eqmap = spec["init_equations"]::Dict{String, String}
+            for (init_var, base_var) in eqmap
+                # Support signed init-equation mappings like "-QGenPu".
+                should_flip_sign = startswith(base_var, "-")
+                source_var = should_flip_sign ? base_var[2:end] : base_var
+                rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
+                push!(lines, "$init_name.$init_var = $rhs;")
+            end
+        end
+
+        if haskey(spec, "init_equations_raw")
+            for raw in spec["init_equations_raw"]::Vector{String}
+                line = replace(replace(raw, "{init}" => init_name), "{base}" => base_name)
+                push!(lines, line)
+            end
         end
     end
 
