@@ -186,10 +186,21 @@ model IEEE14Base_auxiliary "Base class for IEEE 14-bus system benchmark formed w
   // Shunt
   Dynawo.Electrical.Shunts.ShuntB Bank9(BPu = -0.099769*ZBASE2, i0Pu = Complex(-0.0455016, -0.186237), s0Pu = Complex(0, 0.193446), u0Pu = Complex(1.020247, -0.272201)) annotation(
     Placement(visible = true, transformation(origin = {100, 80}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
+  Dynawo.Electrical.Loads.Load_INIT Load2_INIT(Q0Pu = Q0Pu_Load2, P0Pu = P0Pu_Load2, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load9_INIT(Q0Pu = Q0Pu_Load9, P0Pu = P0Pu_Load9, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load12_INIT(Q0Pu = Q0Pu_Load12, P0Pu = P0Pu_Load12, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load6_INIT(Q0Pu = Q0Pu_Load6, P0Pu = P0Pu_Load6, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load5_INIT(Q0Pu = Q0Pu_Load5, P0Pu = P0Pu_Load5, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen2_INIT(PMin = 0, P0Pu = P0Pu_Gen2, PMax = 10.08, U0Pu = U0Pu_Gen2, URef0Pu = U0Pu_Gen2, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen6_INIT(PMin = 0, P0Pu = P0Pu_Gen6, PMax = 0.744, U0Pu = U0Pu_Gen6, URef0Pu = U0Pu_Gen6, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load11_INIT(Q0Pu = Q0Pu_Load11, P0Pu = P0Pu_Load11, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load13_INIT(Q0Pu = Q0Pu_Load13, P0Pu = P0Pu_Load13, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load10_INIT(Q0Pu = Q0Pu_Load10, P0Pu = P0Pu_Load10, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen1_INIT(PMin = 0, PMax = 10.9, U0Pu = U0Pu_Gen1, URef0Pu = U0Pu_Gen1, QMin = -100, QMax = 100, UPhase0 = atan2(U0Pu_Gen1*Modelica.Math.sin(UPhase0_Gen1), U0Pu_Gen1*Modelica.Math.cos(UPhase0_Gen1)), P0Pu(fixed = false), Q0Pu(fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load3_INIT(Q0Pu = Q0Pu_Load3, P0Pu = P0Pu_Load3, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load14_INIT(Q0Pu = Q0Pu_Load14, P0Pu = P0Pu_Load14, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen3_INIT(PMin = 0, P0Pu = P0Pu_Gen3, PMax = 14.85, U0Pu = U0Pu_Gen3, URef0Pu = U0Pu_Gen3, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT Load4_INIT(Q0Pu = Q0Pu_Load4, P0Pu = P0Pu_Load4, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT Gen8_INIT(PMin = 0, P0Pu = P0Pu_Gen8, PMax = 2.28, U0Pu = U0Pu_Gen8, URef0Pu = U0Pu_Gen8, QMin = -100, QMax = 100, Q0Pu(fixed = false), UPhase0(fixed = false));
 equation
 // Generators controls
@@ -332,14 +343,36 @@ equation
   connect(Bus13.terminal, LineB6B13.terminal1) annotation(
     Line(points = {{-70, 200}, {-70, 120}, {-60, 120}}, color = {0, 0, 255}));
 initial equation
+  Load2_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load2.terminal.V);
+  Load2_INIT.UPhase0 = Modelica.ComplexMath.arg(Load2.terminal.V);
+  Load9_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load9.terminal.V);
+  Load9_INIT.UPhase0 = Modelica.ComplexMath.arg(Load9.terminal.V);
+  Load12_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load12.terminal.V);
+  Load12_INIT.UPhase0 = Modelica.ComplexMath.arg(Load12.terminal.V);
+  Load6_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load6.terminal.V);
+  Load6_INIT.UPhase0 = Modelica.ComplexMath.arg(Load6.terminal.V);
+  Load5_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load5.terminal.V);
+  Load5_INIT.UPhase0 = Modelica.ComplexMath.arg(Load5.terminal.V);
   Gen2_INIT.Q0Pu = -(Gen2.QGenPu);
   Gen2_INIT.UPhase0 = Gen2.UPhase;
   Gen6_INIT.Q0Pu = -(Gen6.QGenPu);
   Gen6_INIT.UPhase0 = Gen6.UPhase;
+  Load11_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load11.terminal.V);
+  Load11_INIT.UPhase0 = Modelica.ComplexMath.arg(Load11.terminal.V);
+  Load13_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load13.terminal.V);
+  Load13_INIT.UPhase0 = Modelica.ComplexMath.arg(Load13.terminal.V);
+  Load10_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load10.terminal.V);
+  Load10_INIT.UPhase0 = Modelica.ComplexMath.arg(Load10.terminal.V);
   Gen1_INIT.P0Pu = Modelica.ComplexMath.real(Gen1.terminal.V*Modelica.ComplexMath.conj(Gen1.terminal.i));
   Gen1_INIT.Q0Pu = Modelica.ComplexMath.imag(Gen1.terminal.V*Modelica.ComplexMath.conj(Gen1.terminal.i));
+  Load3_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load3.terminal.V);
+  Load3_INIT.UPhase0 = Modelica.ComplexMath.arg(Load3.terminal.V);
+  Load14_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load14.terminal.V);
+  Load14_INIT.UPhase0 = Modelica.ComplexMath.arg(Load14.terminal.V);
   Gen3_INIT.Q0Pu = -(Gen3.QGenPu);
   Gen3_INIT.UPhase0 = Gen3.UPhase;
+  Load4_INIT.U0Pu = Modelica.ComplexMath.'abs'(Load4.terminal.V);
+  Load4_INIT.UPhase0 = Modelica.ComplexMath.arg(Load4.terminal.V);
   Gen8_INIT.Q0Pu = -(Gen8.QGenPu);
   Gen8_INIT.UPhase0 = Gen8.UPhase;
   annotation(
