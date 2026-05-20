@@ -214,6 +214,28 @@ model NetworkWithAlphaBetaLoads_auxiliary "Nordic test grid with buses, lines, s
   // negative values for capacitors, positive values for inductors (reversed in PESTR)
   parameter Dynawo.Types.PerUnit BPu_shunt_4071;
   final parameter Dynawo.Types.ComplexApparentPowerPu s0Pu_shunt_4071 = Complex(0, BPu_shunt_4071);
+  Dynawo.Electrical.Loads.Load_INIT load_22_INIT(Q0Pu = Q0Pu_load_22, P0Pu = P0Pu_load_22, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_71_INIT(Q0Pu = Q0Pu_load_71, P0Pu = P0Pu_load_71, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_61_INIT(Q0Pu = Q0Pu_load_61, P0Pu = P0Pu_load_61, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_04_INIT(Q0Pu = Q0Pu_load_04, P0Pu = P0Pu_load_04, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_46_INIT(Q0Pu = Q0Pu_load_46, P0Pu = P0Pu_load_46, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_02_INIT(Q0Pu = Q0Pu_load_02, P0Pu = P0Pu_load_02, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_05_INIT(Q0Pu = Q0Pu_load_05, P0Pu = P0Pu_load_05, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_63_INIT(Q0Pu = Q0Pu_load_63, P0Pu = P0Pu_load_63, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_42_INIT(Q0Pu = Q0Pu_load_42, P0Pu = P0Pu_load_42, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_03_INIT(Q0Pu = Q0Pu_load_03, P0Pu = P0Pu_load_03, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_11_INIT(Q0Pu = Q0Pu_load_11, P0Pu = P0Pu_load_11, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_41_INIT(Q0Pu = Q0Pu_load_41, P0Pu = P0Pu_load_41, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_51_INIT(Q0Pu = Q0Pu_load_51, P0Pu = P0Pu_load_51, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_13_INIT(Q0Pu = Q0Pu_load_13, P0Pu = P0Pu_load_13, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_32_INIT(Q0Pu = Q0Pu_load_32, P0Pu = P0Pu_load_32, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_01_INIT(Q0Pu = Q0Pu_load_01, P0Pu = P0Pu_load_01, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_12_INIT(Q0Pu = Q0Pu_load_12, P0Pu = P0Pu_load_12, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_31_INIT(Q0Pu = Q0Pu_load_31, P0Pu = P0Pu_load_31, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_72_INIT(Q0Pu = Q0Pu_load_72, P0Pu = P0Pu_load_72, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_47_INIT(Q0Pu = Q0Pu_load_47, P0Pu = P0Pu_load_47, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_43_INIT(Q0Pu = Q0Pu_load_43, P0Pu = P0Pu_load_43, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_62_INIT(Q0Pu = Q0Pu_load_62, P0Pu = P0Pu_load_62, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
 equation
   load_11.deltaP = 0;
   load_11.deltaQ = 0;
@@ -435,6 +457,51 @@ equation
     Line(points = {{-95, 113}, {-95, 115}}, color = {0, 0, 255}));
   connect(load_72.terminal, bus_B72.terminal) annotation(
     Line(points = {{-88, 63}, {-88, 65}}, color = {0, 0, 255}));
+initial equation
+  load_22_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_22.terminal.V);
+  load_22_INIT.UPhase0 = Modelica.ComplexMath.arg(load_22.terminal.V);
+  load_71_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_71.terminal.V);
+  load_71_INIT.UPhase0 = Modelica.ComplexMath.arg(load_71.terminal.V);
+  load_61_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_61.terminal.V);
+  load_61_INIT.UPhase0 = Modelica.ComplexMath.arg(load_61.terminal.V);
+  load_04_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_04.terminal.V);
+  load_04_INIT.UPhase0 = Modelica.ComplexMath.arg(load_04.terminal.V);
+  load_46_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_46.terminal.V);
+  load_46_INIT.UPhase0 = Modelica.ComplexMath.arg(load_46.terminal.V);
+  load_02_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_02.terminal.V);
+  load_02_INIT.UPhase0 = Modelica.ComplexMath.arg(load_02.terminal.V);
+  load_05_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_05.terminal.V);
+  load_05_INIT.UPhase0 = Modelica.ComplexMath.arg(load_05.terminal.V);
+  load_63_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_63.terminal.V);
+  load_63_INIT.UPhase0 = Modelica.ComplexMath.arg(load_63.terminal.V);
+  load_42_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_42.terminal.V);
+  load_42_INIT.UPhase0 = Modelica.ComplexMath.arg(load_42.terminal.V);
+  load_03_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_03.terminal.V);
+  load_03_INIT.UPhase0 = Modelica.ComplexMath.arg(load_03.terminal.V);
+  load_11_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_11.terminal.V);
+  load_11_INIT.UPhase0 = Modelica.ComplexMath.arg(load_11.terminal.V);
+  load_41_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_41.terminal.V);
+  load_41_INIT.UPhase0 = Modelica.ComplexMath.arg(load_41.terminal.V);
+  load_51_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_51.terminal.V);
+  load_51_INIT.UPhase0 = Modelica.ComplexMath.arg(load_51.terminal.V);
+  load_13_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_13.terminal.V);
+  load_13_INIT.UPhase0 = Modelica.ComplexMath.arg(load_13.terminal.V);
+  load_32_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_32.terminal.V);
+  load_32_INIT.UPhase0 = Modelica.ComplexMath.arg(load_32.terminal.V);
+  load_01_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_01.terminal.V);
+  load_01_INIT.UPhase0 = Modelica.ComplexMath.arg(load_01.terminal.V);
+  load_12_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_12.terminal.V);
+  load_12_INIT.UPhase0 = Modelica.ComplexMath.arg(load_12.terminal.V);
+  load_31_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_31.terminal.V);
+  load_31_INIT.UPhase0 = Modelica.ComplexMath.arg(load_31.terminal.V);
+  load_72_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_72.terminal.V);
+  load_72_INIT.UPhase0 = Modelica.ComplexMath.arg(load_72.terminal.V);
+  load_47_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_47.terminal.V);
+  load_47_INIT.UPhase0 = Modelica.ComplexMath.arg(load_47.terminal.V);
+  load_43_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_43.terminal.V);
+  load_43_INIT.UPhase0 = Modelica.ComplexMath.arg(load_43.terminal.V);
+  load_62_INIT.U0Pu = Modelica.ComplexMath.'abs'(load_62.terminal.V);
+  load_62_INIT.UPhase0 = Modelica.ComplexMath.arg(load_62.terminal.V);
   annotation(
     preferredView = "diagram",
     Diagram(coordinateSystem(extent = {{-100, -150}, {100, 150}}, grid = {1, 1}, preserveAspectRatio = false, initialScale = 0.1)),
