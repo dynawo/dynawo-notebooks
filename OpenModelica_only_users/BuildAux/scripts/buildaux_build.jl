@@ -8,7 +8,6 @@ using ..BuildAuxOmc:
     om_send,
     resolve_load_ref_value,
     get_all_components,
-    _get_component_class_map,
     get_comp_param_value
 
 using ..BuildAuxParse:
@@ -65,6 +64,74 @@ function _existing_modifier_assignments(c::Dict{String, Any})
 end
 
 """
+    _get_slack_voltage_expressions(omc, model, components, comp_name, mods) -> NamedTuple
+
+Resolve the slack voltage magnitude and phase expressions.
+
+For each quantity, prefer the explicit scalar modifier/value (`U0Pu`, `UPhase0`).
+If it is missing, fall back to deriving it from `u0Pu = Complex(re, im)`.
+Returns `(upu = ..., uphase = ...)`.
+"""
+function _get_slack_voltage_expressions(
+    omc,
+    model::String,
+    components::Dict{String, Dict{String, Any}},
+    comp_name::String,
+    mods::Dict{String, String},
+)
+    function get_value(param::String)
+        if haskey(mods, param)
+            return strip(mods[param])
+        end
+        return strip(string(get_comp_param_value(omc, model, components, comp_name, param)))
+    end
+
+    u0pu = get_value("u0Pu")
+    has_complex_u0pu = startswith(u0pu, "Complex(") && endswith(u0pu, ")")
+
+    ure = ""
+    uim = ""
+    if has_complex_u0pu
+        inner = strip(u0pu[9:end-1])
+        parts = split(inner, ","; limit = 2)
+
+        if length(parts) == 2
+            ure = strip(parts[1])
+            uim = strip(parts[2])
+        end
+    end
+
+    upu = get_value("U0Pu")
+    if isempty(upu)
+        if !isempty(ure) && !isempty(uim)
+            upu = "sqrt(($(ure))^2 + ($(uim))^2)"
+        else
+            error(
+                "Could not determine slack voltage magnitude for $model.$comp_name. " *
+                "Expected U0Pu or u0Pu = Complex(re, im)."
+            )
+        end
+    end
+
+    uphase = get_value("UPhase0")
+    if isempty(uphase)
+        if !isempty(ure) && !isempty(uim)
+            uphase = "atan2($(uim), $(ure))"
+        else
+            error(
+                "Could not determine slack voltage phase for $model.$comp_name. " *
+                "Expected UPhase0 or u0Pu = Complex(re, im)."
+            )
+        end
+    end
+
+    return (
+        upu = upu,
+        uphase = uphase,
+    )
+end
+
+"""
     _build_slack_replacement_assignments(omc, model, components, comp_name, mods, call_mods) -> Vector{String}
 
 Build the modifier list for the slack replacement to `InfiniteBus`.
@@ -76,20 +143,11 @@ function _build_slack_replacement_assignments(
     comp_name::String,
     mods::Dict{String, String},
 )
-    function resolve_modifier(target::String, param::String)
-        if haskey(mods, param)
-            return "$(target) = $(mods[param])"
-        end
-        val = get_comp_param_value(omc, model, components, comp_name, param)
-        if isempty(strip(string(val)))
-            error("Empty value for $model.$comp_name.$param while building slack replacement for $comp_name")
-        end
-        return "$(target) = $(val)"
-    end
+    voltage = _get_slack_voltage_expressions(omc, model, components, comp_name, mods)
 
     return [
-        resolve_modifier("UPu", "U0Pu"),
-        resolve_modifier("UPhase", "UPhase0"),
+        "UPu = $(voltage.upu)",
+        "UPhase = $(voltage.uphase)",
     ]
 end
 
@@ -295,6 +353,83 @@ function _load_init_mode(
 end
 
 """
+    _apply_component_modifiers!(omc, aux_model, aux_components, base_comp, replace_keys, extra_raw)
+
+Update one auxiliary component by replacing only the modifiers listed in
+`replace_keys` and preserving all the others.
+"""
+function _apply_component_modifiers!(
+    omc,
+    aux_model::String,
+    aux_components::Dict{String, Dict{String, Any}},
+    base_comp::String,
+    replace_keys::Set{String},
+    extra_raw::Vector{String},
+)
+    isempty(extra_raw) && return nothing
+
+    if !haskey(aux_components, base_comp)
+        error("Component $base_comp not found in $aux_model while applying modifiers")
+    end
+
+    aux_c = aux_components[base_comp]
+    current_aux_class = aux_c["class"]::String
+    existing_assignments = _existing_modifier_assignments(aux_c)
+
+    kept_assignments = String[]
+    for raw in existing_assignments
+        m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
+        m === nothing && error("Could not extract existing modifier name from: $raw")
+        m.captures[1] in replace_keys && continue
+        push!(kept_assignments, raw)
+    end
+
+    mod_assignments = vcat(kept_assignments, extra_raw)
+    mod_str = _code_modification_from_assignments(mod_assignments)
+
+    om_send(
+        omc,
+        "updateComponent($base_comp, $current_aux_class, $aux_model, modification = $mod_str)",
+        parsed = false,
+    )
+end
+
+"""
+    apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp)
+
+Apply custom load-flow modifiers to Dynawo loads so their complex initialization
+variables stay free but receive useful start values derived from P/Q references.
+"""
+function apply_load_LF_modifiers!(
+    omc,
+    model::String,
+    aux_model::String,
+    aux_components::Dict{String, Dict{String, Any}},
+    base_comp::String,
+)
+    p_ref = strip(resolve_load_ref_value(omc, model, base_comp, "PRefPu"))
+    q_ref = strip(resolve_load_ref_value(omc, model, base_comp, "QRefPu"))
+
+    isempty(p_ref) && error("Could not resolve PRefPu for load $model.$base_comp")
+    isempty(q_ref) && error("Could not resolve QRefPu for load $model.$base_comp")
+
+    extra_raw = [
+        "i0Pu(re(start = $p_ref, fixed = false), im(start = -($q_ref), fixed = false))",
+        "s0Pu(re(start = $p_ref, fixed = false), im(start = $q_ref, fixed = false))",
+        "u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))",
+    ]
+
+    _apply_component_modifiers!(
+        omc,
+        aux_model,
+        aux_components,
+        base_comp,
+        Set(["i0Pu", "s0Pu", "u0Pu"]),
+        extra_raw,
+    )
+end
+
+"""
     add_init_models!(omc, model, aux_model, INIT_MODELS, INIT_MODEL_BY_COMPONENT, components, SLACK_COMPONENT)
 
 Add INIT components described in `INIT_MODELS` to `aux_model`.
@@ -369,6 +504,14 @@ function add_init_models!(
 
         # Add slack or target extras
         if is_slack
+            voltage = _get_slack_voltage_expressions(
+                omc,
+                model,
+                components,
+                base_comp,
+                Dict{String, String}(),
+            )
+            push!(assignments, "UPhase0 = $(voltage.uphase)")
             append!(assignments, [
                 "P0Pu(fixed = false)",
                 "Q0Pu(fixed = false)",
@@ -394,7 +537,9 @@ end
 Apply optional `LF_modifiers_raw` to base components in `aux_model`.
 
 Only components whose class appears in `INIT_MODELS` are considered.
-The current auxiliary class is preserved so previous replacements are not lost.
+Existing modifiers are read from the current auxiliary model state, so
+previous replacements are preserved without reintroducing modifiers from
+the original class.
 """
 function apply_LF_modifiers!(
     omc,
@@ -403,10 +548,16 @@ function apply_LF_modifiers!(
     INIT_MODELS::Dict{String, Any},
     components::Dict{String, Dict{String, Any}},
 )
-    aux_class_map = _get_component_class_map(omc, aux_model)
+    aux_components = get_all_components(omc, aux_model)
 
     for (base_comp, c) in components
         base_class = c["class"]::String
+        if startswith(base_class, "Dynawo.Electrical.Loads.")
+            apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp)
+            aux_components = get_all_components(omc, aux_model)
+            continue
+        end
+
         if !haskey(INIT_MODELS, base_class)
             continue
         end
@@ -422,18 +573,22 @@ function apply_LF_modifiers!(
         end
 
         extra_raw = spec["LF_modifiers_raw"]::Vector{String}
-        isempty(extra_raw) && continue
+        lf_keys = Set{String}()
+        for raw in extra_raw
+            m = match(r"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*(?:=|\()", raw)
+            m === nothing && error("Could not extract LF modifier name from: $raw")
+            push!(lf_keys, m.captures[1])
+        end
 
-        # Keep the class already present in the auxiliary model
-        current_aux_class = aux_class_map[base_comp]
-        mod_assignments = vcat(_existing_modifier_assignments(c), extra_raw)
-        mod_str = _code_modification_from_assignments(mod_assignments)
-
-        om_send(
+        _apply_component_modifiers!(
             omc,
-            "updateComponent($base_comp, $current_aux_class, $aux_model, modification = $mod_str)",
-            parsed = false,
+            aux_model,
+            aux_components,
+            base_comp,
+            lf_keys,
+            extra_raw,
         )
+        aux_components = get_all_components(omc, aux_model)
     end
 end
 
@@ -442,7 +597,8 @@ end
 
 Build and inject an `initial equation` block into `aux_model`.
 
-Equations are generated from `init_equations` mappings in `INIT_MODELS`.
+Equations are generated from `init_equations` and `init_equations_raw`
+mappings in `INIT_MODELS`.
 """
 function add_init_equations!(
     omc,
@@ -480,13 +636,22 @@ function add_init_equations!(
         end
 
         # Write the mapped init equations
-        eqmap = spec["init_equations"]::Dict{String, String}
-        for (init_var, base_var) in eqmap
-            # Support signed init-equation mappings like "-QGenPu".
-            should_flip_sign = startswith(base_var, "-")
-            source_var = should_flip_sign ? base_var[2:end] : base_var
-            rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
-            push!(lines, "$init_name.$init_var = $rhs;")
+        if haskey(spec, "init_equations")
+            eqmap = spec["init_equations"]::Dict{String, String}
+            for (init_var, base_var) in eqmap
+                # Support signed init-equation mappings like "-QGenPu".
+                should_flip_sign = startswith(base_var, "-")
+                source_var = should_flip_sign ? base_var[2:end] : base_var
+                rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
+                push!(lines, "$init_name.$init_var = $rhs;")
+            end
+        end
+
+        if haskey(spec, "init_equations_raw")
+            for raw in spec["init_equations_raw"]::Vector{String}
+                line = replace(replace(raw, "{init}" => init_name), "{base}" => base_name)
+                push!(lines, line)
+            end
         end
     end
 
@@ -504,6 +669,8 @@ const CLEANUP_CLASS_PREFIXES = (
     "Modelica.Blocks.Sources.",
     "Dynawo.Electrical.Events.",
     "Dynawo.Electrical.Loads.LoadConnect_INIT",
+    "Dynawo.Electrical.Controls.Machines.",
+    "Dynawo.Electrical.Controls.Frequency.SignalN",
 )
 
 """
@@ -523,9 +690,40 @@ function collect_cleanup_component_names(components::Dict{String, Dict{String, A
 end
 
 """
+    _has_switch_off_signal_equation(omc, aux_model, switch_signal) -> Bool
+
+Return `true` if `switch_signal.value` already appears on either side of an
+equation in `aux_model`.
+"""
+function _has_switch_off_signal_equation(omc, aux_model::String, switch_signal::String)
+    target = switch_signal * ".value"
+    neq = sendExpression(omc, "getEquationItemsCount($aux_model)")
+
+    for i in 1:neq
+        eqi = String(sendExpression(omc, "getNthEquationItem($aux_model, $i)", parsed = false))
+        eqi = strip(replace(eqi, "\"" => ""))
+        occursin("=", eqi) || continue
+
+        parts = split(eqi, "=", limit = 2)
+        length(parts) == 2 || continue
+
+        lhs = strip(replace(parts[1], ";" => ""))
+        rhs = strip(replace(parts[2], ";" => ""))
+
+        if lhs == target || rhs == target
+            return true
+        end
+    end
+
+    return false
+end
+
+"""
     delete_connections!(omc, aux_model, components; global_targets=nothing) -> Set{String}
 
 Delete all connections in `aux_model` that touch a cleanup-target component.
+If the deleted connection leaves a switch-off connector unconnected, add a
+neutral `switchOffSignalN.value = false` equation for the surviving endpoint.
 Returns the set of effective target component names.
 
 Iterates connections backwards because deleting connections reindexes the connection list.
@@ -538,6 +736,7 @@ function delete_connections!(
 )
     local_targets = collect_cleanup_component_names(components)
     cleanup_targets = isnothing(global_targets) ? local_targets : union(local_targets, global_targets)
+    deleted_switch_signals = Set{String}()
 
     count = sendExpression(omc, "getConnectionCount($aux_model)")
 
@@ -549,8 +748,26 @@ function delete_connections!(
         to_comp = component_of_connector(to)
 
         if (from_comp in cleanup_targets) || (to_comp in cleanup_targets)
+            if (from_comp in cleanup_targets) && !(to_comp in cleanup_targets)
+                occursin(r"\.switchOffSignal\d+$", to) && push!(deleted_switch_signals, String(to))
+            end
+            if (to_comp in cleanup_targets) && !(from_comp in cleanup_targets)
+                occursin(r"\.switchOffSignal\d+$", from) && push!(deleted_switch_signals, String(from))
+            end
             sendExpression(omc, "deleteConnection($from, $to, $aux_model)")
         end
+    end
+
+    switch_signal_lines = String[]
+    for switch_signal in sort!(collect(deleted_switch_signals))
+        _has_switch_off_signal_equation(omc, aux_model, switch_signal) && continue
+        push!(switch_signal_lines, "$switch_signal.value = false;")
+    end
+
+    # Add false equations for switch-off signals whose event/source connection is deleted.
+    if !isempty(switch_signal_lines)
+        block = "equation\n" * join(switch_signal_lines, "\n")
+        om_send(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
     end
 
     return cleanup_targets

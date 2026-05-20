@@ -1,42 +1,20 @@
-# helpers/initialization_helpers.jl
-# Initialization extraction and model update helpers
+# scripts/initialization_parse.jl
+# Low-level Modelica text parsing helpers
 
-module InitializationHelpers
-using OMJulia
+module InitializationParse
 
 export
-    om_send,
-    get_all_components,
-    get_initializable_components,
-    extract_all_initialization_values,
-    apply_initialization_modifiers!
+    parse_modifier_dict,
+    parse_call_modifier_dict,
+    parse_component
 
-function om_send(omc, expr; parsed = true)
-    println("OMC -> ", expr)
-    try
-        return sendExpression(omc, expr; parsed = parsed)
-    catch err
-        println(sendExpression(omc, "getErrorString()", parsed = false))
-        rethrow(err)
-    end
-end
+"""
+    _unwrap_code_modifier(mod_raw::String) -> String
 
-function parse_component(raw::String)
-    s = strip(raw)
-    s = replace(s, "{" => "")
-    s = replace(s, "}" => "")
-    parts = split(s, ",")
+Return the inner text of an OpenModelica modifier wrapper.
 
-    comp_class = strip(parts[1])
-    comp_name = strip(parts[2])
-
-    return comp_class, comp_name
-end
-
-# ------------------------------------------------------------
-# Low-Level String Scanners
-# ------------------------------------------------------------
-
+`{\$Code((...))}` becomes `...`, and `{}` becomes `""`.
+"""
 function _unwrap_code_modifier(mod_raw::String)
     s = strip(mod_raw)
     if s == "{}"
@@ -72,7 +50,6 @@ function _strip_modelica_comments(s::AbstractString)
         next_c = next_i <= lastindex(s) ? s[next_i] : nothing
 
         if in_line_comment
-            # Keep line breaks so the next token stays on its own line.
             if c == '\n'
                 in_line_comment = false
                 write(out, c)
@@ -133,6 +110,13 @@ function _strip_modelica_comments(s::AbstractString)
     return strip(String(take!(out)))
 end
 
+"""
+    _split_top_level_commas(s::AbstractString) -> Vector{String}
+
+Split `s` by commas that appear at top level only.
+
+Commas inside `()`, `[]`, `{}`, or quoted strings are ignored.
+"""
 function _split_top_level_commas(s::AbstractString)
     parts = String[]
     isempty(strip(s)) && return parts
@@ -177,7 +161,6 @@ function _split_top_level_commas(s::AbstractString)
             brace = max(brace - 1, 0)
         end
 
-        # Split only when the comma is outside nested delimiters and strings.
         if c == ',' && paren == 0 && bracket == 0 && brace == 0
             push!(parts, strip(String(take!(buf))))
         else
@@ -193,6 +176,13 @@ function _split_top_level_commas(s::AbstractString)
     return parts
 end
 
+"""
+    _find_top_level_equal(part::AbstractString) -> Union{Int, Nothing}
+
+Return the index of the first `=` that appears at top level in `part`.
+
+`=` inside nested delimiters or quoted strings is ignored.
+"""
 function _find_top_level_equal(part::AbstractString)
     paren = 0
     bracket = 0
@@ -236,6 +226,13 @@ function _find_top_level_equal(part::AbstractString)
     return nothing
 end
 
+"""
+    parse_modifier_dict(mod_raw::String) -> Dict{String, String}
+
+Parse top-level assignment modifiers from OpenModelica raw text.
+
+Call-style modifiers like `x(fixed = false)` are skipped.
+"""
 function parse_modifier_dict(mod_raw::String)
     s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     isempty(s) && return Dict{String, String}()
@@ -256,6 +253,13 @@ function parse_modifier_dict(mod_raw::String)
     return result
 end
 
+"""
+    parse_call_modifier_dict(mod_raw::String) -> Dict{String, String}
+
+Parse top-level call-style modifiers from OpenModelica raw text.
+
+Example output entry: `"i0Pu" => "re(fixed = false), im(fixed = false)"`.
+"""
 function parse_call_modifier_dict(mod_raw::String)
     s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     isempty(s) && return Dict{String, String}()
@@ -276,116 +280,22 @@ function parse_call_modifier_dict(mod_raw::String)
     return result
 end
 
-function get_all_components(omc, model)
-    n = sendExpression(omc, "getComponentCount($model)")
-    components = Dict{String, Dict{String, Any}}()
+"""
+    parse_component(raw::String) -> (comp_class::String, comp_name::String)
 
-    for i in 1:n
-        raw = sendExpression(omc, "getNthComponent($model, $i)", parsed = false)
-        comp_class, comp_name = parse_component(String(raw))
+Parse OpenModelica `getNthComponent` raw text, typically:
+`{ClassName, componentName}`.
+"""
+function parse_component(raw::String)
+    s = strip(raw)
+    s = replace(s, "{" => "")
+    s = replace(s, "}" => "")
+    parts = split(s, ",")
 
-        mod_raw = sendExpression(omc, "getNthComponentModification($model, $i)", parsed = false)
-        modifiers = parse_modifier_dict(String(mod_raw))
-        call_modifiers = parse_call_modifier_dict(String(mod_raw))
+    comp_class = String(strip(parts[1]))
+    comp_name = String(strip(parts[2]))
 
-        components[comp_name] = Dict{String, Any}(
-            "class" => comp_class,
-            "modifiers" => modifiers,
-            "call_modifiers" => call_modifiers,
-        )
-    end
-
-    return components
-end
-
-function get_initializable_components(components, init_params)
-    initializable = Dict{String, Dict{String, Any}}()
-
-    for (component, info) in components
-        haskey(init_params, info["class"]) || continue
-        initializable[component] = info
-    end
-
-    return initializable
-end
-
-function _read_result_value(aux_session, full_name::AbstractString)
-    isempty(aux_session.resultfile) && error("Auxiliary session has no result file. Run simulate(...) before extracting initialization values.")
-    values = getSolutions(aux_session, String(full_name))
-    series = values[1]
-    isempty(series) && error("No values found in $(aux_session.resultfile) for $(full_name)")
-    return Float64(series[end])
-end
-
-function extract_component_initialization_values(aux_session, component, param_pairs)
-    init_component = component * "_INIT"
-    values = Dict{String, Float64}()
-
-    for (init_var, dynamic_var) in param_pairs
-        full_name = init_component * "." * init_var
-        values[dynamic_var] = _read_result_value(aux_session, full_name)
-    end
-
-    return values
-end
-
-function extract_all_initialization_values(aux_session, initializable_components, init_params)
-    values_by_component = Dict{String, Dict{String, Float64}}()
-
-    for (component, info) in initializable_components
-        param_pairs = init_params[info["class"]]
-        values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs)
-    end
-
-    return values_by_component
-end
-
-function _code_modification_from_assignments(assignments::Vector{String})
-    return "\$Code((" * join(assignments, ", ") * "))"
-end
-
-function build_modifier_assignments(info, param_pairs, values)
-    modifiers = Dict{String, String}(info["modifiers"])
-    call_modifiers = Dict{String, String}(info["call_modifiers"])
-
-    dynamic_vars = [dynamic_var for (_, dynamic_var) in param_pairs]
-    scalar_vars = [v for v in dynamic_vars if !(endswith(v, ".re") || endswith(v, ".im"))]
-    complex_bases = unique(replace(v, r"\.(re|im)$" => "") for v in dynamic_vars if endswith(v, ".re") || endswith(v, ".im"))
-
-    for field in scalar_vars
-        haskey(values, field) || error("Missing extracted value for $field")
-        modifiers[field] = string(values[field])
-    end
-
-    # Rebuild Complex(...) modifiers from the extracted .re/.im values.
-    for base in complex_bases
-        real_key = base * ".re"
-        imag_key = base * ".im"
-        haskey(values, real_key) || error("Missing extracted value for $real_key")
-        haskey(values, imag_key) || error("Missing extracted value for $imag_key")
-        modifiers[base] = "Complex($(values[real_key]), $(values[imag_key]))"
-    end
-
-    assignments = String[]
-    for (field, value) in modifiers
-        push!(assignments, "$(field) = $(value)")
-    end
-    for (field, value) in call_modifiers
-        push!(assignments, "$(field)($(value))")
-    end
-
-    return assignments
-end
-
-function apply_initialization_modifiers!(omc, target_model, initializable_components, init_params, values_by_component)
-    for (component, info) in initializable_components
-        haskey(values_by_component, component) || error("Missing extracted values for $component")
-        current_class = info["class"]
-        param_pairs = init_params[current_class]
-        assignments = build_modifier_assignments(info, param_pairs, values_by_component[component])
-        mod_str = _code_modification_from_assignments(assignments)
-        om_send(omc, "updateComponent($component, $current_class, $target_model, modification = $mod_str)", parsed = false)
-    end
+    return comp_class, comp_name
 end
 
 end # module
