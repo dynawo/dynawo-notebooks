@@ -1,47 +1,42 @@
-# scripts/buildaux_omc.jl
+# helpers/openmodelica.jl
 # OpenModelica query and inspection helpers
-
-include("buildaux_parse.jl")
-
-module BuildAuxOmc
-using OMJulia
-
-using ..BuildAuxParse:
-    parse_modifier_dict,
-    parse_call_modifier_dict,
-    parse_component,
-    parse_nth_connection,
-    component_of_connector
-
-export
-    om_send,
-    resolve_load_ref_value,
-    inherited_classes,
-    get_inheritance_chain,
-    get_all_components,
-    get_comp_param_value
 
 # ------------------------------------------------------------
 # OpenModelica Command Wrapper
 # ------------------------------------------------------------
 
 """
-    om_send(omc, expr; parsed=true)
+    omc_call(omc, expression; parsed = true)
 
-Send an expression to OpenModelica and print the command.
+Send an expression to OpenModelica and return its result.
 
-If OpenModelica fails, this prints `getErrorString()` and rethrows.
+If OpenModelica reports an error or returns failure, stop with the expression
+and the OpenModelica error messages. Successful calls remain quiet.
 """
-function om_send(omc, expr; parsed = true)
-    println("OMC -> ", expr)
-    try
-        return sendExpression(omc, expr; parsed = parsed)
-    catch err
-        println("OMC FAILED on: ", expr)
-        println("OpenModelica says:")
-        println(sendExpression(omc, "getErrorString()"))
-        rethrow(err)
+function omc_call(omc, expression; parsed = true)
+    sendExpression(omc, "clearMessages()")
+
+    result = sendExpression(omc, expression; parsed = parsed)
+
+    _, num_errors, _ = sendExpression(omc, "countMessages()")
+    messages = sendExpression(omc, "getErrorString()")
+
+    if result === false || result === nothing || num_errors > 0
+        error("""
+        OpenModelica call failed.
+
+        Expression:
+        $expression
+
+        Result:
+        $result
+
+        OpenModelica messages:
+        $messages
+        """)
     end
+
+    return result
 end
 
 # ------------------------------------------------------------
@@ -103,7 +98,7 @@ end
 Return direct inherited classes for `model`, filtering out icon-only parents.
 """
 function inherited_classes(omc, model::String)
-    raw = strip(String(om_send(omc, "getInheritedClasses($model)", parsed = false)))
+    raw = strip(String(omc_call(omc, "getInheritedClasses($model)", parsed = false)))
     raw = replace(raw, "{" => "", "}" => "", ";" => "", "\"" => "")
     isempty(strip(raw)) && return String[]
 
@@ -210,5 +205,3 @@ function get_comp_param_value(
 
     return sendExpression(omc, "getComponentModifierValue($model, $comp_name.$param)")
 end
-
-end # module

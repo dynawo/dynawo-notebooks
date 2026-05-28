@@ -1,9 +1,5 @@
-# scripts/initialization_dictionaries.jl
+# dictionaries/init_parameters.jl
 # Initialization parameter mappings by component class
-
-module InitializationDictionaries
-
-export INIT_PARAMS
 
 const INIT_PARAMS = Dict{String, Any}(
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource" => [
@@ -304,5 +300,3 @@ const INIT_PARAMS = Dict{String, Any}(
         ),
     ),
 )
-
-end # module

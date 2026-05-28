@@ -1,18 +1,5 @@
-# scripts/buildaux_parse.jl
+# helpers/modelica_parsing.jl
 # Low-level Modelica text parsing helpers
-
-module BuildAuxParse
-
-export
-    parse_modifier_dict,
-    parse_call_modifier_dict,
-    parse_component,
-    parse_nth_connection,
-    component_of_connector
-
-# ------------------------------------------------------------
-# Low-Level String Scanners
-# ------------------------------------------------------------
 
 """
     _unwrap_code_modifier(mod_raw::String) -> String
@@ -33,9 +20,93 @@ function _unwrap_code_modifier(mod_raw::String)
 end
 
 """
+    _strip_modelica_comments(s::AbstractString) -> String
+
+Remove Modelica line and block comments from `s`.
+
+Comment markers inside quoted strings are kept literal, and newlines are
+preserved so adjacent tokens do not get glued together.
+"""
+function _strip_modelica_comments(s::AbstractString)
+    isempty(s) && return ""
+
+    out = IOBuffer()
+    in_str = false
+    escaped = false
+    in_line_comment = false
+    in_block_comment = false
+
+    i = firstindex(s)
+    while i <= lastindex(s)
+        c = s[i]
+        next_i = nextind(s, i)
+        next_c = next_i <= lastindex(s) ? s[next_i] : nothing
+
+        if in_line_comment
+            if c == '\n'
+                in_line_comment = false
+                write(out, c)
+            end
+            i = nextind(s, i)
+            continue
+        end
+
+        if in_block_comment
+            if c == '*' && next_c == '/'
+                in_block_comment = false
+                i = nextind(s, next_i)
+            else
+                if c == '\n'
+                    write(out, c)
+                end
+                i = nextind(s, i)
+            end
+            continue
+        end
+
+        if in_str
+            write(out, c)
+            if escaped
+                escaped = false
+            elseif c == '\\'
+                escaped = true
+            elseif c == '"'
+                in_str = false
+            end
+            i = nextind(s, i)
+            continue
+        end
+
+        if c == '"'
+            in_str = true
+            write(out, c)
+            i = nextind(s, i)
+            continue
+        end
+
+        if c == '/' && next_c == '/'
+            in_line_comment = true
+            i = nextind(s, next_i)
+            continue
+        end
+
+        if c == '/' && next_c == '*'
+            in_block_comment = true
+            i = nextind(s, next_i)
+            continue
+        end
+
+        write(out, c)
+        i = nextind(s, i)
+    end
+
+    return strip(String(take!(out)))
+end
+
+"""
     _split_top_level_commas(s::AbstractString) -> Vector{String}
 
-Split `s` by commas that are at top level only.
+Split `s` by commas that appear at top level only.
 
 Commas inside `()`, `[]`, `{}`, or quoted strings are ignored.
 """
@@ -99,7 +170,7 @@ function _split_top_level_commas(s::AbstractString)
 end
 
 """
-    _find_top_level_equal(part::AbstractString) -> Union{Int,Nothing}
+    _find_top_level_equal(part::AbstractString) -> Union{Int, Nothing}
 
 Return the index of the first `=` that appears at top level in `part`.
 
@@ -148,20 +219,15 @@ function _find_top_level_equal(part::AbstractString)
     return nothing
 end
 
-# ------------------------------------------------------------
-# Modifier Parsers
-# ------------------------------------------------------------
-
 """
-    parse_modifier_dict(mod_raw::String) -> Dict{String,String}
+    parse_modifier_dict(mod_raw::String) -> Dict{String, String}
 
 Parse top-level assignment modifiers from OpenModelica raw text.
 
-Example output entry: `"U0Pu" => "Complex(1, 0)"`.
 Call-style modifiers like `x(fixed = false)` are skipped.
 """
 function parse_modifier_dict(mod_raw::String)
-    s = _unwrap_code_modifier(mod_raw)
+    s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     isempty(s) && return Dict{String, String}()
     parts = _split_top_level_commas(s)
 
@@ -181,14 +247,14 @@ function parse_modifier_dict(mod_raw::String)
 end
 
 """
-    parse_call_modifier_dict(mod_raw::String) -> Dict{String,String}
+    parse_call_modifier_dict(mod_raw::String) -> Dict{String, String}
 
 Parse top-level call-style modifiers from OpenModelica raw text.
 
 Example output entry: `"i0Pu" => "re(fixed = false), im(fixed = false)"`.
 """
 function parse_call_modifier_dict(mod_raw::String)
-    s = _unwrap_code_modifier(mod_raw)
+    s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     isempty(s) && return Dict{String, String}()
     parts = _split_top_level_commas(s)
 
@@ -207,10 +273,6 @@ function parse_call_modifier_dict(mod_raw::String)
     return result
 end
 
-# ------------------------------------------------------------
-# OpenModelica Raw Parsers
-# ------------------------------------------------------------
-
 """
     parse_component(raw::String) -> (comp_class::String, comp_name::String)
 
@@ -223,24 +285,20 @@ function parse_component(raw::String)
     s = replace(s, "}" => "")
     parts = split(s, ",")
 
-    comp_class = strip(parts[1])
-    comp_name = strip(parts[2])
+    comp_class = String(strip(parts[1]))
+    comp_name = String(strip(parts[2]))
 
     return comp_class, comp_name
 end
 
 """
-    parse_nth_connection(raw::String) -> (from::SubString{String}, to::SubString{String})
+    parse_nth_connection(raw::String) -> (from::String, to::String)
 
-Parse OpenModelica `getNthConnection` raw text and return the
-`from` and `to` connector strings.
+Parse OpenModelica `getNthConnection` raw text and return the connector paths.
 """
 function parse_nth_connection(raw::String)
-    ms = collect(eachmatch(r"\"([^\"]*)\"", raw))
-
-    from = ms[1].captures[1]
-    to = ms[2].captures[1]
-    return from, to
+    matches = collect(eachmatch(r"\"([^\"]*)\"", raw))
+    return String(matches[1].captures[1]), String(matches[2].captures[1])
 end
 
 """
@@ -251,5 +309,3 @@ Return the component name from a connector path.
 function component_of_connector(conn::AbstractString)
     return String(split(conn, ".", limit = 2)[1])
 end
-
-end # module
