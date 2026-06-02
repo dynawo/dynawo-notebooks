@@ -54,36 +54,38 @@ def generate_generic_mock_dump(network, dump_dir: str) -> None:
 
 def parse_all_dumps(dump_dir: str) -> dict:
     """
-    Reads all Dynawo dump .txt files recursively in a directory and compiles a 
+    Reads all Dynawo dump .txt files recursively in a directory and compiles a
     flat dictionary of initialization parameters. Prepends the component name
     derived from the filename to prevent variable overwriting in local dumps.
-    
+
     Args:
         dump_dir (str): Root directory containing globalInit/localInit folders.
-        
+
     Returns:
         dict: Parsed key-value pairs of the initialization state.
     """
     extracted_data = {}
     # Use recursive globbing to enter globalInit and localInit subdirectories
     file_pattern = os.path.join(dump_dir, "**", "*.txt")
-    
+
     for filepath in glob.glob(file_pattern, recursive=True):
         filename = os.path.basename(filepath)
-        
+
         # Extract component name from filename (e.g., "dumpInitValues-GEN____3_SM.txt" -> "GEN____3_SM")
         component_prefix = ""
         match = re.match(r"dumpInitValues-(.+)\.txt", filename)
-        
+
         # Global files like NETWORK or OMEGA_REF usually already contain fully qualified names inside
-        if match and not any(global_name in filename for global_name in ["NETWORK", "OMEGA_REF", "NodeFault"]):
+        if match and not any(
+            global_name in filename for global_name in ["NETWORK", "OMEGA_REF", "NodeFault"]
+        ):
             # Normalize prefix to Modelica dot-notation standard early on
             component_prefix = match.group(1) + "."
 
         with open(filepath, "r") as f:
             for line in f:
                 line = line.strip()
-                
+
                 # Match parameters
                 param_match = re.match(r"^([\w_]+)\s*=\s*([-\d\.eE\+]+)", line)
                 if param_match:
@@ -100,31 +102,33 @@ def parse_all_dumps(dump_dir: str) -> dict:
     return extracted_data
 
 
-def reinject_into_modelica(omc_connector, model_name: str, parsed_data: dict, output_filename: str) -> None:
+def reinject_into_modelica(
+    omc_connector, model_name: str, parsed_data: dict, output_filename: str
+) -> None:
     """
     Injects the parsed hierarchical Modelica paths directly into the Modelica AST.
     """
     logger.info("Starting Modelica AST parameter injection...")
-    
+
     injection_count = 0
     for dynawo_key, value in parsed_data.items():
         # The key is now fully constructed (e.g., "GEN____3_SM.generator_lambdaDPu")
         # We replace the remaining internal C++ underscores with Modelica dots for the sub-components
-        
+
         if "." in dynawo_key:
             prefix, suffix = dynawo_key.split(".", 1)
             # Convert C++ internal structuring (generator_lambda) to Modelica (generator.lambda)
             modelica_path = f"{prefix}.{suffix.replace('_', '.')}"
         else:
-            modelica_path = dynawo_key.replace('_', '.')
+            modelica_path = dynawo_key.replace("_", ".")
 
         cmd = f"setComponentModifierValue({model_name}, {modelica_path}, $Code(= {value}))"
         omc_connector._omc.sendExpression(cmd)
         injection_count += 1
 
     logger.info(f"Successfully injected {injection_count} parameters into the AST.")
-    
+
     save_cmd = f'saveTotalModel("{output_filename}", {model_name})'
     omc_connector._omc.sendExpression(save_cmd)
-    
+
     logger.info(f"Initialized model saved to disk as: {output_filename}")
