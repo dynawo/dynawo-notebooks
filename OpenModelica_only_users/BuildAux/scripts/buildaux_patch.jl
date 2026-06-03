@@ -292,7 +292,8 @@ function _remove_unused_deleted_ref_declarations(txt::String, deleted_local_refs
         m === nothing && continue
 
         without_declaration = replace(cleaned, m.match => ""; count = 1)
-        still_used = occursin(Regex("\\b" * escaped_ref * "\\b"), without_declaration)
+        code_without_comments = _strip_modelica_comments(without_declaration)
+        still_used = occursin(Regex("\\b" * escaped_ref * "\\b"), code_without_comments)
         still_used || (cleaned = without_declaration)
     end
 
@@ -352,13 +353,11 @@ function _patch_step_setpoint(txt::String, components)
         txt = replace(txt, Regex("\\b" * escaped_step_name * "\\.step\\b") => step_name * ".setPoint")
     end
 
-    # Insert missing static load equations.
+    # Insert missing static load variation equations.
     new_lines = String[]
     for (load_name, ref_field, delta_field, _) in sort!(collect(targets))
         escaped_load_name = replace(load_name, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        der_pattern = Regex("(?m)^\\s*der\\(" * escaped_load_name * "\\." * ref_field * "\\)\\s*=\\s*0\\s*;\\s*\$")
         delta_pattern = Regex("(?m)^\\s*" * escaped_load_name * "\\." * delta_field * "\\s*=\\s*0\\s*;\\s*\$")
-        occursin(der_pattern, txt) || push!(new_lines, "  der($load_name.$ref_field) = 0;")
         occursin(delta_pattern, txt) || push!(new_lines, "  $load_name.$delta_field = 0;")
     end
     if !isempty(new_lines) && occursin(r"(?m)^equation\s*$", txt)

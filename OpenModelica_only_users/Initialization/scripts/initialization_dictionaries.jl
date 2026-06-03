@@ -57,6 +57,15 @@ const INIT_PARAMS = Dict{String, Any}(
         ("u0Pu.im", "u0Pu.im"),
     ],
 
+    "Dynawo.Electrical.Loads.LoadZIP" => [
+        ("i0Pu.re", "i0Pu.re"),
+        ("i0Pu.im", "i0Pu.im"),
+        ("s0Pu.re", "s0Pu.re"),
+        ("s0Pu.im", "s0Pu.im"),
+        ("u0Pu.re", "u0Pu.re"),
+        ("u0Pu.im", "u0Pu.im"),
+    ],
+
     "Dynawo.Electrical.Loads.LoadAlphaBeta" => [
         ("i0Pu.re", "i0Pu.re"),
         ("i0Pu.im", "i0Pu.im"),

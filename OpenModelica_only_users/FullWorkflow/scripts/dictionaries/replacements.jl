@@ -42,9 +42,9 @@ const REPLACEMENTS = Dict{String, Any}(
         "extra_modifiers_raw" => [
             "Alpha = 0",
             "Beta = 0",
-            "U0Pu(fixed = false)",
-            "u0Pu(re(fixed = false), im(fixed = false))",
-            "i0Pu(re(fixed = false), im(fixed = false))",
+            "U0Pu = 1",
+            "u0Pu = Complex(1, 0)",
+            "i0Pu = Modelica.ComplexMath.conj(Complex({component}.PGen0Pu, {component}.QGen0Pu) / {component}.u0Pu)",
         ]
     ),
 
@@ -74,6 +74,15 @@ const REPLACEMENTS = Dict{String, Any}(
     ),
 
     "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative" => Dict(
+        "new_class" => "Dynawo.Electrical.Loads.LoadPQ",
+        "extra_modifiers_raw" => [
+            "i0Pu(re(fixed = false), im(fixed = false))",
+            "s0Pu(re(fixed = false), im(fixed = false))",
+            "u0Pu(re(fixed = false), im(fixed = false))",
+        ]
+    ),
+
+    "Dynawo.Electrical.Loads.LoadZIP" => Dict(
         "new_class" => "Dynawo.Electrical.Loads.LoadPQ",
         "extra_modifiers_raw" => [
             "i0Pu(re(fixed = false), im(fixed = false))",

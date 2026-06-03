@@ -249,7 +249,7 @@ function apply_replacements!(
             push!(assignments, "$(new_param) = $(rhs)")
         end
 
-        append!(assignments, extra_raw)
+        append!(assignments, replace.(extra_raw, "{component}" => comp_name))
 
         # Build the modification string and update the component
         mod_str = _code_modification_from_assignments(assignments)

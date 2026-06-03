@@ -46,9 +46,9 @@ const REPLACEMENTS = Dict{String, Any}(
         "extra_modifiers_raw" => [
             "Alpha = 0",
             "Beta = 0",
-            "U0Pu(fixed = false)",
-            "u0Pu(re(fixed = false), im(fixed = false))",
-            "i0Pu(re(fixed = false), im(fixed = false))",
+            "U0Pu = 1",
+            "u0Pu = Complex(1, 0)",
+            "i0Pu = Modelica.ComplexMath.conj(Complex({component}.PGen0Pu, {component}.QGen0Pu) / {component}.u0Pu)",
         ]
     ),
 
@@ -78,6 +78,15 @@ const REPLACEMENTS = Dict{String, Any}(
     ),
 
     "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative" => Dict(
+        "new_class" => "Dynawo.Electrical.Loads.LoadPQ",
+        "extra_modifiers_raw" => [
+            "i0Pu(re(fixed = false), im(fixed = false))",
+            "s0Pu(re(fixed = false), im(fixed = false))",
+            "u0Pu(re(fixed = false), im(fixed = false))",
+        ]
+    ),
+
+    "Dynawo.Electrical.Loads.LoadZIP" => Dict(
         "new_class" => "Dynawo.Electrical.Loads.LoadPQ",
         "extra_modifiers_raw" => [
             "i0Pu(re(fixed = false), im(fixed = false))",
@@ -144,6 +153,26 @@ const AUX_ALLOWED_REFS = Dict{String, Vector{String}}(
 )
 
 const INIT_MODELS = Dict{String, Any}(
+    "Dynawo.Electrical.Loads.LoadZIP" => Dict(
+        "init_component_suffix" => "_INIT",
+        "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
+
+        "write_modifiers" => Dict(
+            "P0Pu" => "PRefPu",
+            "Q0Pu" => "QRefPu",
+        ),
+
+        "extra_modifiers_raw" => [
+            "U0Pu(start = 1, fixed = false)",
+            "UPhase0(start = 0, fixed = false)",
+        ],
+
+        "init_equations_raw" => [
+            "{init}.U0Pu = Modelica.ComplexMath.'abs'({base}.terminal.V);",
+            "{init}.UPhase0 = Modelica.ComplexMath.arg({base}.terminal.V);",
+        ],
+    ),
+
     "Dynawo.Electrical.Loads.LoadPQ" => Dict(
         "init_component_suffix" => "_INIT",
         "init_class" => "Dynawo.Electrical.Loads.Load_INIT",
