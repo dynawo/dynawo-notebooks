@@ -49,7 +49,11 @@ function apply_initialization_modifiers!(omc, target_model, initializable_compon
     for (component, info) in initializable_components
         haskey(values_by_component, component) || error("Missing extracted values for $component")
         current_class = info["class"]
-        param_pairs = _resolve_init_params(component, current_class, init_model_by_component)
+        param_pairs = if current_class == INERTIAL_GRID_CLASS
+            [(field, field) for field in ("P0Pu", "Q0Pu", "U0Pu", "UPhase0")]
+        else
+            _resolve_init_params(component, current_class, init_model_by_component)
+        end
         assignments = build_modifier_assignments(info, param_pairs, values_by_component[component])
         mod_str = _code_modification_from_assignments(assignments)
         omc_call(omc, "updateComponent($component, $current_class, $target_model, modification = $mod_str)", parsed = false)

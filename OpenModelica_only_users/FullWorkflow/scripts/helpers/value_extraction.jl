@@ -1,6 +1,8 @@
 # helpers/value_extraction.jl
 # Extract initialization values computed by the auxiliary simulation.
 
+const INERTIAL_GRID_CLASS = "Dynawo.Electrical.Sources.InertialGrid.InertialGrid"
+
 """
     _resolve_init_params(component, class, init_model_by_component)
 
@@ -39,6 +41,11 @@ function get_initializable_components(components, init_model_by_component = Dict
     initializable = Dict{String, Dict{String, Any}}()
 
     for (component, info) in components
+        info["class"] == INERTIAL_GRID_CLASS && begin
+            initializable[component] = info
+            continue
+        end
+
         param_pairs = _resolve_init_params(component, info["class"], init_model_by_component)
         isnothing(param_pairs) && continue
         initializable[component] = info
@@ -59,6 +66,20 @@ function _read_result_value(aux_session, full_name::AbstractString)
     series = values[1]
     isempty(series) && error("No values found in $(aux_session.resultfile) for $(full_name)")
     return Float64(series[end])
+end
+
+function _extract_inertial_grid_values(aux_session, component::AbstractString)
+    vre = _read_result_value(aux_session, component * ".terminal.V.re")
+    vim = _read_result_value(aux_session, component * ".terminal.V.im")
+    ire = _read_result_value(aux_session, component * ".terminal.i.re")
+    iim = _read_result_value(aux_session, component * ".terminal.i.im")
+
+    return Dict{String, Float64}(
+        "P0Pu" => -(vre * ire + vim * iim),
+        "Q0Pu" => vre * iim - vim * ire,
+        "U0Pu" => sqrt(vre^2 + vim^2),
+        "UPhase0" => atan(vim, vre),
+    )
 end
 
 """
@@ -89,6 +110,11 @@ function extract_all_initialization_values(aux_session, components, init_model_b
     values_by_component = Dict{String, Dict{String, Float64}}()
 
     for (component, info) in components
+        info["class"] == INERTIAL_GRID_CLASS && begin
+            values_by_component[component] = _extract_inertial_grid_values(aux_session, component)
+            continue
+        end
+
         param_pairs = _resolve_init_params(component, info["class"], init_model_by_component)
         isnothing(param_pairs) && continue
         values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs)
