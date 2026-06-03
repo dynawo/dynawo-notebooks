@@ -9,7 +9,7 @@
  *
  * This file is part of Dynawo, an hybrid C++/Modelica open source time domain simulation tool for power systems.
  */
-model DIGrid_auxiliary
+model DIGrid_initialized
   extends Modelica.Icons.Example;
   parameter Dynawo.Types.VoltageModule UNom = 400 "Nominal voltage for the test case";
   parameter Dynawo.Types.ActivePowerPu deltaPPu = 0.05 "Variation on the PQ load active power in pu (base SNom)";
@@ -24,17 +24,17 @@ model DIGrid_auxiliary
   parameter Real L1 = 120 "Branch 1 length (in km)";
   parameter Real L2 = 120 "Branch 2 length (in km)";
   parameter Real L3 = 100 "Branch 3 length (in km)";
-  Dynawo.Electrical.Buses.InfiniteBus inertialGrid1(UPu = 1, UPhase = 0) annotation(
+  Dynawo.Electrical.Sources.InertialGrid.InertialGrid inertialGrid1(U0Pu = 1.0, Km = 1, Q0Pu = 2.2515679729740707, Tr = 15, Fh = 0, H = 2.6, DPu = 2, SNom = SNom, P0Pu = 2.135609306794866, UPhase0 = 0.0, R = 0.05) annotation(
     Placement(visible = true, transformation(origin = {-38, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta inertialGrid2(QGen0Pu = 0, PGen0Pu = 3.3, Alpha = 0, Beta = 0, U0Pu = 1, u0Pu = Complex(1, 0), i0Pu = Modelica.ComplexMath.conj(Complex(inertialGrid2.PGen0Pu, inertialGrid2.QGen0Pu)/inertialGrid2.u0Pu)) annotation(
+  Dynawo.Electrical.Sources.InertialGrid.InertialGrid inertialGrid2(U0Pu = 0.9546457674808407, Km = 1, Q0Pu = -1.3877787807814457e-17, Tr = 15, Fh = 0, H = 2.6, DPu = 2, SNom = SNom, P0Pu = 3.3, UPhase0 = 0.03170317664333713, R = 0.05) annotation(
     Placement(visible = true, transformation(origin = {-38, -40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Loads.LoadPQ load(i0Pu(re(start = 5, fixed = false), im(start = -(0), fixed = false)), s0Pu(re(start = 5, fixed = false), im(start = 0, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadZIP load(Zp = 0, u0Pu = Complex(0.7798689823338428, -0.29879803762993795), Pp = 1, Zq = 0, i0Pu = Complex(5.590651847629191, -2.1419954363933136), s0Pu = Complex(5.0, 0.0), Ip = 0, Pq = 1, Iq = 0) annotation(
     Placement(visible = true, transformation(origin = {84, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
-  Dynawo.Electrical.Loads.LoadPQ loadPQ(i0Pu(re(start = 0, fixed = false), im(start = -(0), fixed = false)), s0Pu(re(start = 0, fixed = false), im(start = 0, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
+  Dynawo.Electrical.Loads.LoadPQ loadPQ(u0Pu = Complex(1.0, 0.0), i0Pu = Complex(-0.0, -0.0), s0Pu = Complex(0.0, 0.0)) annotation(
     Placement(visible = true, transformation(origin = {-20, 18}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load(Value0 = 5);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load(Value0 = 0);
-  Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_loadPQ(Value0 = 0);
+  Dynawo.Electrical.Controls.Basics.Step PrefPu_loadPQ(Value0 = 0, Height = 1, tStep = 10);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_loadPQ(Value0 = 0);
   Dynawo.Electrical.Buses.Bus busIG1 annotation(
     Placement(visible = true, transformation(origin = {-2, 40}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
@@ -50,11 +50,10 @@ model DIGrid_auxiliary
     Placement(visible = true, transformation(origin = {16, -26}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
   Dynawo.Electrical.Lines.Line line3(BPu = 0, GPu = 0, RPu = R3Pu*L3, XPu = X3Pu*L3) annotation(
     Placement(visible = true, transformation(origin = {50, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
-Dynawo.Electrical.Loads.Load_INIT load_INIT(Q0Pu = 0, P0Pu = 5, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT loadPQ_INIT(Q0Pu = 0, P0Pu = 0, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Types.Frequency deltaFrequency "Frequency difference between both inertial grids";
 equation
-  loadPQ.deltaP = 0;
 // deltaFrequency calculation
+  deltaFrequency = inertialGrid1.reducedOrderSFR.deltaFrequency - inertialGrid2.reducedOrderSFR.deltaFrequency;
 //Switch-off equations inhibitions
   load.switchOffSignal1.value = false;
   load.switchOffSignal2.value = false;
@@ -66,10 +65,15 @@ equation
   line2.switchOffSignal2.value = false;
   line3.switchOffSignal1.value = false;
   line3.switchOffSignal2.value = false;
-inertialGrid2.switchOffSignal1.value = false;
-  inertialGrid2.switchOffSignal2.value = false;
-  inertialGrid2.switchOffSignal3.value = false;
+  inertialGrid1.injectorURI.switchOffSignal1.value = false;
+  inertialGrid1.injectorURI.switchOffSignal2.value = false;
+  inertialGrid1.injectorURI.switchOffSignal3.value = false;
+  inertialGrid2.injectorURI.switchOffSignal1.value = false;
+  inertialGrid2.injectorURI.switchOffSignal2.value = false;
+  inertialGrid2.injectorURI.switchOffSignal3.value = false;
 // No variations in PspPu for the inertial grids
+  der(inertialGrid1.reducedOrderSFR.PspPu) = 0;
+  der(inertialGrid2.reducedOrderSFR.PspPu) = 0;
 // No variations in the ZIP Load
   load.deltaP = 0;
   load.deltaQ = 0;
@@ -77,8 +81,11 @@ inertialGrid2.switchOffSignal1.value = false;
   load.QRefPu = QrefPu_load.setPoint;
 // Variation in P in loadPQ (5% in base SNom for inertialGrid1)
   loadPQ.deltaQ = 0;
+  when time > 10 then
+    loadPQ.deltaP = deltaPPu*SNom/Dynawo.Electrical.SystemBase.SnRef;
+  end when;
 // LoadPQ Setpoint
-  loadPQ.PRefPu = PrefPu_loadPQ.setPoint;
+  loadPQ.PRefPu = PrefPu_loadPQ.step;
   loadPQ.QRefPu = QrefPu_loadPQ.setPoint;
   connect(busIG1.terminal, loadPQ.terminal) annotation(
     Line(points = {{-2, 40}, {-20, 40}, {-20, 18}}, color = {0, 0, 255}));
@@ -100,11 +107,6 @@ inertialGrid2.switchOffSignal1.value = false;
     Line(points = {{60, 0}, {72, 0}}, color = {0, 0, 255}));
   connect(line3.terminal2, bus.terminal) annotation(
     Line(points = {{40, 0}, {16, 0}}, color = {0, 0, 255}));
-initial equation
-  load_INIT.U0Pu = Modelica.ComplexMath.'abs'(load.terminal.V);
-  load_INIT.UPhase0 = Modelica.ComplexMath.arg(load.terminal.V);
-  loadPQ_INIT.U0Pu = Modelica.ComplexMath.'abs'(loadPQ.terminal.V);
-  loadPQ_INIT.UPhase0 = Modelica.ComplexMath.arg(loadPQ.terminal.V);
   annotation(
     preferredView = "diagram",
     experiment(StartTime = 0, StopTime = 50, Tolerance = 1e-08, Interval = 0.001),
@@ -129,4 +131,4 @@ initial equation
 </figure>
 
 </div></div><div><br></div><div>The test case can be used and modified to assess the contribution of any device under test to the interarea mode.</div></body></html>"));
-end DIGrid_auxiliary;
+end DIGrid_initialized;

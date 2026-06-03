@@ -84,15 +84,12 @@ equation
   der(inertialGrid1.reducedOrderSFR.PspPu) = 0;
   der(inertialGrid2.reducedOrderSFR.PspPu) = 0;
 // No variations in the ZIP Load
-  der(load.PRefPu) = 0;
-  der(load.QRefPu) = 0;
   load.deltaP = 0;
   load.deltaQ = 0;
   load.PRefPu = PrefPu_load.setPoint;
   load.QRefPu = QrefPu_load.setPoint;
 
 // Variation in P in loadPQ (5% in base SNom for inertialGrid1)
-  der(loadPQ.QRefPu) = 0;
   loadPQ.deltaQ = 0;
   when time > 10 then
     loadPQ.deltaP = deltaPPu * SNom / Dynawo.Electrical.SystemBase.SnRef;
