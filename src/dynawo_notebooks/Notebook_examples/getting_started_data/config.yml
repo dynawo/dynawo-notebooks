@@ -1,0 +1,12 @@
+dynawo:
+    homeDir: "WORKING_DIR/dynawo"
+    debug: true
+
+dynawo-simulation-default-parameters:
+    parametersFile: "WORKING_DIR/getting_started_data/Base_Case.par"
+    network.parametersFile: "WORKING_DIR/getting_started_data/Network.par"
+    network.parametersId: "Network"
+    solver.type: SIM
+    solver.parametersFile: "WORKING_DIR/getting_started_data/Solver.par"
+    solver.parametersId: "Solver"
+    debug: true
