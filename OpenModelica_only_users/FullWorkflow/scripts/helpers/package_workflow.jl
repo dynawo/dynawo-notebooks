@@ -205,7 +205,11 @@ function simulation_flags_without_log_stats(omc, model::String)
             "getAnnotationModifierValue($model, \"__OpenModelica_simulationFlags\", \"$flag_name\")",
         )
 
-        push!(simflag_parts, "-$flag_name=$flag_value")
+        if flag_value == "()"
+            push!(simflag_parts, "-$flag_name")
+        else
+            push!(simflag_parts, "-$flag_name=$flag_value")
+        end
     end
 
     return join(simflag_parts, " ")
