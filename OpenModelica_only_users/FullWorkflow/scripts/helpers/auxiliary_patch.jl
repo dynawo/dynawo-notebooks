@@ -1,12 +1,5 @@
-# scripts/buildaux_patch.jl
+# helpers/auxiliary_patch.jl
 # Text rewrite and post-save patch helpers
-
-module BuildAuxPatch
-
-export
-    rewrite_aux_extends,
-    patch_aux_equations!,
-    patch_testcase_omega_refs!
 
 # ------------------------------------------------------------
 # Regex Helper
@@ -34,82 +27,6 @@ end
 # Post-Save Patches
 # ------------------------------------------------------------
 
-function _strip_modelica_comments(s::AbstractString)
-    isempty(s) && return ""
-
-    out = IOBuffer()
-    in_str = false
-    escaped = false
-    in_line_comment = false
-    in_block_comment = false
-
-    i = firstindex(s)
-    while i <= lastindex(s)
-        c = s[i]
-        next_i = nextind(s, i)
-        next_c = next_i <= lastindex(s) ? s[next_i] : nothing
-
-        if in_line_comment
-            if c == '\n'
-                in_line_comment = false
-                write(out, c)
-            end
-            i = nextind(s, i)
-            continue
-        end
-
-        if in_block_comment
-            if c == '*' && next_c == '/'
-                in_block_comment = false
-                i = nextind(s, next_i)
-            else
-                if c == '\n'
-                    write(out, c)
-                end
-                i = nextind(s, i)
-            end
-            continue
-        end
-
-        if in_str
-            write(out, c)
-            if escaped
-                escaped = false
-            elseif c == '\\'
-                escaped = true
-            elseif c == '"'
-                in_str = false
-            end
-            i = nextind(s, i)
-            continue
-        end
-
-        if c == '"'
-            in_str = true
-            write(out, c)
-            i = nextind(s, i)
-            continue
-        end
-
-        if c == '/' && next_c == '/'
-            in_line_comment = true
-            i = nextind(s, next_i)
-            continue
-        end
-
-        if c == '/' && next_c == '*'
-            in_block_comment = true
-            i = nextind(s, next_i)
-            continue
-        end
-
-        write(out, c)
-        i = nextind(s, i)
-    end
-
-    return strip(String(take!(out)))
-end
-
 function _collect_deleted_component_names(components)
     components === nothing && return Set{String}()
 
@@ -131,10 +48,6 @@ end
 function _collect_allowed_component_refs(components, slack_component::String)
     components === nothing && return Dict{String, Set{String}}()
 
-    # Read the replacement and whitelist tables used by the notebooks.
-    replacements = Main.BuildAuxDictionaries.REPLACEMENTS
-    aux_allowed_refs = Main.BuildAuxDictionaries.AUX_ALLOWED_REFS
-
     # Deleted components keep an empty allowed interface.
     allowed_refs_by_component = Dict{String, Set{String}}()
     deleted_names = _collect_deleted_component_names(components)
@@ -147,18 +60,18 @@ function _collect_allowed_component_refs(components, slack_component::String)
 
         # Slack replacements always end up as InfiniteBus.
         if comp_name == slack_component
-            allowed_refs_by_component[comp_name] = Set(aux_allowed_refs["Dynawo.Electrical.Buses.InfiniteBus"])
+            allowed_refs_by_component[comp_name] = Set(AUX_ALLOWED_REFS["Dynawo.Electrical.Buses.InfiniteBus"])
             continue
         end
 
         old_class = string(get(c, "class", ""))
-        haskey(replacements, old_class) || continue
+        haskey(REPLACEMENTS, old_class) || continue
 
         # Regular replacements use the allowed interface of their new class.
-        new_class = string(replacements[old_class]["new_class"])
-        haskey(aux_allowed_refs, new_class) || continue
+        new_class = string(REPLACEMENTS[old_class]["new_class"])
+        haskey(AUX_ALLOWED_REFS, new_class) || continue
 
-        allowed_refs_by_component[comp_name] = Set(aux_allowed_refs[new_class])
+        allowed_refs_by_component[comp_name] = Set(AUX_ALLOWED_REFS[new_class])
     end
 
     return allowed_refs_by_component
@@ -371,14 +284,14 @@ function _patch_step_setpoint(txt::String, components)
 end
 
 """
-    patch_aux_equations!(aux_file::String, slack_component::String = ""; components = nothing)
+    patch_aux_equations!(aux_file::String, components, slack_component::String = "")
 
 Apply targeted text patches to the saved auxiliary `.mo` file.
 
 This function fixes specific equation lines that are easier to patch in text
 than through OpenModelica API calls.
 """
-function patch_aux_equations!(aux_file::String, slack_component::String = ""; components = nothing)
+function patch_aux_equations!(aux_file::String, components, slack_component::String = "")
     txt = read(aux_file, String)
 
     # Patch switch-off equations after injector-based replacements.
@@ -435,5 +348,3 @@ function patch_testcase_omega_refs!(aux_file::String)
     write(aux_file, txt)
     return nothing
 end
-
-end # module

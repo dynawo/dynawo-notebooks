@@ -1,9 +1,5 @@
-# scripts/initialization_dictionaries.jl
+# dictionaries/init_parameters.jl
 # Initialization parameter mappings by component class
-
-module InitializationDictionaries
-
-export INIT_PARAMS
 
 const INIT_PARAMS = Dict{String, Any}(
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource" => [
@@ -48,7 +44,7 @@ const INIT_PARAMS = Dict{String, Any}(
         ("Q0Pu", "Q0Pu"),
     ],
 
-    "Dynawo.Electrical.Loads.LoadPQ" => [
+    "Dynawo.Electrical.Loads.LoadZIP" => [
         ("i0Pu.re", "i0Pu.re"),
         ("i0Pu.im", "i0Pu.im"),
         ("s0Pu.re", "s0Pu.re"),
@@ -57,7 +53,7 @@ const INIT_PARAMS = Dict{String, Any}(
         ("u0Pu.im", "u0Pu.im"),
     ],
 
-    "Dynawo.Electrical.Loads.LoadZIP" => [
+    "Dynawo.Electrical.Loads.LoadPQ" => [
         ("i0Pu.re", "i0Pu.re"),
         ("i0Pu.im", "i0Pu.im"),
         ("s0Pu.re", "s0Pu.re"),
@@ -313,5 +309,3 @@ const INIT_PARAMS = Dict{String, Any}(
         ),
     ),
 )
-
-end # module
