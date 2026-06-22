@@ -15,6 +15,6 @@ Set `SWEEP_COMPONENT`, `SWEEP_PARAMETER`, and `SWEEP_VALUES` to define the param
 
 Set `REINITIALIZE_EACH_CASE = true` to recalculate initialization values after every parameter update. Set it to `false` to initialize the base case once and reuse those initialization values for the complete sweep.
 
-The package notebook also uses `INIT_MODEL_BY_COMPONENT` and `SLACK_COMPONENT`.
+Both notebooks support `INIT_MODEL_BY_COMPONENT` and `SLACK_COMPONENT` for models that require component-specific INIT profiles or slack handling.
 
 Run the cells in order. Generated auxiliary and initialized Modelica cases are stored under `outputs/<study>/modelica`, while selected CSV results are stored under `outputs/<study>/results`.
