@@ -14,6 +14,6 @@ This folder contains notebooks that build the auxiliary case and create the init
 
 For a single-file model, configure `MODEL`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, `INIT_MODEL_BY_COMPONENT`, and `SLACK_COMPONENT`.
 
-For a package model, configure the full package model name in `MODEL`, the library paths, `INIT_MODEL_BY_COMPONENT`, and `SLACK_COMPONENT`.
+For a package model, configure `MODEL`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, `INIT_MODEL_BY_COMPONENT`, and `SLACK_COMPONENT`.
 
 Run the cells in order. The notebooks build and simulate the auxiliary case, extract the initialization values, create the initialized dynamic case, and validate it with a final simulation.

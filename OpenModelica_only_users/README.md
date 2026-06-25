@@ -1,19 +1,14 @@
 # OpenModelica Workflows
 
-This folder contains notebook workflows for OpenModelica cases using the Dynawo Modelica library:
-
-- `BuildAux/`: builds an auxiliary steady-state version of a single model or package.
-- `Initialization/`: uses an existing auxiliary model or package to create an initialized dynamic case.
-- `FullWorkflow/`: builds the auxiliary case, extracts initialization values, and creates the initialized dynamic case in one notebook.
-- `ParametricStudies/`: runs parameter sweeps on single-file and package models.
+This folder contains notebook workflows for OpenModelica cases using the Dynawo Modelica library.
 
 ## Contents
 
-- [`BuildAux/`](BuildAux/): auxiliary model and package generation.
-- [`Initialization/`](Initialization/): initialization from an existing auxiliary case.
-- [`FullWorkflow/`](FullWorkflow/): complete auxiliary-build and initialization workflow.
-- [`ParametricStudies/`](ParametricStudies/): parameter sweeps with optional reinitialization for each parameter value.
-- `Compare_*.ipynb`: notebooks for comparing selected simulation results.
+- [`BuildAux/`](BuildAux/): builds an auxiliary steady-state model or package.
+- [`Initialization/`](Initialization/): creates an initialized dynamic model or package from an existing auxiliary case.
+- [`FullWorkflow/`](FullWorkflow/): builds the auxiliary case and creates the initialized dynamic case in one workflow.
+- [`ParametricStudies/`](ParametricStudies/): runs parameter sweeps for single-file and package models, with optional reinitialization.
+- `Compare_*.ipynb`: notebooks for comparing generated OpenModelica cases with Dynawo reference models.
 - `Older notebooks/`: previous examples and workflows kept for reference.
 
 ## Prerequisites
@@ -52,7 +47,3 @@ The notebooks also expect local library paths for:
 - `MODELICA_PKG_PATH`: path to the Modelica `package.mo`
 
 Update those paths in the notebook configuration cells before running anything.
-
-## Workflow Documentation
-
-Each workflow folder contains its own README with its notebooks, configuration options, and generated outputs.

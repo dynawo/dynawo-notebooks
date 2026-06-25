@@ -1,6 +1,6 @@
 # Model Initialization
 
-This folder contains notebooks for creating initialized dynamic models from auxiliary models generated with `BuildAux`.
+This folder contains notebooks for creating initialized dynamic models and packages from auxiliary cases generated with `BuildAux`.
 
 ## Contents
 
@@ -12,8 +12,8 @@ This folder contains notebooks for creating initialized dynamic models from auxi
 
 ## Configuration
 
-For a single-file model, configure the original model, auxiliary model, initialized model output, library paths, and `PLOT_VARIABLE`.
+For a single-file model, configure `MODEL_DIR`, `MODEL`, `MODEL_FILE_PATH`, `INITIALIZED_MODEL`, `INITIALIZED_FILE_PATH`, `AUX_MODEL`, `AUX_FILE_PATH`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, and `PLOT_VARIABLE`.
 
-For a package model, configure the original package, auxiliary package, root model, library paths, `INIT_MODEL_BY_COMPONENT`, and `PLOT_VARIABLE`.
+For a package model, configure `MODEL_DIR`, `MODELS_PKG_PATH`, `AUX_DIR`, `AUX_PACKAGE_FILE`, `MODEL`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, `INIT_MODEL_BY_COMPONENT`, and `PLOT_VARIABLE`.
 
 Run the cells in order. The auxiliary model is simulated, its initialization values are extracted, and the initialized dynamic model or package is written as `*_initialized`.

@@ -1,6 +1,6 @@
 # Build Auxiliary Models
 
-This folder contains notebooks for generating auxiliary steady-state models used by the initialization workflow.
+This folder contains notebooks for generating auxiliary steady-state models and packages used by the initialization workflow.
 
 ## Contents
 
