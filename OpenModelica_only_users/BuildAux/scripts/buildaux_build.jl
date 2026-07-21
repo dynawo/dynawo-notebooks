@@ -595,10 +595,10 @@ end
 """
     add_init_equations!(omc, model, aux_model, components, INIT_MODELS, INIT_MODEL_BY_COMPONENT, SLACK_COMPONENT)
 
-Build and inject an `initial equation` block into `aux_model`.
+Add the initial equations to `aux_model`.
 
 Equations are generated from `init_equations` and `init_equations_raw`
-mappings in `INIT_MODELS`.
+mappings in `INIT_MODELS` and added with `addEquation`.
 """
 function add_init_equations!(
     omc,
@@ -609,8 +609,7 @@ function add_init_equations!(
     INIT_MODEL_BY_COMPONENT::Dict{String, String},
     SLACK_COMPONENT::String,
 )
-    lines = String[]
-    push!(lines, "initial equation")
+    eqs = String[]
 
     for (base_name, c) in components
         base_class = c["class"]::String
@@ -630,8 +629,8 @@ function add_init_equations!(
 
         # Slack equations use terminal V and i directly
         if base_name == SLACK_COMPONENT
-            push!(lines, "$init_name.P0Pu = Modelica.ComplexMath.real($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i));")
-            push!(lines, "$init_name.Q0Pu = Modelica.ComplexMath.imag($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i));")
+            push!(eqs, "$init_name.P0Pu = Modelica.ComplexMath.real($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i))")
+            push!(eqs, "$init_name.Q0Pu = Modelica.ComplexMath.imag($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i))")
             continue
         end
 
@@ -643,22 +642,22 @@ function add_init_equations!(
                 should_flip_sign = startswith(base_var, "-")
                 source_var = should_flip_sign ? base_var[2:end] : base_var
                 rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
-                push!(lines, "$init_name.$init_var = $rhs;")
+                push!(eqs, "$init_name.$init_var = $rhs")
             end
         end
 
         if haskey(spec, "init_equations_raw")
             for raw in spec["init_equations_raw"]::Vector{String}
                 line = replace(replace(raw, "{init}" => init_name), "{base}" => base_name)
-                push!(lines, line)
+                push!(eqs, line)
             end
         end
     end
 
-    # Build and inject the block
-    length(lines) == 1 && return nothing
-    block = join(lines, "\n")
-    om_send(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
+    # Add each initial equation directly through the OpenModelica API
+    for eq in eqs
+        om_send(omc, "addEquation($aux_model, \"$(rstrip(strip(eq), ';'))\", true)", parsed = false)
+    end
 end
 
 # ------------------------------------------------------------
