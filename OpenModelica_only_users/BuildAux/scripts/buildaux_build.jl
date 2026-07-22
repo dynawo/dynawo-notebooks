@@ -757,16 +757,10 @@ function delete_connections!(
         end
     end
 
-    switch_signal_lines = String[]
+    # Add false equations for switch-off signals whose event/source connection is deleted.
     for switch_signal in sort!(collect(deleted_switch_signals))
         _has_switch_off_signal_equation(omc, aux_model, switch_signal) && continue
-        push!(switch_signal_lines, "$switch_signal.value = false;")
-    end
-
-    # Add false equations for switch-off signals whose event/source connection is deleted.
-    if !isempty(switch_signal_lines)
-        block = "equation\n" * join(switch_signal_lines, "\n")
-        om_send(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
+        om_send(omc, "addEquation($aux_model, \"$switch_signal.value = false\", false)", parsed = false)
     end
 
     return cleanup_targets
