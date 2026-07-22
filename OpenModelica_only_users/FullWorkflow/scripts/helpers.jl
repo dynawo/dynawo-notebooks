@@ -28,7 +28,7 @@ export
     add_init_models!,
     apply_LF_modifiers!,
     add_init_equations!,
-    patch_aux_equations!,
+    clean_aux_equations!,
     get_initializable_components,
     extract_all_initialization_values,
     apply_initialization_modifiers!,
