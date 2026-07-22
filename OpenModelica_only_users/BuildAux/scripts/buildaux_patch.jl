@@ -3,10 +3,12 @@
 
 module BuildAuxPatch
 
+using OMJulia
+using ..BuildAuxOmc: om_send
+
 export
     rewrite_aux_extends,
-    patch_aux_equations!,
-    patch_testcase_omega_refs!
+    clean_aux_equations!
 
 # ------------------------------------------------------------
 # Regex Helper
@@ -22,7 +24,7 @@ function rewrite_aux_extends(text::String, aux_name_map::Dict{String, String})
     for (original_parent, aux_parent) in aux_name_map
         # Escape the parent name so regex metacharacters stay literal.
         escaped_parent = replace(original_parent, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        
+
         pattern = Regex("(?m)(\\bextends\\s+)" * escaped_parent * "(\\s*[;(])")
         replacement = SubstitutionString("\\1" * aux_parent * "\\2")
         rewritten = replace(rewritten, pattern => replacement)
@@ -31,84 +33,8 @@ function rewrite_aux_extends(text::String, aux_name_map::Dict{String, String})
 end
 
 # ------------------------------------------------------------
-# Post-Save Patches
+# Dead-Reference Detection Helpers
 # ------------------------------------------------------------
-
-function _strip_modelica_comments(s::AbstractString)
-    isempty(s) && return ""
-
-    out = IOBuffer()
-    in_str = false
-    escaped = false
-    in_line_comment = false
-    in_block_comment = false
-
-    i = firstindex(s)
-    while i <= lastindex(s)
-        c = s[i]
-        next_i = nextind(s, i)
-        next_c = next_i <= lastindex(s) ? s[next_i] : nothing
-
-        if in_line_comment
-            if c == '\n'
-                in_line_comment = false
-                write(out, c)
-            end
-            i = nextind(s, i)
-            continue
-        end
-
-        if in_block_comment
-            if c == '*' && next_c == '/'
-                in_block_comment = false
-                i = nextind(s, next_i)
-            else
-                if c == '\n'
-                    write(out, c)
-                end
-                i = nextind(s, i)
-            end
-            continue
-        end
-
-        if in_str
-            write(out, c)
-            if escaped
-                escaped = false
-            elseif c == '\\'
-                escaped = true
-            elseif c == '"'
-                in_str = false
-            end
-            i = nextind(s, i)
-            continue
-        end
-
-        if c == '"'
-            in_str = true
-            write(out, c)
-            i = nextind(s, i)
-            continue
-        end
-
-        if c == '/' && next_c == '/'
-            in_line_comment = true
-            i = nextind(s, next_i)
-            continue
-        end
-
-        if c == '/' && next_c == '*'
-            in_block_comment = true
-            i = nextind(s, next_i)
-            continue
-        end
-
-        write(out, c)
-        i = nextind(s, i)
-    end
-
-    return strip(String(take!(out)))
-end
 
 function _collect_deleted_component_names(components)
     components === nothing && return Set{String}()
@@ -165,9 +91,7 @@ function _collect_allowed_component_refs(components, slack_component::String)
 end
 
 function _statement_uses_disallowed_ref(statement::String, allowed_refs_by_component::Dict{String, Set{String}})
-    # Ignore comments when checking whether a statement references dead paths.
-    statement_code = _strip_modelica_comments(statement)
-    stripped_statement = strip(statement_code)
+    stripped_statement = strip(statement)
     isempty(stripped_statement) && return false
 
     # Connections are already cleaned up earlier in the notebook workflow.
@@ -178,7 +102,7 @@ function _statement_uses_disallowed_ref(statement::String, allowed_refs_by_compo
         escaped_comp_name = replace(comp_name, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
         ref_pattern = Regex("\\b" * escaped_comp_name * "\\.([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)")
 
-        for m in eachmatch(ref_pattern, statement_code)
+        for m in eachmatch(ref_pattern, statement)
             suffix = "." * String(m.captures[1])
             isempty(allowed_refs) && return true
 
@@ -192,8 +116,7 @@ end
 
 function _simple_local_refs(statement::String)
     refs = Set{String}()
-    statement_code = _strip_modelica_comments(statement)
-    parts = split(statement_code, "=", limit = 2)
+    parts = split(statement, "=", limit = 2)
     length(parts) == 2 || return refs
 
     lhs = strip(parts[1])
@@ -205,111 +128,68 @@ function _simple_local_refs(statement::String)
     return refs
 end
 
-function _delete_dead_equations(txt::String, components, slack_component::String)
-    components === nothing && return txt, Set{String}()
+# ------------------------------------------------------------
+# Equation Readers
+# ------------------------------------------------------------
 
-    # Track the interfaces that are allowed to remain after replacements and deletions.
-    allowed_refs_by_component = _collect_allowed_component_refs(components, slack_component)
-    isempty(allowed_refs_by_component) && return txt, Set{String}()
-
-    # Rebuild equation sections while dropping statements that reference dead interfaces.
-    in_equation_section = false
-    statement_lines = String[]
-    rewritten_lines = String[]
-    deleted_local_refs = Set{String}()
-    lines = split(txt, "\n"; keepempty = true)
-
-    function flush_statement!()
-        isempty(statement_lines) && return
-        statement = join(statement_lines, "\n")
-        if _statement_uses_disallowed_ref(statement, allowed_refs_by_component)
-            union!(deleted_local_refs, _simple_local_refs(statement))
-        else
-            append!(rewritten_lines, statement_lines)
-        end
-        empty!(statement_lines)
+function _equation_items(omc, aux_model::String)
+    items = String[]
+    n = sendExpression(omc, "getEquationItemsCount($aux_model)")
+    for i in 1:n
+        eq = String(sendExpression(omc, "getNthEquationItem($aux_model, $i)", parsed = false))
+        push!(items, String(strip(replace(eq, "\"" => ""))))
     end
-
-    for line in lines
-        if !in_equation_section
-            push!(rewritten_lines, line)
-            if occursin(r"^\s*(initial equation|equation)\s*$", line)
-                in_equation_section = true
-            end
-            continue
-        end
-
-        if isempty(statement_lines) && occursin(r"^\s*(annotation\b|initial equation\b|equation\b|initial algorithm\b|algorithm\b|end\b)", line)
-            in_equation_section = false
-            push!(rewritten_lines, line)
-            if occursin(r"^\s*(initial equation|equation)\s*$", line)
-                in_equation_section = true
-            end
-            continue
-        end
-
-        if isempty(statement_lines) && (isempty(strip(line)) || occursin(r"^\s*//", line))
-            push!(rewritten_lines, line)
-            continue
-        end
-
-        push!(statement_lines, line)
-        occursin(';', line) && flush_statement!()
-    end
-
-    flush_statement!()
-    return join(rewritten_lines, "\n"), deleted_local_refs
+    return items
 end
 
-function _remove_deleted_local_ref_equations(txt::String, deleted_local_refs::Set{String})
-    cleaned = txt
-
-    for ref in deleted_local_refs
-        escaped_ref = replace(ref, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        cleaned = replace(
-            cleaned,
-            Regex("(?m)^\\s*" * escaped_ref * "\\s*=\\s*[^;]+;\\s*\\n?") => "",
-        )
+function _all_equation_items(omc, aux_model::String)
+    items = _equation_items(omc, aux_model)
+    n = sendExpression(omc, "getInitialEquationItemsCount($aux_model)")
+    for i in 1:n
+        eq = String(sendExpression(omc, "getNthInitialEquationItem($aux_model, $i)", parsed = false))
+        push!(items, String(strip(replace(eq, "\"" => ""))))
     end
-
-    return cleaned
+    return items
 end
 
-function _remove_unused_deleted_ref_declarations(txt::String, deleted_local_refs::Set{String})
-    cleaned = txt
+# ------------------------------------------------------------
+# Equation Cleanup Steps
+# ------------------------------------------------------------
 
-    for ref in deleted_local_refs
-        escaped_ref = replace(ref, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        declaration_pattern = Regex(
-            "(?m)^\\s*" *
-            "(?:final\\s+|inner\\s+|outer\\s+|replaceable\\s+|parameter\\s+|constant\\s+|discrete\\s+|input\\s+|output\\s+)*" *
-            "(?:[A-Za-z_]\\w*\\.)*[A-Za-z_]\\w*" *
-            "\\s+" * escaped_ref * "\\b" *
-            "[^;]*;\\s*\\n?",
-        )
-
-        m = match(declaration_pattern, cleaned)
+function _patch_switch_off_signals!(omc, aux_model::String, slack_component::String)
+    for eq in _equation_items(omc, aux_model)
+        m = match(r"^([A-Za-z_]\w*)\.(injector|injectorURI|wT4Injector)\.(switchOffSignal[123]\.value)\s*=\s*false\s*;?$", eq)
         m === nothing && continue
 
-        without_declaration = replace(cleaned, m.match => ""; count = 1)
-        code_without_comments = _strip_modelica_comments(without_declaration)
-        still_used = occursin(Regex("\\b" * escaped_ref * "\\b"), code_without_comments)
-        still_used || (cleaned = without_declaration)
+        if m.captures[1] == slack_component
+            # Slack becomes an InfiniteBus, which has no switch-off signal
+            om_send(omc, "deleteEquation($aux_model, \"$eq\")")
+        else
+            # Replacement class exposes the signal directly, so drop the injector level
+            om_send(omc, "updateEquation($aux_model, \"$eq\", \"$(m.captures[1]).$(m.captures[3]) = false\")")
+        end
     end
-
-    return cleaned
 end
 
-function _patch_time_switch_events(txt::String)
-    return replace(
-        txt,
-        r"(?m)^(\s*)([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.(switchOffSignal[123]\.value)\s*=\s*[^;]*\btime\b[^;]*;\s*(?://.*)?$" =>
-            s"\1\2.\3 = false;",
-    )
+function _patch_time_switch_events!(omc, aux_model::String)
+    for eq in _equation_items(omc, aux_model)
+        m = match(r"^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.(switchOffSignal[123]\.value)\s*=\s*[^;]*\btime\b[^;]*;?$", eq)
+        m === nothing && continue
+
+        om_send(omc, "updateEquation($aux_model, \"$eq\", \"$(m.captures[1]).$(m.captures[2]) = false\")")
+    end
 end
 
-function _patch_step_setpoint(txt::String, components)
-    components === nothing && return txt
+function _remove_when_blocks!(omc, aux_model::String)
+    for eq in _equation_items(omc, aux_model)
+        occursin(r"^when\b", eq) || continue
+
+        om_send(omc, "deleteEquation($aux_model, \"$(replace(eq, "\n" => "\\n"))\")")
+    end
+end
+
+function _patch_step_setpoint!(omc, aux_model::String, components)
+    components === nothing && return nothing
 
     # Collect original Step component names.
     step_names = Set{String}()
@@ -325,21 +205,19 @@ function _patch_step_setpoint(txt::String, components)
         push!(load_names, comp_name)
     end
 
+    eqs = _equation_items(omc, aux_model)
+
     # Detect Step-driven load reference equations.
     targets = Set{Tuple{String, String, String, String}}()
-    for m in eachmatch(r"(?m)^\s*([A-Za-z_]\w*)\.(PRefPu|QRefPu)\s*=\s*([A-Za-z_]\w*)\.step\s*;\s*$", txt)
-        load_name = String(m.captures[1])
-        ref_field = String(m.captures[2])
-        step_name = String(m.captures[3])
-        load_name in load_names || continue
-        step_name in step_names || continue
-        delta_field = ref_field == "PRefPu" ? "deltaP" : "deltaQ"
-        push!(targets, (load_name, ref_field, delta_field, step_name))
-    end
-    for m in eachmatch(r"(?m)^\s*([A-Za-z_]\w*)\.step\s*=\s*([A-Za-z_]\w*)\.(PRefPu|QRefPu)\s*;\s*$", txt)
-        step_name = String(m.captures[1])
-        load_name = String(m.captures[2])
-        ref_field = String(m.captures[3])
+    for eq in eqs
+        m = match(r"^([A-Za-z_]\w*)\.(PRefPu|QRefPu)\s*=\s*([A-Za-z_]\w*)\.step\s*;?$", eq)
+        if m === nothing
+            m = match(r"^([A-Za-z_]\w*)\.step\s*=\s*([A-Za-z_]\w*)\.(PRefPu|QRefPu)\s*;?$", eq)
+            m === nothing && continue
+            step_name = String(m.captures[1]); load_name = String(m.captures[2]); ref_field = String(m.captures[3])
+        else
+            load_name = String(m.captures[1]); ref_field = String(m.captures[2]); step_name = String(m.captures[3])
+        end
         load_name in load_names || continue
         step_name in step_names || continue
         delta_field = ref_field == "PRefPu" ? "deltaP" : "deltaQ"
@@ -348,91 +226,86 @@ function _patch_step_setpoint(txt::String, components)
 
     # Replace Step output references with SetPoint outputs.
     used_step_names = sort!(collect(Set(step_name for (_, _, _, step_name) in targets)))
-    for step_name in used_step_names
-        escaped_step_name = replace(step_name, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        txt = replace(txt, Regex("\\b" * escaped_step_name * "\\.step\\b") => step_name * ".setPoint")
+    for eq in eqs
+        new_eq = eq
+        for step_name in used_step_names
+            escaped_step_name = replace(step_name, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
+            new_eq = replace(new_eq, Regex("\\b" * escaped_step_name * "\\.step\\b") => step_name * ".setPoint")
+        end
+        new_eq == eq && continue
+        om_send(omc, "updateEquation($aux_model, \"$eq\", \"$new_eq\")")
     end
 
     # Insert missing static load variation equations.
-    new_lines = String[]
     for (load_name, ref_field, delta_field, _) in sort!(collect(targets))
         escaped_load_name = replace(load_name, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        delta_pattern = Regex("(?m)^\\s*" * escaped_load_name * "\\." * delta_field * "\\s*=\\s*0\\s*;\\s*\$")
-        occursin(delta_pattern, txt) || push!(new_lines, "  $load_name.$delta_field = 0;")
+        any(occursin(Regex("^" * escaped_load_name * "\\." * delta_field * "\\s*=\\s*0\\s*;?\$"), e) for e in eqs) && continue
+        om_send(omc, "addEquation($aux_model, \"$load_name.$delta_field = 0\", false)")
     end
-    if !isempty(new_lines) && occursin(r"(?m)^equation\s*$", txt)
-        txt = replace(txt, r"(?m)^equation\s*$" => "equation\n" * join(new_lines, "\n"); count = 1)
-    end
-
-    # Remove all when blocks from the auxiliary model.
-    txt = replace(txt, r"(?ms)^\s*when\b.*?^\s*end\s+when;\s*\n?" => "")
-
-    return txt
 end
 
-"""
-    patch_aux_equations!(aux_file::String, slack_component::String = ""; components = nothing)
+function _delete_dead_equations!(omc, aux_model::String, components, slack_component::String)
+    components === nothing && return Set{String}()
 
-Apply targeted text patches to the saved auxiliary `.mo` file.
+    # Track the interfaces that are allowed to remain after replacements and deletions.
+    allowed_refs_by_component = _collect_allowed_component_refs(components, slack_component)
+    deleted_local_refs = Set{String}()
+    isempty(allowed_refs_by_component) && return deleted_local_refs
 
-This function fixes specific equation lines that are easier to patch in text
-than through OpenModelica API calls.
-"""
-function patch_aux_equations!(aux_file::String, slack_component::String = ""; components = nothing)
-    txt = read(aux_file, String)
+    for eq in _all_equation_items(omc, aux_model)
+        _statement_uses_disallowed_ref(eq, allowed_refs_by_component) || continue
 
-    # Patch switch-off equations after injector-based replacements.
-    if !isempty(slack_component)
-        escaped_slack_component = replace(slack_component, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
-        txt = replace(
-            txt,
-            Regex("(?m)^\\s*" * escaped_slack_component * "\\.(injector|injectorURI|wT4Injector)\\.switchOffSignal[123]\\.value\\s*=\\s*false\\s*;\\s*\\n?") => "",
-        )
+        union!(deleted_local_refs, _simple_local_refs(eq))
+        om_send(omc, "deleteEquation($aux_model, \"$(replace(eq, "\n" => "\\n"))\")")
     end
-    txt = replace(
-        txt,
-        r"(?m)^(\s*)([A-Za-z_]\w*)\.(injector|injectorURI|wT4Injector)\.(switchOffSignal[123]\.value\s*=\s*false\s*;)\s*$" => s"\1\2.\4",
-    )
 
-    # Replace time-driven switch-off events with static false assignments.
-    txt = _patch_time_switch_events(txt)
-
-    # Patch Step equations after Step components are replaced by SetPoint.
-    txt = _patch_step_setpoint(txt, components)
-
-    # Delete equations that still reference dead interfaces after replacements.
-    txt, deleted_local_refs = _delete_dead_equations(txt, components, slack_component)
-    txt = _remove_deleted_local_ref_equations(txt, deleted_local_refs)
-    txt = _remove_unused_deleted_ref_declarations(txt, deleted_local_refs)
-
-    write(aux_file, txt)
-    return nothing
+    return deleted_local_refs
 end
 
+function _remove_deleted_local_ref_equations!(omc, aux_model::String, deleted_local_refs::Set{String})
+    isempty(deleted_local_refs) && return nothing
+
+    for eq in _all_equation_items(omc, aux_model)
+        m = match(r"^([A-Za-z_]\w*)\s*=\s*[^;]+;?$", eq)
+        m === nothing && continue
+        m.captures[1] in deleted_local_refs || continue
+
+        om_send(omc, "deleteEquation($aux_model, \"$eq\")")
+    end
+end
+
+function _remove_unused_deleted_ref_declarations!(omc, aux_model::String, deleted_local_refs::Set{String})
+    isempty(deleted_local_refs) && return nothing
+
+    used_text = join(_all_equation_items(omc, aux_model), "\n")
+
+    for ref in deleted_local_refs
+        escaped_ref = replace(ref, r"([.^$|()\[\]{}*+?\\])" => s"\\\1")
+        occursin(Regex("\\b" * escaped_ref * "\\b"), used_text) && continue
+        om_send(omc, "deleteComponent($ref, $aux_model)")
+    end
+end
+
+# ------------------------------------------------------------
+# Cleanup Orchestrator
+# ------------------------------------------------------------
+
 """
-    patch_testcase_omega_refs!(aux_file::String)
+    clean_aux_equations!(omc, aux_model, slack_component = ""; components = nothing)
 
-Apply targeted text cleanup for `TestCase` omegaCOI and generator omegaRef lines.
+Clean up the auxiliary model's equations in place with the OpenModelica
+equation API, after the structural build steps.
 """
-function patch_testcase_omega_refs!(aux_file::String)
-    txt = read(aux_file, String)
+function clean_aux_equations!(omc, aux_model::String, slack_component::String = ""; components = nothing)
+    _patch_switch_off_signals!(omc, aux_model, slack_component)
+    _patch_time_switch_events!(omc, aux_model)
+    _remove_when_blocks!(omc, aux_model)
+    _patch_step_setpoint!(omc, aux_model, components)
 
-    txt = replace(
-        txt,
-        r"(?ms)^\s*omegaCOI\s*=.*?;\s*\n" => "",
-    )
+    deleted_local_refs = _delete_dead_equations!(omc, aux_model, components, slack_component)
+    _remove_deleted_local_ref_equations!(omc, aux_model, deleted_local_refs)
+    _remove_unused_deleted_ref_declarations!(omc, aux_model, deleted_local_refs)
 
-    txt = replace(
-        txt,
-        r"(?m)^\s*g\d+\.generatorSynchronous\.omegaRefPu\s*=\s*omegaCOI\s*;\s*\n" => "",
-    )
-
-    txt = replace(
-        txt,
-        r"(?m)^\s*g\d+\.omegaRefPu\s*=\s*omegaCOI\s*;\s*\n" => "",
-    )
-
-    write(aux_file, txt)
     return nothing
 end
 

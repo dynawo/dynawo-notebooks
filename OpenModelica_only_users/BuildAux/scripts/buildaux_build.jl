@@ -654,7 +654,7 @@ function add_init_equations!(
         end
     end
 
-    # Add each initial equation directly through the OpenModelica API
+    # Build and inject the block
     for eq in eqs
         om_send(omc, "addEquation($aux_model, \"$(rstrip(strip(eq), ';'))\", true)", parsed = false)
     end

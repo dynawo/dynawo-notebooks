@@ -25,7 +25,6 @@ export
     delete_connections!,
     delete_components!,
     rewrite_aux_extends,
-    patch_aux_equations!,
-    patch_testcase_omega_refs!
+    clean_aux_equations!
 
 end # module
