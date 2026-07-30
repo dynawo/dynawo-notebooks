@@ -153,6 +153,6 @@ equation
     preferredView = "diagram",
     experiment(StartTime = 0, StopTime = 3, Tolerance = 1e-05, Interval = 0.001),
   __OpenModelica_commandLineOptions = "--matchingAlgorithm=PFPlusExt --indexReductionMethod=dynamicStateSelection -d=initialization,NLSanalyticJacobian,newInst",
-  __OpenModelica_simulationFlags(lv = "LOG_STATS", s = "ida", maxIntegrationOrder = "2", nls = "kinsol", noHomotopyOnFirstTry = "()", noRestart = "()", noRootFinding = "()", initialStepSize = "0.00001", maxStepSize = "10"),
+  __OpenModelica_simulationFlags(lv = "LOG_STATS", nls = "kinsol"),
   Documentation(info = "hi "));
 end MyBESS;
