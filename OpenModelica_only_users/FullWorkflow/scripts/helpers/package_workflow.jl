@@ -196,6 +196,8 @@ function simulation_flags_without_log_stats(omc, model::String)
         "getAnnotationNamedModifiers($model, \"__OpenModelica_simulationFlags\")",
     )
 
+    isnothing(flag_names) && return ""
+
     simflag_parts = String[]
     for flag_name in flag_names
         flag_name == "lv" && continue
