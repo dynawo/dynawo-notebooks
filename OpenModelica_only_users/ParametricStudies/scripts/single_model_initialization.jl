@@ -42,14 +42,16 @@ function _build_auxiliary_model!(
         slack_component = slack_component,
     )
 
+    clean_aux_equations!(
+        dynamic_omc,
+        auxiliary_model,
+        source_components,
+        slack_component,
+    )
+
     omc_call(
         dynamic_omc,
         "saveModel(\"$auxiliary_model_file\", $auxiliary_model)",
-    )
-    patch_aux_equations!(
-        auxiliary_model_file,
-        source_components,
-        slack_component,
     )
 
     return nothing
