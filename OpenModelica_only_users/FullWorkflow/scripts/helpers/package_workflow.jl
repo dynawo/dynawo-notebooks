@@ -120,7 +120,7 @@ end
     save_auxiliary_package_classes!(omc, chain, aux_name_map, aux_dir, patch_components_by_model, slack_component)
 
 Save generated auxiliary classes, rewrite inherited parents to auxiliary
-parents, and run the auxiliary text patches.
+parents, and clean the auxiliary equations.
 """
 function save_auxiliary_package_classes!(
     omc,
@@ -138,6 +138,8 @@ function save_auxiliary_package_classes!(
         aux_name = String(split(aux_model, ".")[end])
         aux_file = joinpath(aux_dir, aux_name * ".mo")
 
+        clean_aux_equations!(omc, aux_model, patch_components_by_model[model_name], slack_component)
+
         text = String(omc_call(omc, "listFile($aux_model)"))
         text = rewrite_aux_extends(text, aux_name_map)
 
@@ -145,8 +147,6 @@ function save_auxiliary_package_classes!(
             print(io, text)
             endswith(text, "\n") || print(io, "\n")
         end
-
-        patch_aux_equations!(aux_file, patch_components_by_model[model_name], slack_component)
     end
 
     return nothing

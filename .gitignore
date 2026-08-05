@@ -5,4 +5,5 @@
 *grid_export*.*
 *.log
 *compare_parameters*
+omc-build/
 OpenModelica_only_users/StabilityAnalysis/outputs/

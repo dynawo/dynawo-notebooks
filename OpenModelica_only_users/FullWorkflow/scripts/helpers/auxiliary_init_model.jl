@@ -284,7 +284,7 @@ function add_init_equations!(
     init_model_by_component::Dict{String, String},
     slack_component::String,
 )
-    lines = ["initial equation"]
+    eqs = String[]
 
     for (base_name, component) in components
         base_class = component["class"]::String
@@ -299,8 +299,8 @@ function add_init_equations!(
         init_name = base_name * suffix
 
         if base_name == slack_component
-            push!(lines, "$init_name.P0Pu = Modelica.ComplexMath.real($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i));")
-            push!(lines, "$init_name.Q0Pu = Modelica.ComplexMath.imag($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i));")
+            push!(eqs, "$init_name.P0Pu = Modelica.ComplexMath.real($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i))")
+            push!(eqs, "$init_name.Q0Pu = Modelica.ComplexMath.imag($base_name.terminal.V * Modelica.ComplexMath.conj($base_name.terminal.i))")
             continue
         end
 
@@ -310,18 +310,18 @@ function add_init_equations!(
                 should_flip_sign = startswith(base_var, "-")
                 source_var = should_flip_sign ? base_var[2:end] : base_var
                 rhs = should_flip_sign ? "-($base_name.$source_var)" : "$base_name.$source_var"
-                push!(lines, "$init_name.$init_var = $rhs;")
+                push!(eqs, "$init_name.$init_var = $rhs")
             end
         end
 
         if haskey(spec, "init_equations_raw")
             for raw in spec["init_equations_raw"]::Vector{String}
-                push!(lines, replace(replace(raw, "{init}" => init_name), "{base}" => base_name))
+                push!(eqs, replace(replace(raw, "{init}" => init_name), "{base}" => base_name))
             end
         end
     end
 
-    length(lines) == 1 && return nothing
-    block = join(lines, "\n")
-    omc_call(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
+    for eq in eqs
+        omc_call(omc, "addEquation($aux_model, \"$(rstrip(strip(eq), ';'))\", true)", parsed = false)
+    end
 end

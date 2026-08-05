@@ -87,15 +87,9 @@ function delete_connections!(
         end
     end
 
-    switch_signal_lines = String[]
     for switch_signal in sort!(collect(deleted_switch_signals))
         _has_switch_off_signal_equation(omc, aux_model, switch_signal) && continue
-        push!(switch_signal_lines, "$switch_signal.value = false;")
-    end
-
-    if !isempty(switch_signal_lines)
-        block = "equation\n" * join(switch_signal_lines, "\n")
-        omc_call(omc, "loadClassContentString(\"$block\", $aux_model)", parsed = false)
+        omc_call(omc, "addEquation($aux_model, \"$switch_signal.value = false\", false)", parsed = false)
     end
 
     return cleanup_targets
