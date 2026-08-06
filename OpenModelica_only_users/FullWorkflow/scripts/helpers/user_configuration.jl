@@ -59,6 +59,8 @@ function check_user_configuration_single(
             error("Component $sweep_component has no parameter $sweep_parameter")
     end
 
+    println("Configuration checked successfully")
+
     return nothing
 end
 
@@ -119,6 +121,8 @@ function check_user_configuration_package(
         sweep_parameter in _all_parameter_names(omc, component_class) ||
             error("Component $sweep_component has no parameter $sweep_parameter")
     end
+
+    println("Configuration checked successfully")
 
     return (model_chain = model_chain, parameter_model = parameter_model)
 end

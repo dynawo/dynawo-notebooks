@@ -67,7 +67,7 @@ model IEEE14Base_auxiliary "Base class for IEEE 14-bus system benchmark formed w
   Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed Gen8(PGen0Pu = -(P0Pu_Gen8), U0Pu = U0Pu_Gen8) annotation(
     Placement(visible = true, transformation(origin = {170, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   // Generators control
-// Loads
+  // Loads
   Dynawo.Electrical.Loads.LoadPQ Load2(i0Pu(re(start = P0Pu_Load2, fixed = false), im(start = -(Q0Pu_Load2), fixed = false)), s0Pu(re(start = P0Pu_Load2, fixed = false), im(start = Q0Pu_Load2, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {-120, -160}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load2(Value0 = P0Pu_Load2);
