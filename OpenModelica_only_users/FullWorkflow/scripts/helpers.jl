@@ -17,6 +17,7 @@ include(joinpath(@__DIR__, "helpers", "auxiliary_patch.jl"))
 include(joinpath(@__DIR__, "helpers", "value_extraction.jl"))
 include(joinpath(@__DIR__, "helpers", "initialized_model.jl"))
 include(joinpath(@__DIR__, "helpers", "package_workflow.jl"))
+include(joinpath(@__DIR__, "helpers", "user_configuration.jl"))
 
 export
     omc_call,
@@ -42,6 +43,8 @@ export
     save_initialized_package_classes!,
     simulation_flags_without_log_stats,
     print_omc_errors,
-    run_omc_diagnostic
+    run_omc_diagnostic,
+    check_user_configuration_single,
+    check_user_configuration_package
 
 end # module
