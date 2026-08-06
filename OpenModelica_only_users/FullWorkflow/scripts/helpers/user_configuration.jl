@@ -29,10 +29,19 @@ function check_user_configuration_single(
     sweep_component::String = "",
     sweep_parameter::String = "",
     slack_component::String = "",
+    init_model_by_component::Dict{String, String} = Dict{String, String}(),
 )
+    isempty(sweep_component) && !isempty(sweep_parameter) &&
+        error("A sweep parameter was set without a sweep component")
+
     omc_call(omc, "checkModel($model)", parsed = false)
 
     components = get_all_components(omc, model)
+
+    for configured_component in keys(init_model_by_component)
+        haskey(components, configured_component) ||
+            error("INIT_MODEL_BY_COMPONENT entry \"$configured_component\" is not a component of $model")
+    end
 
     if !isempty(sweep_component)
         haskey(components, sweep_component) ||
@@ -66,22 +75,33 @@ function check_user_configuration_package(
     sweep_component::String = "",
     sweep_parameter::String = "",
     slack_component::String = "",
+    init_model_by_component::Dict{String, String} = Dict{String, String}(),
 )
+    isempty(sweep_component) && !isempty(sweep_parameter) &&
+        error("A sweep parameter was set without a sweep component")
+
     omc_call(omc, "checkModel($model)", parsed = false)
 
     model_chain = get_inheritance_chain(omc, model)
 
     parameter_models = String[]
     slack_found = isempty(slack_component)
+    all_component_names = Set{String}()
     for chain_model in model_chain
         model_name = String(chain_model)
         components = get_all_components(omc, model_name)
+        union!(all_component_names, keys(components))
         if !isempty(sweep_component) && haskey(components, sweep_component)
             push!(parameter_models, model_name)
         end
         if !isempty(slack_component) && haskey(components, slack_component)
             slack_found = true
         end
+    end
+
+    for configured_component in keys(init_model_by_component)
+        configured_component in all_component_names ||
+            error("INIT_MODEL_BY_COMPONENT entry \"$configured_component\" is not a component of $model")
     end
 
     parameter_model = ""
