@@ -82,6 +82,7 @@ equation
   LineB13B14.switchOffSignal2.value = false;
   LineB1B5.switchOffSignal1.value = false;
   LineB1B5.switchOffSignal2.value = false;
+// Disconnecting line B1B5
   LineB1B2.switchOffSignal1.value = false;
   LineB1B2.switchOffSignal2.value = false;
   LineB2B3.switchOffSignal1.value = false;
