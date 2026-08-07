@@ -7517,7 +7517,8 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Parametric-Studies---MyIEEE14-Package">Parametric Studies - MyIEEE14 Package<a class="anchor-link" href="#Parametric-Studies---MyIEEE14-Package">¶</a></h1><p>This notebook performs a parameter sweep on a Modelica package model. Set <code>REINITIALIZE_EACH_CASE</code> to choose whether the package is initialized once before the sweep, or reinitialized after each parameter update.</p>
+<h1 id="Parametric-Studies---MyIEEE14-Package">Parametric Studies - MyIEEE14 Package<a class="anchor-link" href="#Parametric-Studies---MyIEEE14-Package">¶</a></h1><p>This notebook sweeps one parameter of the <code>MyIEEE14</code> package, simulating the model at each value and comparing a chosen output variable across the sweep.</p>
+<p>Set <code>REINITIALIZE_EACH_CASE</code> to choose whether the package is initialized once before the sweep, or reinitialized after each parameter update.</p>
 </div>
 </div>
 </div>
@@ -7550,7 +7551,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="User-Configuration">User Configuration<a class="anchor-link" href="#User-Configuration">¶</a></h2>
+<h2 id="User-Configuration">User Configuration<a class="anchor-link" href="#User-Configuration">¶</a></h2><p>Set the sweep component, parameter, values, and the model paths here.</p>
 </div>
 </div>
 </div>
@@ -7594,7 +7595,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Prepare-OpenModelica-Session">Prepare OpenModelica Session<a class="anchor-link" href="#Prepare-OpenModelica-Session">¶</a></h2>
+<h2 id="Prepare-OpenModelica-Session">Prepare OpenModelica Session<a class="anchor-link" href="#Prepare-OpenModelica-Session">¶</a></h2><p>The output directories are created and the library paths are checked before the sweep runs.</p>
 </div>
 </div>
 </div>
@@ -7645,7 +7646,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.tmuB4yBtiX"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.1P0Eo7gdnE"
 </pre>
 </div>
 </div>
@@ -7671,7 +7672,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Initialize-the-Base-Package">Initialize the Base Package<a class="anchor-link" href="#Initialize-the-Base-Package">¶</a></h2>
+<h2 id="Initialize-the-Base-Package">Initialize the Base Package<a class="anchor-link" href="#Initialize-the-Base-Package">¶</a></h2><p>When <code>REINITIALIZE_EACH_CASE</code> is <code>false</code>, the base package is initialized once here and reused for every sweep value.</p>
 </div>
 </div>
 </div>
@@ -7719,7 +7720,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Run-the-Package-Parameter-Sweep">Run the Package Parameter Sweep<a class="anchor-link" href="#Run-the-Package-Parameter-Sweep">¶</a></h2>
+<h2 id="Run-the-Package-Parameter-Sweep">Run the Package Parameter Sweep<a class="anchor-link" href="#Run-the-Package-Parameter-Sweep">¶</a></h2><p>Each sweep value is applied, the model is simulated, and the selected variable is collected for comparison.</p>
 </div>
 </div>
 </div>
@@ -7828,14 +7829,21 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.RQDYHOaEnt"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.LHYiNzbXCN"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.vzipdQzGx9"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.hTV4bOSpNL"
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.qevHI9O3yn"
 </pre>
 </div>
 </div>
@@ -7849,14 +7857,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.84qKBr6HT9"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.W4dKp73eff"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.hLbXGDvpeq"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.q80pPKcqYX"
 </pre>
 </div>
 </div>
@@ -7870,14 +7878,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.uBIKYypyP3"
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.Lgvqkt3H6h"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.gCbsPwJy5N"
 </pre>
 </div>
 </div>
@@ -7904,7 +7905,7 @@ Stored selected result files in: /home/clarafercas/dynawo-notebooks/OpenModelica
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Compare-Sweep-Results">Compare Sweep Results<a class="anchor-link" href="#Compare-Sweep-Results">¶</a></h2>
+<h2 id="Compare-Sweep-Results">Compare Sweep Results<a class="anchor-link" href="#Compare-Sweep-Results">¶</a></h2><p>The selected variable is plotted across all sweep values.</p>
 </div>
 </div>
 </div>
@@ -7960,10 +7961,10 @@ for more information.
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
-<div id="id_a5ead972_8690_4874_a8ae_918b234c62ac" style="width:600px;height:400px;"></div>
+<div id="id_9a930e0d_3796_4f01_9b09_e2e22032c738" style="width:600px;height:400px;"></div>
 <script>
     ;(()=> {
-    function plots_jl_plotly_id_a5ead972_8690_4874_a8ae_918b234c62ac() {
+    function plots_jl_plotly_id_9a930e0d_3796_4f01_9b09_e2e22032c738() {
             requirejs.config({
         paths: {
             plotly: 'https://cdn.plot.ly/plotly-2.6.3.min'
@@ -7971,7 +7972,7 @@ for more information.
     });
     require(['plotly'], function (Plotly) {
 
-        Plotly.newPlot('id_a5ead972_8690_4874_a8ae_918b234c62ac', [
+        Plotly.newPlot('id_9a930e0d_3796_4f01_9b09_e2e22032c738', [
     {
         "xaxis": "x",
         "colorbar": {
@@ -9532,9 +9533,9 @@ for more information.
     }
     let plotlyloader = window.document.createElement("script")
     let src="https://requirejs.org/docs/release/2.3.7/minified/require.js"
-    plotlyloader.addEventListener("load", plots_jl_plotly_id_a5ead972_8690_4874_a8ae_918b234c62ac);
+    plotlyloader.addEventListener("load", plots_jl_plotly_id_9a930e0d_3796_4f01_9b09_e2e22032c738);
     plotlyloader.src = src
-    document.querySelector("#id_a5ead972_8690_4874_a8ae_918b234c62ac").appendChild(plotlyloader)
+    document.querySelector("#id_9a930e0d_3796_4f01_9b09_e2e22032c738").appendChild(plotlyloader)
     })()
     </script>
 </div>

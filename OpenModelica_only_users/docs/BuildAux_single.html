@@ -7510,7 +7510,19 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0f4d2e61">
+<main>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=11aafd76">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="Build-Auxiliary-Model---Single-.mo-File">Build Auxiliary Model - Single <code>.mo</code> File<a class="anchor-link" href="#Build-Auxiliary-Model---Single-.mo-File">¶</a></h1><p>This notebook builds the auxiliary model from a single dynamic <code>.mo</code> file.</p>
+<p>It takes the input model from <code>models/</code>, replaces each dynamic component with its static counterpart, adds the INIT model where there is one, removes the dynamic events, and saves the auxiliary model to <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0f4d2e61">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,9 +7530,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 1: Environment Setup</span>
-
-<span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
 <span class="n">include</span><span class="p">(</span><span class="s">"../scripts/helpers.jl"</span><span class="p">)</span>
 <span class="k">using</span><span class="w"> </span><span class="o">.</span><span class="n">WorkflowHelpers</span>
 <span class="k">using</span><span class="w"> </span><span class="n">OMJulia</span>
@@ -7567,6 +7577,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d0e66589">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Load-and-Validate-the-Model">Load and Validate the Model<a class="anchor-link" href="#Load-and-Validate-the-Model">¶</a></h2><p>The original dynamic model is loaded and checked, and the user configuration is validated against it, before any changes are made.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cell_02">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7575,9 +7596,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 2: OpenModelica Setup + Single Model Validation</span>
-
-<span class="c"># 1. Start OMC and load libraries</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># 1. Start OMC and load libraries</span>
 <span class="n">omc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OMJulia</span><span class="o">.</span><span class="n">OMCSession</span><span class="p">()</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="s">"loadFile(</span><span class="se">\"</span><span class="si">$MODELICA_PKG_PATH</span><span class="se">\"</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="s">"loadModel(Complex)"</span><span class="p">)</span>
@@ -7603,7 +7622,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.2Y9wWFVqpv"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.C4rFuaFINM"
 </pre>
 </div>
 </div>
@@ -7616,6 +7635,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=fc3f12d3">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Generate-the-Auxiliary-Model">Generate the Auxiliary Model<a class="anchor-link" href="#Generate-the-Auxiliary-Model">¶</a></h2><p>The auxiliary model is generated from a copy of the original and saved to <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cell_03">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7624,8 +7654,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 3: Auxiliary Model Setup</span>
-<span class="n">OUTPUT_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"outputs"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">OUTPUT_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"outputs"</span><span class="p">)</span>
 <span class="n">mkpath</span><span class="p">(</span><span class="n">OUTPUT_DIR</span><span class="p">)</span>
 
 <span class="n">AUX_MODEL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MODEL</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="s">"_auxiliary"</span>
@@ -7655,9 +7684,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 4: Single-Model Auxiliary Build Pipeline</span>
-
-<span class="c"># Create/refresh the auxiliary model in OpenModelica</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># Create/refresh the auxiliary model in OpenModelica</span>
 <span class="n">sendExpression</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="s">"deleteClass(</span><span class="si">$AUX_MODEL</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="s">"copyClass(</span><span class="si">$MODEL</span><span class="s">, </span><span class="se">\"</span><span class="si">$AUX_MODEL</span><span class="se">\"</span><span class="s">)"</span><span class="p">)</span>
 

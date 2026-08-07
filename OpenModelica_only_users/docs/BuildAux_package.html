@@ -7510,7 +7510,19 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0f4d2e61">
+<main>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=8aebf0eb">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="Build-Auxiliary-Model---Package">Build Auxiliary Model - Package<a class="anchor-link" href="#Build-Auxiliary-Model---Package">¶</a></h1><p>This notebook builds the auxiliary package from a package-based dynamic model.</p>
+<p>It takes the input package from <code>models/</code>, replaces each dynamic component with its static counterpart, adds the INIT model where there is one, removes the dynamic events, and saves the auxiliary package to <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0f4d2e61">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,9 +7530,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 1: Environment Setup</span>
-
-<span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
 <span class="n">include</span><span class="p">(</span><span class="s">"../scripts/helpers.jl"</span><span class="p">)</span>
 <span class="k">using</span><span class="w"> </span><span class="o">.</span><span class="n">WorkflowHelpers</span>
 <span class="k">using</span><span class="w"> </span><span class="n">OMJulia</span>
@@ -7564,6 +7574,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7de61c72">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Load-and-Validate-the-Model">Load and Validate the Model<a class="anchor-link" href="#Load-and-Validate-the-Model">¶</a></h2><p>The original package root model is loaded and checked, and the user configuration is validated against it, before any changes are made.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cell_02">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7572,9 +7593,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 2: OpenModelica Setup + User's Case Validation</span>
-
-<span class="c"># 1. Start OMC and load libraries</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># 1. Start OMC and load libraries</span>
 <span class="n">omc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OMJulia</span><span class="o">.</span><span class="n">OMCSession</span><span class="p">()</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="s">"loadFile(</span><span class="se">\"</span><span class="si">$MODELICA_PKG_PATH</span><span class="se">\"</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="s">"loadModel(Complex)"</span><span class="p">)</span>
@@ -7601,7 +7620,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.eXsYMfi1Zg"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.j1SfDkJgJW"
 </pre>
 </div>
 </div>
@@ -7622,6 +7641,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=194c95e8">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Generate-the-Auxiliary-Package">Generate the Auxiliary Package<a class="anchor-link" href="#Generate-the-Auxiliary-Package">¶</a></h2><p>The auxiliary package is generated from a copy of the original, transforming each model in the inheritance chain, and saved to <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=cell_03">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7630,8 +7660,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 3: Auxiliary Package Naming and Paths</span>
-<span class="n">OUTPUT_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"outputs"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">OUTPUT_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"outputs"</span><span class="p">)</span>
 <span class="n">mkpath</span><span class="p">(</span><span class="n">OUTPUT_DIR</span><span class="p">)</span>
 
 <span class="n">PATHS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">package_workflow_paths</span><span class="p">(</span><span class="n">MODEL</span><span class="p">,</span><span class="w"> </span><span class="n">MODEL_DIR</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT_DIR</span><span class="p">)</span>
@@ -7670,9 +7699,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 4: Main Auxiliary Build Pipeline</span>
-
-<span class="n">package_context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">collect_package_component_contexts</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="n">chain</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">package_context</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">collect_package_component_contexts</span><span class="p">(</span><span class="n">omc</span><span class="p">,</span><span class="w"> </span><span class="n">chain</span><span class="p">)</span>
 <span class="n">components_by_model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">package_context</span><span class="o">.</span><span class="n">components_by_model</span>
 <span class="n">patch_components_by_model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">package_context</span><span class="o">.</span><span class="n">patch_components_by_model</span>
 <span class="n">global_blacklist_names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">package_context</span><span class="o">.</span><span class="n">global_blacklist_names</span>
@@ -7756,7 +7783,13 @@ a.anchor-link {
 Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 875 variable(s).
 326 of these are trivial equation(s)."
 
-Wrote auxiliary package: /home/clarafercas/dynawo-notebooks/OpenModelica_only_users/BuildAux/outputs/MyIEEE14_auxiliary
+Wrote auxiliary package: /home/clarafercas/dynawo-notebooks/OpenModelica_only_users/BuildAux/outputs/MyIEEE14_auxiliary</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>
 </pre>
 </div>
 </div>

@@ -7517,7 +7517,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Stability-Analysis---MyNordic-Package-Parameter-Sweep">Stability Analysis - MyNordic Package Parameter Sweep<a class="anchor-link" href="#Stability-Analysis---MyNordic-Package-Parameter-Sweep">¶</a></h1><p>Start from the <code>MyNordic</code> package model (Nordic-32 test system, 20 detailed synchronous machines), change one parameter, and compare the modes across the sweep.</p>
+<h1 id="Stability-Analysis---MyNordic-Package-Parameter-Sweep">Stability Analysis - MyNordic Package Parameter Sweep<a class="anchor-link" href="#Stability-Analysis---MyNordic-Package-Parameter-Sweep">¶</a></h1><p>This notebook sweeps one parameter of the <code>MyNordic</code> package (Nordic-32 test system, 20 detailed synchronous machines), linearizes the model at each value, and analyzes the eigenvalues to track how the modes and their stability change across the sweep.</p>
 <p>Set <code>REINITIALIZE_EACH_CASE</code> to choose whether the package is initialized once before the sweep, or reinitialized after each parameter update.</p>
 </div>
 </div>
@@ -7552,7 +7552,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="User-Configuration">User Configuration<a class="anchor-link" href="#User-Configuration">¶</a></h2>
+<h2 id="User-Configuration">User Configuration<a class="anchor-link" href="#User-Configuration">¶</a></h2><p>Choose the model, the parameter to sweep and its values, and the linearization settings here.</p>
 </div>
 </div>
 </div>
@@ -7623,7 +7623,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Prepare-OpenModelica-Session">Prepare OpenModelica Session<a class="anchor-link" href="#Prepare-OpenModelica-Session">¶</a></h2>
+<h2 id="Prepare-OpenModelica-Session">Prepare OpenModelica Session<a class="anchor-link" href="#Prepare-OpenModelica-Session">¶</a></h2><p>The output folders are created and the library paths are checked before the run.</p>
 </div>
 </div>
 </div>
@@ -7672,7 +7672,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.iLYMEbBaTQ"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.3hc3LgQsir"
 </pre>
 </div>
 </div>
@@ -7747,7 +7747,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.huFgGljBLC"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.6z62N5gM4m"
 </pre>
 </div>
 </div>
@@ -7773,7 +7773,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Run-the-Parameter-Sweep">Run the Parameter Sweep<a class="anchor-link" href="#Run-the-Parameter-Sweep">¶</a></h2>
+<h2 id="Run-the-Parameter-Sweep">Run the Parameter Sweep<a class="anchor-link" href="#Run-the-Parameter-Sweep">¶</a></h2><p>For each parameter value the model is initialized, linearized, and its state-space matrix is stored.</p>
 </div>
 </div>
 </div>
@@ -7894,7 +7894,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.WDDAr4p9Hw"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.s3LuRHfBAq"
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.vMisHYWzft"
 </pre>
 </div>
 </div>
@@ -7908,7 +7915,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.DxJSNsCJRX"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.IlFJeEZVtD"
 </pre>
 </div>
 </div>
@@ -7922,7 +7929,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.0IcwLPTE9h"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.gJVQjWbCR9"
 </pre>
 </div>
 </div>
@@ -7930,13 +7937,6 @@ a.anchor-link {
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Finished vrNordic_g20.KTgr = 2000.0
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.nX27tRqPoq"
 </pre>
 </div>
 </div>
@@ -7957,7 +7957,7 @@ Linearization sweep finished.
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Linearization-Summary">Linearization Summary<a class="anchor-link" href="#Linearization-Summary">¶</a></h2>
+<h2 id="Linearization-Summary">Linearization Summary<a class="anchor-link" href="#Linearization-Summary">¶</a></h2><p>The dimensions of the linearized system are reported for one case as a sanity check.</p>
 </div>
 </div>
 </div>
@@ -8004,7 +8004,7 @@ Linearization sweep finished.
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Analyze-Modes">Analyze Modes<a class="anchor-link" href="#Analyze-Modes">¶</a></h2>
+<h2 id="Analyze-Modes">Analyze Modes<a class="anchor-link" href="#Analyze-Modes">¶</a></h2><p>The modes of each case are computed and classified as stable, marginal, or unstable.</p>
 </div>
 </div>
 </div>
@@ -8084,7 +8084,7 @@ Linearization sweep finished.
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Check-Unstable-Modes">Check Unstable Modes<a class="anchor-link" href="#Check-Unstable-Modes">¶</a></h2>
+<h2 id="Check-Unstable-Modes">Check Unstable Modes<a class="anchor-link" href="#Check-Unstable-Modes">¶</a></h2><p>The modes that become unstable across the sweep are identified.</p>
 </div>
 </div>
 </div>
@@ -8149,7 +8149,7 @@ Linearization sweep finished.
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Modes">Modes<a class="anchor-link" href="#Modes">¶</a></h2>
+<h2 id="Modes">Modes<a class="anchor-link" href="#Modes">¶</a></h2><p>The stability summary and the unstable modes are displayed.</p>
 </div>
 </div>
 </div>
@@ -8210,7 +8210,7 @@ Linearization sweep finished.
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Mode-Plots">Mode Plots<a class="anchor-link" href="#Mode-Plots">¶</a></h2>
+<h2 id="Mode-Plots">Mode Plots<a class="anchor-link" href="#Mode-Plots">¶</a></h2><p>The unstable modes are plotted in the complex plane across the sweep.</p>
 </div>
 </div>
 </div>
@@ -8282,10 +8282,10 @@ for more information.
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
-<div id="id_fb75a961_07ac_446f_8772_a44369612d65" style="width:600px;height:400px;"></div>
+<div id="id_a20406f1_79dd_4aca_8ab0_6d12222344ec" style="width:600px;height:400px;"></div>
 <script>
     ;(()=> {
-    function plots_jl_plotly_id_fb75a961_07ac_446f_8772_a44369612d65() {
+    function plots_jl_plotly_id_a20406f1_79dd_4aca_8ab0_6d12222344ec() {
             requirejs.config({
         paths: {
             plotly: 'https://cdn.plot.ly/plotly-2.6.3.min'
@@ -8293,7 +8293,7 @@ for more information.
     });
     require(['plotly'], function (Plotly) {
 
-        Plotly.newPlot('id_fb75a961_07ac_446f_8772_a44369612d65', [
+        Plotly.newPlot('id_a20406f1_79dd_4aca_8ab0_6d12222344ec', [
     {
         "xaxis": "x",
         "colorbar": {
@@ -8735,9 +8735,9 @@ for more information.
     }
     let plotlyloader = window.document.createElement("script")
     let src="https://requirejs.org/docs/release/2.3.7/minified/require.js"
-    plotlyloader.addEventListener("load", plots_jl_plotly_id_fb75a961_07ac_446f_8772_a44369612d65);
+    plotlyloader.addEventListener("load", plots_jl_plotly_id_a20406f1_79dd_4aca_8ab0_6d12222344ec);
     plotlyloader.src = src
-    document.querySelector("#id_fb75a961_07ac_446f_8772_a44369612d65").appendChild(plotlyloader)
+    document.querySelector("#id_a20406f1_79dd_4aca_8ab0_6d12222344ec").appendChild(plotlyloader)
     })()
     </script>
 </div>

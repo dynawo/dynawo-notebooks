@@ -7510,7 +7510,19 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b5d3c4bd">
+<main>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=13ee25c9">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="Model-Initialization---Single-.mo-File">Model Initialization - Single <code>.mo</code> File<a class="anchor-link" href="#Model-Initialization---Single-.mo-File">¶</a></h1><p>This notebook initializes one dynamic Modelica model from its auxiliary model.</p>
+<p>It loads the model and its auxiliary from <code>models/</code>, simulates the auxiliary to compute the initialization values, applies them to a copy of the model, and saves the initialized model to <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b5d3c4bd">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,9 +7530,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 1: Environment Setup</span>
-
-<span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
 <span class="n">include</span><span class="p">(</span><span class="s">"../scripts/helpers.jl"</span><span class="p">)</span>
 <span class="k">using</span><span class="w"> </span><span class="o">.</span><span class="n">WorkflowHelpers</span>
 <span class="k">using</span><span class="w"> </span><span class="n">OMJulia</span>
@@ -7579,6 +7589,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1c66d963">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Load-and-Validate-the-Models">Load and Validate the Models<a class="anchor-link" href="#Load-and-Validate-the-Models">¶</a></h2><p>The dynamic model and its auxiliary are loaded and checked, and the user configuration is validated against the dynamic model, before any changes are made.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e1c5f84b">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7587,9 +7608,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 2: OpenModelica Setup + Model Loading</span>
-
-<span class="c"># 1. Load the dynamic model and validate the configuration against it</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># 1. Load the dynamic model and validate the configuration against it</span>
 <span class="n">SourceOMC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OMJulia</span><span class="o">.</span><span class="n">OMCSession</span><span class="p">()</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadFile(</span><span class="se">\"</span><span class="si">$MODELICA_PKG_PATH</span><span class="se">\"</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadModel(Complex)"</span><span class="p">)</span>
@@ -7623,7 +7642,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.nx2BPcYLbQ"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.KEwXCucJvf"
 </pre>
 </div>
 </div>
@@ -7637,7 +7656,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.BljBuwraSu"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.EE2dK9cFfY"
 </pre>
 </div>
 </div>
@@ -7660,6 +7679,17 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=eaa1a2db">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Extract-Initialization-Values">Extract Initialization Values<a class="anchor-link" href="#Extract-Initialization-Values">¶</a></h2><p>The auxiliary model is simulated, and its outputs provide the initialization values to apply to the dynamic model.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=de1ce09d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7668,8 +7698,7 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 3: Simulate the auxiliary model and extract initialization values</span>
-<span class="c"># 1. Build and simulate the auxiliary model</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># 1. Build and simulate the auxiliary model</span>
 <span class="n">ModelicaSystem</span><span class="p">(</span><span class="n">AuxOMC</span><span class="p">,</span><span class="w"> </span><span class="n">AUX_FILE_PATH</span><span class="p">,</span><span class="w"> </span><span class="n">AUX_MODEL</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">MODELICA_PKG_PATH</span><span class="p">,</span><span class="w"> </span><span class="n">DYNAWO_PKG_PATH</span><span class="p">])</span>
 <span class="n">simulate</span><span class="p">(</span><span class="n">AuxOMC</span><span class="p">,</span><span class="w"> </span><span class="n">resultfile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">AUX_MODEL</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="s">"_res.mat"</span><span class="p">)</span>
 
@@ -7700,6 +7729,17 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ff3dca18">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Build-Initialized-Model">Build Initialized Model<a class="anchor-link" href="#Build-Initialized-Model">¶</a></h2><p>A copy of the dynamic model is populated with the extracted values and saved as the initialized model in <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=68bb1f7e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7708,8 +7748,7 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 4: Build and save the initialized dynamic model</span>
-<span class="n">sendExpression</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"deleteClass(</span><span class="si">$INITIALIZED_MODEL</span><span class="s">)"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">sendExpression</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"deleteClass(</span><span class="si">$INITIALIZED_MODEL</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"copyClass(</span><span class="si">$MODEL</span><span class="s">, </span><span class="se">\"</span><span class="si">$INITIALIZED_MODEL</span><span class="se">\"</span><span class="s">)"</span><span class="p">)</span>
 
 <span class="n">apply_initialization_modifiers!</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="n">INITIALIZED_MODEL</span><span class="p">,</span><span class="w"> </span><span class="n">initializable_components</span><span class="p">,</span><span class="w"> </span><span class="n">init_values_by_component</span><span class="p">,</span><span class="w"> </span><span class="n">INIT_MODEL_BY_COMPONENT</span><span class="p">)</span>
@@ -7740,6 +7779,17 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e93cc4bf">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Validate-Initialized-Model">Validate Initialized Model<a class="anchor-link" href="#Validate-Initialized-Model">¶</a></h2><p>The initialized model is loaded independently and simulated to verify that the final output can run.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9b2edd13">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7748,8 +7798,7 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 <div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 5: Final simulation</span>
-<span class="n">InitializedOMC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OMJulia</span><span class="o">.</span><span class="n">OMCSession</span><span class="p">()</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">InitializedOMC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OMJulia</span><span class="o">.</span><span class="n">OMCSession</span><span class="p">()</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">InitializedOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadModel(Complex)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">InitializedOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadModel(ModelicaServices)"</span><span class="p">)</span>
 <span class="n">ModelicaSystem</span><span class="p">(</span><span class="n">InitializedOMC</span><span class="p">,</span><span class="w"> </span><span class="n">INITIALIZED_FILE_PATH</span><span class="p">,</span><span class="w"> </span><span class="n">INITIALIZED_MODEL</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">MODELICA_PKG_PATH</span><span class="p">,</span><span class="w"> </span><span class="n">DYNAWO_PKG_PATH</span><span class="p">])</span>
@@ -7784,7 +7833,7 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.kBnCRB0Vz4"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.60iunVXltN"
 </pre>
 </div>
 </div>
@@ -7792,13 +7841,7 @@ Class DIGrid_auxiliary has 151 equation(s) and 151 variable(s).
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Checking the initialized model...
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>"Check of DIGrid_initialized completed successfully.
+"Check of DIGrid_initialized completed successfully.
 Class DIGrid_initialized has 239 equation(s) and 239 variable(s).
 131 of these are trivial equation(s)."
 
@@ -7809,18 +7852,18 @@ Class DIGrid_initialized has 239 equation(s) and 239 variable(s).
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>record SimulationResult
-    resultFile = "/tmp/jl_aGS0ik/DIGrid_initialized_res.csv",
+    resultFile = "/tmp/jl_EqJQCq/DIGrid_initialized_res.csv",
     simulationOptions = "startTime = 0.0, stopTime = 50.0, numberOfIntervals = 50000, tolerance = 1e-8, method = 'dassl', fileNamePrefix = 'DIGrid_initialized', options = '', outputFormat = 'csv', variableFilter = '.*', cflags = '', simflags = ''",
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.047266656000000004,
-    timeBackend = 0.466236753,
-    timeSimCode = 0.030000753,
-    timeTemplates = 0.188705339,
-    timeCompile = 2.72998624,
-    timeSimulation = 5.359909504,
-    timeTotal = 8.822358472
+    timeFrontend = 0.036558888000000005,
+    timeBackend = 0.42352386000000003,
+    timeSimCode = 0.022910859000000002,
+    timeTemplates = 0.0987060219999999,
+    timeCompile = 1.476634575,
+    timeSimulation = 5.277577812,
+    timeTotal = 7.336085854
 end SimulationResult;
 
 </pre>
@@ -7829,8 +7872,19 @@ end SimulationResult;
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>"/tmp/jl_aGS0ik/DIGrid_initialized_res.csv"</pre>
+<pre>"/tmp/jl_EqJQCq/DIGrid_initialized_res.csv"</pre>
 </div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=767817c9">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Optional:-Plot-Simulation-Result">Optional: Plot Simulation Result<a class="anchor-link" href="#Optional:-Plot-Simulation-Result">¶</a></h2><p>The final cell is an optional example of visualizing a variable from the initialized-model simulation result.</p>
 </div>
 </div>
 </div>
@@ -7842,8 +7896,7 @@ end SimulationResult;
 <div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 6: Plot the initialized dynamic model</span>
-<span class="n">initialized_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DataFrame</span><span class="p">(</span><span class="n">CSV</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">initialized_resultfile</span><span class="p">))</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">initialized_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DataFrame</span><span class="p">(</span><span class="n">CSV</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">initialized_resultfile</span><span class="p">))</span>
 <span class="n">PLOT_VARIABLE</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">names</span><span class="p">(</span><span class="n">initialized_df</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
 <span class="w">    </span><span class="n">error</span><span class="p">(</span><span class="s">"PLOT_VARIABLE </span><span class="se">\"</span><span class="si">$PLOT_VARIABLE</span><span class="se">\"</span><span class="s"> is not a variable in the simulation result."</span><span class="p">)</span>
 
@@ -7877,10 +7930,10 @@ for more information.
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
-<div id="id_858489dc_3386_4401_bf04_6c552dd59cff" style="width:600px;height:400px;"></div>
+<div id="id_6832c62e_dc1a_4728_b45d_bd8b124c7e85" style="width:600px;height:400px;"></div>
 <script>
     ;(()=> {
-    function plots_jl_plotly_id_858489dc_3386_4401_bf04_6c552dd59cff() {
+    function plots_jl_plotly_id_6832c62e_dc1a_4728_b45d_bd8b124c7e85() {
             requirejs.config({
         paths: {
             plotly: 'https://cdn.plot.ly/plotly-2.6.3.min'
@@ -7888,7 +7941,7 @@ for more information.
     });
     require(['plotly'], function (Plotly) {
 
-        Plotly.newPlot('id_858489dc_3386_4401_bf04_6c552dd59cff', [
+        Plotly.newPlot('id_6832c62e_dc1a_4728_b45d_bd8b124c7e85', [
     {
         "xaxis": "x",
         "colorbar": {
@@ -108093,9 +108146,9 @@ for more information.
     }
     let plotlyloader = window.document.createElement("script")
     let src="https://requirejs.org/docs/release/2.3.7/minified/require.js"
-    plotlyloader.addEventListener("load", plots_jl_plotly_id_858489dc_3386_4401_bf04_6c552dd59cff);
+    plotlyloader.addEventListener("load", plots_jl_plotly_id_6832c62e_dc1a_4728_b45d_bd8b124c7e85);
     plotlyloader.src = src
-    document.querySelector("#id_858489dc_3386_4401_bf04_6c552dd59cff").appendChild(plotlyloader)
+    document.querySelector("#id_6832c62e_dc1a_4728_b45d_bd8b124c7e85").appendChild(plotlyloader)
     })()
     </script>
 </div>

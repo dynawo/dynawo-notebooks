@@ -7510,7 +7510,19 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4bb0656c">
+<main>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=0afc1de2">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="Model-Initialization---Package">Model Initialization - Package<a class="anchor-link" href="#Model-Initialization---Package">¶</a></h1><p>This notebook initializes one dynamic Modelica model that belongs to a package, from its auxiliary package.</p>
+<p>It loads the package and its auxiliary from <code>models/</code>, simulates the auxiliary to compute the initialization values, applies them to a copy of the package, and saves the initialized package to <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4bb0656c">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7518,9 +7530,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 1: Environment Setup</span>
-
-<span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">include</span><span class="p">(</span><span class="s">"../scripts/dictionaries.jl"</span><span class="p">)</span>
 <span class="n">include</span><span class="p">(</span><span class="s">"../scripts/helpers.jl"</span><span class="p">)</span>
 <span class="k">using</span><span class="w"> </span><span class="o">.</span><span class="n">WorkflowHelpers</span>
 <span class="k">using</span><span class="w"> </span><span class="n">OMJulia</span>
@@ -7589,6 +7599,17 @@ a.anchor-link {
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=70a10e0b">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Load-and-Validate-the-Models">Load and Validate the Models<a class="anchor-link" href="#Load-and-Validate-the-Models">¶</a></h2><p>The dynamic package and its auxiliary are loaded and checked, and the user configuration is validated against the package root model, before any changes are made.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1bcae4db">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7597,9 +7618,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 2: OpenModelica Setup + Package Loading</span>
-
-<span class="c"># 1. Load the original dynamic package and validate the configuration against it</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># 1. Load the original dynamic package and validate the configuration against it</span>
 <span class="n">SourceOMC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">OMJulia</span><span class="o">.</span><span class="n">OMCSession</span><span class="p">()</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadFile(</span><span class="se">\"</span><span class="si">$MODELICA_PKG_PATH</span><span class="se">\"</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadModel(Complex)"</span><span class="p">)</span>
@@ -7634,7 +7653,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.tw7pCmOGDp"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.eVhEh7f29V"
 </pre>
 </div>
 </div>
@@ -7648,7 +7667,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.V56do03VEc"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.cwaP11tpHw"
 </pre>
 </div>
 </div>
@@ -7679,8 +7698,7 @@ Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 
 <div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 3: Package Name Mapping</span>
-<span class="n">INITIALIZED_NAME_MAP</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">initialized_name_map</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span><span class="w"> </span><span class="n">INITIALIZED_PACKAGE</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">INITIALIZED_NAME_MAP</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">initialized_name_map</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span><span class="w"> </span><span class="n">INITIALIZED_PACKAGE</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7700,6 +7718,17 @@ Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=9af465a5">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Extract-Initialization-Values">Extract Initialization Values<a class="anchor-link" href="#Extract-Initialization-Values">¶</a></h2><p>The auxiliary package is simulated, and its outputs provide the initialization values to apply to each model in the inheritance chain.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=c9bf847d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7708,9 +7737,7 @@ Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 
 <div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 4: Simulate Auxiliary Package + Extract Initialization Values</span>
-
-<span class="c"># Build and simulate the auxiliary root model.</span>
+<div class="highlight hl-julia"><pre><span></span><span class="c"># Build and simulate the auxiliary root model.</span>
 <span class="n">ModelicaSystem</span><span class="p">(</span><span class="n">AuxOMC</span><span class="p">,</span><span class="w"> </span><span class="n">AUX_PACKAGE_FILE</span><span class="p">,</span><span class="w"> </span><span class="n">AUX_ROOT_MODEL</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">MODELICA_PKG_PATH</span><span class="p">,</span><span class="w"> </span><span class="n">DYNAWO_PKG_PATH</span><span class="p">])</span>
 <span class="n">simulate</span><span class="p">(</span><span class="n">AuxOMC</span><span class="p">,</span><span class="w"> </span><span class="n">resultfile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">AUX_PACKAGE</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="s">"_res.mat"</span><span class="p">)</span>
 
@@ -7731,6 +7758,17 @@ Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=26fc8e19">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Build-Initialized-Package">Build Initialized Package<a class="anchor-link" href="#Build-Initialized-Package">¶</a></h2><p>A copy of each model in the package is populated with the extracted values and saved as the initialized package in <code>outputs/</code>.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=4028353e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7739,8 +7777,7 @@ Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 
 <div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 5: Build and save the initialized package</span>
-<span class="n">sendExpression</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"deleteClass(</span><span class="si">$INITIALIZED_PACKAGE</span><span class="s">)"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">sendExpression</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"deleteClass(</span><span class="si">$INITIALIZED_PACKAGE</span><span class="s">)"</span><span class="p">)</span>
 <span class="n">omc_call</span><span class="p">(</span><span class="n">SourceOMC</span><span class="p">,</span><span class="w"> </span><span class="s">"loadString(</span><span class="se">\"</span><span class="s">within ; package </span><span class="si">$INITIALIZED_PACKAGE</span><span class="s"> end </span><span class="si">$INITIALIZED_PACKAGE</span><span class="s">;</span><span class="se">\"</span><span class="s">)"</span><span class="p">,</span><span class="w"> </span><span class="n">parsed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">)</span>
 
 <span class="k">for</span><span class="w"> </span><span class="n">model</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">chain</span>
@@ -7818,7 +7855,7 @@ Class MyIEEE14_auxiliary.IEEE14DisconnectLine_auxiliary has 875 equation(s) and 
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.mBZ4Qgk3re"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.9KZ4kg61rx"
 </pre>
 </div>
 </div>
@@ -7841,6 +7878,17 @@ Class MyIEEE14_initialized.IEEE14DisconnectLine_initialized has 806 equation(s) 
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e03624cc">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="Validate-Initialized-Package">Validate Initialized Package<a class="anchor-link" href="#Validate-Initialized-Package">¶</a></h2><p>The initialized package is loaded independently and simulated to verify that the final output can run.</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=2075c7bd">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -7849,9 +7897,7 @@ Class MyIEEE14_initialized.IEEE14DisconnectLine_initialized has 806 equation(s) 
 <div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 6: Final simulation of the initialized package</span>
-
-<span class="n">ModelicaSystem</span><span class="p">(</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">ModelicaSystem</span><span class="p">(</span>
 <span class="w">    </span><span class="n">InitializedOMC</span><span class="p">,</span>
 <span class="w">    </span><span class="n">INITIALIZED_PACKAGE_FILE</span><span class="p">,</span>
 <span class="w">    </span><span class="n">INITIALIZED_ROOT_MODEL</span><span class="p">,</span>
@@ -7893,13 +7939,13 @@ Class MyIEEE14_initialized.IEEE14DisconnectLine_initialized has 806 equation(s) 
 LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.26182051100000003,
-    timeBackend = 1.515257538,
-    timeSimCode = 0.6896168890000001,
-    timeTemplates = 0.6251850830000001,
-    timeCompile = 3.107286847,
-    timeSimulation = 0.15771247800000002,
-    timeTotal = 5.732084996
+    timeFrontend = 0.109718307,
+    timeBackend = 1.502321117,
+    timeSimCode = 0.740657527,
+    timeTemplates = 0.6770268479999999,
+    timeCompile = 3.3464049190000003,
+    timeSimulation = 0.16865106400000002,
+    timeTotal = 5.868177174
 end SimulationResult;
 
 </pre>
@@ -7921,9 +7967,7 @@ end SimulationResult;
 <div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="c"># Cell 7: Plot the initialized package response</span>
-
-<span class="n">result_columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">names</span><span class="p">(</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">CSV</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">initialized_resultfile</span><span class="p">;</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)))</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">result_columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">names</span><span class="p">(</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">CSV</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">initialized_resultfile</span><span class="p">;</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">)))</span>
 <span class="n">PLOT_VARIABLE</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">result_columns</span><span class="w"> </span><span class="o">||</span>
 <span class="w">    </span><span class="n">error</span><span class="p">(</span><span class="s">"PLOT_VARIABLE </span><span class="se">\"</span><span class="si">$PLOT_VARIABLE</span><span class="se">\"</span><span class="s"> is not a variable in the simulation result."</span><span class="p">)</span>
 <span class="n">initialized_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DataFrame</span><span class="p">(</span><span class="n">CSV</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">initialized_resultfile</span><span class="p">;</span><span class="w"> </span><span class="n">select</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s">"time"</span><span class="p">,</span><span class="w"> </span><span class="n">PLOT_VARIABLE</span><span class="p">]))</span>
@@ -7958,10 +8002,10 @@ for more information.
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
-<div id="id_6c50a68c_f7a3_4494_aa2b_3a9b1d3c2eae" style="width:600px;height:400px;"></div>
+<div id="id_c9e28a9e_a0f8_4de9_bfda_14ed98004b13" style="width:600px;height:400px;"></div>
 <script>
     ;(()=> {
-    function plots_jl_plotly_id_6c50a68c_f7a3_4494_aa2b_3a9b1d3c2eae() {
+    function plots_jl_plotly_id_c9e28a9e_a0f8_4de9_bfda_14ed98004b13() {
             requirejs.config({
         paths: {
             plotly: 'https://cdn.plot.ly/plotly-2.6.3.min'
@@ -7969,7 +8013,7 @@ for more information.
     });
     require(['plotly'], function (Plotly) {
 
-        Plotly.newPlot('id_6c50a68c_f7a3_4494_aa2b_3a9b1d3c2eae', [
+        Plotly.newPlot('id_c9e28a9e_a0f8_4de9_bfda_14ed98004b13', [
     {
         "xaxis": "x",
         "colorbar": {
@@ -8608,9 +8652,9 @@ for more information.
     }
     let plotlyloader = window.document.createElement("script")
     let src="https://requirejs.org/docs/release/2.3.7/minified/require.js"
-    plotlyloader.addEventListener("load", plots_jl_plotly_id_6c50a68c_f7a3_4494_aa2b_3a9b1d3c2eae);
+    plotlyloader.addEventListener("load", plots_jl_plotly_id_c9e28a9e_a0f8_4de9_bfda_14ed98004b13);
     plotlyloader.src = src
-    document.querySelector("#id_6c50a68c_f7a3_4494_aa2b_3a9b1d3c2eae").appendChild(plotlyloader)
+    document.querySelector("#id_c9e28a9e_a0f8_4de9_bfda_14ed98004b13").appendChild(plotlyloader)
     })()
     </script>
 </div>
