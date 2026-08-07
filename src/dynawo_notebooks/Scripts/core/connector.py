@@ -9,6 +9,7 @@ and interaction with the OpenModelica Compiler (OMC) via the OMPython API.
 import os
 import logging
 import re
+import shutil
 from typing import Optional, List, Any
 from OMPython import OMCSessionZMQ
 
@@ -258,17 +259,25 @@ class OMCConnector:
             pass
         return []
 
-    def simulate_model(self, model_name: str, stop_time: float = 0.0) -> bool:
+    def simulate_model(self, model_name: str, stop_time: float = 0.0, om_file: str = None) -> bool:
         """
         Runs a Modelica simulation to evaluate initialization and steady-state values.
 
         :param model_name: Name of the Modelica model to simulate.
         :param stop_time: Simulation stop time (default 0.0 for Load Flow / Init).
+        :param om_file: Path to the output file for the simulation results.
         :return: True if the simulation was successful, False otherwise.
         """
         logger.info(
             f"Starting OMC simulation for '{model_name}' (stopTime={stop_time}). This may take a moment..."
         )
+
+        if om_file:
+            res = self._omc.sendExpression(
+                f'simulate({model_name}, stopTime={stop_time}, outputFormat="csv")'
+            )
+            shutil.copy2(res["resultFile"], om_file)
+
         res = self._omc.sendExpression(f"simulate({model_name}, stopTime={stop_time})")
 
         if res and "timeCompile" in str(res) and "Error" not in str(res):

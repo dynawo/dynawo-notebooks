@@ -5,6 +5,7 @@ This is the main entry point for the toolkit. It orchestrates the Connector,
 Parser, and Converter modules to provide a seamless experience for the user.
 """
 
+import os
 import logging
 import json
 from typing import List, Dict, Any
@@ -125,8 +126,6 @@ class MoTopologyToolkit:
         """
         logger.info(f">>> SAVING PYPOWSYBL NETWORK TO: {export_path}")
         try:
-            import os
-
             # Ensure the target directory exists before executing the save operation
             if not os.path.exists(export_path):
                 os.makedirs(export_path)

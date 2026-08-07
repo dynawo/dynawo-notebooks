@@ -12,7 +12,7 @@ import json
 import logging
 import pandas as pd
 import pypowsybl as pp
-from typing import Dict, Set
+from typing import Dict, Set, Any
 from dynawo_notebooks.Scripts.core.powerflow import PowerFlowRunner
 
 logger = logging.getLogger(__name__)
@@ -85,59 +85,67 @@ class PowsyblConverter:
         # 2. Voltage Discovery & Creation
         # Dynawo buses often don't have explicit Un. We discover it from connected equipment.
         bus_nominal_v = {}
+
+        def is_valid_kv(vol: Any) -> bool:
+            try:
+                return vol is not None and float(vol) > 1.5
+            except (ValueError, TypeError):
+                return False
+
         if "buses" in data:
             for bid, info in data["buses"].items():
                 # 2.1 Try to get explicit voltage
                 v = info.get("nominal_v")
 
                 # 2.2 Discovery from Transformers (rated_u1/u2)
-                if not v or v == 0.0:
+                # Overrides '1.0' pu values to find the true physical base
+                if not is_valid_kv(v):
                     for tid, t_info in data.get("transformers", {}).items():
-                        if t_info.get("bus1") == bid and t_info.get("rated_u1"):
+                        if t_info.get("bus1") == bid and is_valid_kv(t_info.get("rated_u1")):
                             v = t_info.get("rated_u1")
                             break
-                        if t_info.get("bus2") == bid and t_info.get("rated_u2"):
+                        if t_info.get("bus2") == bid and is_valid_kv(t_info.get("rated_u2")):
                             v = t_info.get("rated_u2")
                             break
 
                 # 2.3 Discovery from Generators (nominal_v)
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for gid, g_info in data.get("generators", {}).items():
-                        if g_info.get("bus") == bid and g_info.get("nominal_v"):
+                        if g_info.get("bus") == bid and is_valid_kv(g_info.get("nominal_v")):
                             v = g_info.get("nominal_v")
                             break
 
                 # 2.4 Discovery from Loads
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for lid, l_info in data.get("loads", {}).items():
-                        if l_info.get("bus") == bid and l_info.get("nominal_v"):
+                        if l_info.get("bus") == bid and is_valid_kv(l_info.get("nominal_v")):
                             v = l_info.get("nominal_v")
                             break
 
                 # 2.5 Discovery from Lines
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for lid, l_info in data.get("lines", {}).items():
-                        if (l_info.get("bus1") == bid or l_info.get("bus2") == bid) and l_info.get(
-                            "nominal_v"
-                        ):
+                        if (
+                            l_info.get("bus1") == bid or l_info.get("bus2") == bid
+                        ) and is_valid_kv(l_info.get("nominal_v")):
                             v = l_info.get("nominal_v")
                             break
 
                 # 2.6 Naming convention fallback using external JSON rules
-                if not v or v == 0.0:
+                if not is_valid_kv(v):
                     for prefix, mapped_voltage in voltage_mapping.items():
                         if prefix != "default" and prefix in bid:
                             v = mapped_voltage
                             break
                     # If it still hasn't found a match, apply the default voltage
-                    if not v or v == 0.0:
+                    if not is_valid_kv(v):
                         v = voltage_mapping.get("default", 225.0)
 
                 # Force 'v' to be a float. Fallback safely if extraction fails.
                 try:
                     v = float(v)
-                    # Auto-convert Volts to kV for PyPowSyBl compliance
-                    # Ensures that raw values (e.g., 69000.0) are interpreted as 69.0 kV
+                    # Auto-convert Volts to kV for PyPowSyBl
+                    # Ensures that any raw value (e.g., 69000.0) is correctly interpreted as 69.0 kV
                     if v > 1000.0:
                         v = v / 1000.0
                 except (ValueError, TypeError):
@@ -164,9 +172,21 @@ class PowsyblConverter:
         for lid, info in data.get("lines", {}).items():
             PowsyblConverter._create_line(network, lid, info, bus_nominal_v)
 
+        total_load_p = sum(
+            abs(info.get("p_pu", 0.0) * info.get("sn_nom", 100.0))
+            for info in data.get("loads", {}).values()
+        )
+        total_gen_p = sum(
+            abs(info.get("p", info.get("p_pu", 0.0) * info.get("sn_nom", 100.0)))
+            for info in data.get("generators", {}).values()
+        )
+        estimated_mismatch = max(total_load_p - total_gen_p, 100.0)  # Ensure a minimum threshold
+
         # 4. Generators
         for gid, info in data.get("generators", {}).items():
-            PowsyblConverter._create_generator(network, gid, info, bus_nominal_v)
+            PowsyblConverter._create_generator(
+                network, gid, info, bus_nominal_v, estimated_mismatch
+            )
 
         # 5. Loads
         for lid, info in data.get("loads", {}).items():
@@ -213,13 +233,13 @@ class PowsyblConverter:
         if is_pu:
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
-            b_sie = raw_b / z_base
-            g_sie = raw_g / z_base
+            b_sie = -float(raw_b) / z_base
+            g_sie = float(raw_g) / z_base
         else:
             r_ohm = raw_r
             x_ohm = raw_x
-            b_sie = raw_b
-            g_sie = raw_g
+            b_sie = -float(raw_b)
+            g_sie = float(raw_g)
 
         network.create_lines(
             id=str(lid),
@@ -236,14 +256,16 @@ class PowsyblConverter:
         )
 
     @staticmethod
-    def _create_generator(network: pp.network.Network, gid: str, info: Dict, bus_v: Dict) -> None:
+    def _create_generator(
+        network: pp.network.Network,
+        gid: str,
+        info: Dict,
+        bus_v: Dict,
+        slack_warm_start_mw: float = 1.0,
+    ) -> None:
         """
         Creates a generator in the PyPowSyBl network, properly configuring slack bus behavior.
-
-        :param network: The PyPowSyBl network instance.
-        :param gid: The unique identifier for the generator.
-        :param info: Dictionary containing the generator's parameters.
-        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        Incorporates a Warm Start active power estimation to prevent Newton-Raphson divergence.
         """
         bid = info.get("bus")
 
@@ -253,24 +275,18 @@ class PowsyblConverter:
 
         p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
 
-        is_slack = True
+        # Robust slack detection
+        is_slack = False
         valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
-        try:
-            gens_df = network.get_generators()
-            for gid_temp, row in gens_df.iterrows():
-                gid_str = str(gid_temp).lower()
+        gid_str = str(gid).lower()
 
-                # Check if any of the dynamic identifiers match the generator ID
-                if any(identifier in gid_str for identifier in valid_slack_identifiers):
-                    is_slack = False
-                    break
-        except Exception as e:
-            logger.warning(f"Could not read generators for slack detection: {e}")
+        # Check directly if this ID contains the slack nomenclature
+        if any(identifier in gid_str for identifier in valid_slack_identifiers):
+            is_slack = True
 
-        # If it is a Slack Bus and its active power is 0 MW, we assign a dummy initial value (1.0 MW).
-        # This provides a "participation factor" > 0% so that OpenLoadFlow accepts mismatch injection.
+        # Warm start injection to prevent unacceptable jumps in the Jacobian matrix
         if is_slack and p_mw == 0.0:
-            p_mw = 1.0
+            p_mw = slack_warm_start_mw
 
         # GENERATOR TYPE (PQ vs PV)
         modelica_type = info.get("modelica_type", "").lower()
@@ -286,8 +302,7 @@ class PowsyblConverter:
             if "q_pu" in info:
                 target_q = info["q_pu"] * sn
 
-        # Robust voltage extraction: Prevent 0.0 propagation to avoid solver crashes
-        # Provide a standard base voltage fallback if the parsed value is zero or missing
+        # Robust voltage extraction
         base_v = bus_v.get(bid)
         if not base_v or base_v == 0.0:
             base_v = 130.0
@@ -303,6 +318,16 @@ class PowsyblConverter:
             min_p=-9999.0 if is_slack else abs(p_mw),
             max_p=9999.0 if is_slack else abs(p_mw),
         )
+
+        # Capability curve based on effective size
+        min_q_val = -99999.0
+        max_q_val = 99999.0
+
+        q_limits_df = pd.DataFrame(
+            {"id": [str(gid)], "min_q": [min_q_val], "max_q": [max_q_val]}
+        ).set_index("id")
+
+        network.create_minmax_reactive_limits(q_limits_df)
 
     @staticmethod
     def _create_load(network: pp.network.Network, lid: str, info: Dict, bus_v: Dict) -> None:
@@ -339,7 +364,7 @@ class PowsyblConverter:
         un = bus_v.get(bid, 225.0)
         sn = info.get("sn_nom", 100.0)
 
-        # Normalització de tensió a kV
+        # Normalize voltage to kV
         if un > 1000.0:
             un = un / 1000.0
 
@@ -350,6 +375,7 @@ class PowsyblConverter:
         raw_g = info.get("g_pu", info.get("g", 0.0))
 
         if is_pu:
+            # Explicit sign inversion for CIM compliance (-float)
             b_sie = -float(raw_b) / z_base
             g_sie = float(raw_g) / z_base
         else:
@@ -412,16 +438,9 @@ class PowsyblConverter:
         rho_max = info.get("rho_max")
         rho_min = info.get("rho_min")
 
-        effective_ratio = base_ratio
-        if rho_max is not None and rho_min is not None and n_tap > 1:
-            step_size = (rho_max - rho_min) / (n_tap - 1)
-            effective_ratio = base_ratio * (rho_min + tap_pos * step_size)
-
-        rated_u1_effective = un1 * effective_ratio
-
-        # Calculate Z_base strictly using the effective primary rated voltage.
-        # PyPowSyBl requires ohmic impedances to be referred to the primary ratedU1 side.
-        z_base = (rated_u1_effective**2) / sn_comp
+        # To match the Modelica multiplier (V2 = V1 * un2/un1 * ratio),
+        # in PyPowSyBl we must DIVIDE ratedU1 by the ratio.
+        rated_u1_base = un1 / base_ratio if base_ratio != 0.0 else un1
 
         is_pu = "r_pu" in info or "x_pu" in info
 
@@ -432,16 +451,20 @@ class PowsyblConverter:
 
         raw_r = max(float(raw_r), 1e-6)
 
+        # Topological fix: Reflect impedance from secondary to primary side
+        # by using the actual referred voltage for the impedance base calculation.
+        z_base = ((un1 * base_ratio) ** 2) / sn_comp if base_ratio != 0.0 else (un1**2) / sn_comp
+
         if is_pu:
             r_ohm = raw_r * z_base
             x_ohm = raw_x * z_base
-            b_sie = raw_b / z_base
-            g_sie = raw_g / z_base
+            b_sie = -float(raw_b) / z_base
+            g_sie = float(raw_g) / z_base
         else:
             r_ohm = raw_r
             x_ohm = raw_x
-            b_sie = raw_b
-            g_sie = raw_g
+            b_sie = -float(raw_b)
+            g_sie = float(raw_g)
 
         network.create_2_windings_transformers(
             id=str(tid),
@@ -450,10 +473,40 @@ class PowsyblConverter:
             voltage_level2_id=f"VL_{b2}",
             bus2_id=str(b2),
             rated_s=sn_comp,
-            rated_u1=rated_u1_effective,
+            rated_u1=rated_u1_base,
             rated_u2=un2,
             r=r_ohm,
             x=x_ohm,
             g=g_sie,
             b=b_sie,
         )
+
+        if rho_max is not None and rho_min is not None and n_tap > 1:
+            rtc_df = pd.DataFrame(
+                {
+                    "id": [str(tid)],
+                    "low_tap": [0],
+                    "tap": [int(tap_pos)],
+                    "regulating": [False],
+                }
+            ).set_index("id")
+
+            network.create_ratio_tap_changers(rtc_df)
+
+            steps_data = []
+            step_size = (rho_max - rho_min) / (n_tap - 1)
+
+            for i in range(int(n_tap)):
+                steps_data.append(
+                    {
+                        "id": str(tid),
+                        "rho": rho_min + (i * step_size),
+                        "r": r_ohm,
+                        "x": x_ohm,
+                        "g": g_sie,
+                        "b": b_sie,
+                    }
+                )
+
+            steps_df = pd.DataFrame(steps_data).set_index("id")
+            network.update_ratio_tap_changer_steps(steps_df)
