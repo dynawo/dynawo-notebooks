@@ -3,7 +3,7 @@
 
 module WorkflowDictionaries
 
-include(joinpath(@__DIR__, "dictionaries", "replacements.jl"))
+include(joinpath(@__DIR__, "dictionaries", "lf_replacements.jl"))
 include(joinpath(@__DIR__, "dictionaries", "init_models.jl"))
 include(joinpath(@__DIR__, "dictionaries", "init_parameters.jl"))
 

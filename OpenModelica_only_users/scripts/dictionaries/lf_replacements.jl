@@ -1,4 +1,4 @@
-# dictionaries/replacements.jl
+# dictionaries/lf_replacements.jl
 # Component replacements and valid interfaces in the auxiliary model.
 
 const REPLACEMENTS = Dict{String, Any}(
