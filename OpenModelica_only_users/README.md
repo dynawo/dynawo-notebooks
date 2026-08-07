@@ -1,17 +1,18 @@
-# BuildAux and Initialization
+# OpenModelica Workflows
 
-This folder contains two notebook workflows for OpenModelica cases using the Dynawo Modelica library:
-
-- `BuildAux/`: builds an auxiliary steady-state version of a single file or package, written as `*_auxiliary`.
-- `Initialization/`: simulates that auxiliary case, extracts initialization values, and writes them back into a dynamic case as `*_initialized`.
+This folder contains notebook workflows for OpenModelica cases using the Dynawo Modelica library.
 
 ## Contents
 
-- `BuildAux/BuildAux_single.ipynb`: build an auxiliary case from a single `.mo` file.
-- `BuildAux/BuildAux_package.ipynb`: build an auxiliary package from a package-based case.
-- `BuildAux/scripts/`: helper code and replacement dictionaries used by the BuildAux notebooks.
-- `Initialization/Initialization_single.ipynb`: create an initialized dynamic case from an existing auxiliary case.
-- `Initialization/helpers/`: helper code and parameter dictionaries used by the initialization notebook.
+- [`BuildAux/`](BuildAux/): builds an auxiliary steady-state model or package.
+- [`Initialization/`](Initialization/): creates an initialized dynamic model or package from an existing auxiliary case.
+- [`FullWorkflow/`](FullWorkflow/): builds the auxiliary case and creates the initialized dynamic case in one workflow.
+- [`ParametricStudies/`](ParametricStudies/): runs parameter sweeps for single-file and package models, with optional reinitialization.
+- [`StabilityAnalysis/`](StabilityAnalysis/): retrieves linearized OpenModelica models and performs small-signal stability analysis.
+- [`scripts/`](scripts/): shared helper library (dictionaries, workflow helpers, and sweep/initialization helpers) reused across the notebooks.
+- [`dynawo_library/`](dynawo_library/): the Dynawo Modelica library, pinned in this repo (Dynawo master, commit `a35017621f5`).
+- [`docs/`](docs/): rendered HTML exports of the notebooks, with their outputs, to view the results without running them.
+- `Older notebooks/`: previous examples and workflows kept for reference.
 
 ## Prerequisites
 
@@ -20,15 +21,14 @@ Before running the notebooks, install:
 - Julia
 - OpenModelica
 - Jupyter Notebook or JupyterLab
-- the Dynawo Modelica package on your machine
-- the Modelica Standard Library on your machine
+- a Dynawo installation (its Modelica Standard Library is used by the notebooks)
 - the OpenModelica packages `Complex` and `ModelicaServices`
 
 Then install the Julia packages used by the notebooks:
 
 ```julia
 using Pkg
-Pkg.add(["IJulia", "OMJulia", "Plots", "DataFrames", "CSV"])
+Pkg.add(["IJulia", "OMJulia", "Plots", "PlotlyJS", "DataFrames", "CSV"])
 ```
 
 You can install the OpenModelica packages `Complex` and `ModelicaServices` with:
@@ -43,58 +43,6 @@ EOF
 omc /tmp/openmodelica_setup.mos
 ```
 
-The notebooks also expect local library paths for:
+The Dynawo Modelica library is pinned in this repo under `dynawo_library/`, so the notebooks load it directly — no download needed (`DYNAWO_PKG_PATH` points there).
 
-- `DYNAWO_PKG_PATH`: path to the Dynawo `package.mo`
-- `MODELICA_PKG_PATH`: path to the Modelica `package.mo`
-
-Update those paths in the notebook configuration cells before running anything.
-
-## First Steps
-
-### BuildAux
-
-Open one of the notebooks in `BuildAux/`, depending on your case.
-
-#### `BuildAux_single.ipynb`
-
-Use this notebook for a single `.mo` file. By default, it looks in the local `models/` folder.
-
-In the configuration cells, set:
-
-- `MODEL_DIR`: the folder that contains the `.mo` file
-- `MODEL`: the model you want to transform into an auxiliary file
-- `MODEL_FILE_PATH`: the path to the selected `.mo` file, usually built from `MODEL_DIR` and `MODEL`
-- `INIT_MODEL_BY_COMPONENT`: a dictionary that assigns a specific INIT model to each component that needs one
-- `SLACK_COMPONENT`: the component that should be treated as the slack reference in the auxiliary build
-
-#### `BuildAux_package.ipynb`
-
-Use this notebook for a package-based case. By default, it looks in the local `MyNordic/` folder.
-
-In the configuration cells, set:
-
-- `MODEL_DIR`: the folder that contains the package
-- `MODELS_PKG_PATH`: the path to the package `package.mo`
-- `MODEL`: the full model name inside the package, for example `MyNordic.TestCase`
-- `INIT_MODEL_BY_COMPONENT`: a dictionary that assigns a specific INIT model to each component that needs one
-- `SLACK_COMPONENT`: the component that should be treated as the slack reference in the auxiliary build
-
-You can change `MODEL_DIR` and the derived paths if your files are stored somewhere else. Run the notebook cells in order to generate the auxiliary model or package, which is named `*_auxiliary`.
-
-### Initialization
-
-Open `Initialization/Initialization_single.ipynb`.
-
-By default, this notebook looks for cases in the local `models/` folder. You can change `MODEL_DIR` and the derived paths if your files are stored somewhere else.
-
-In the configuration cells, set:
-
-- `MODEL_DIR`: the folder that contains the model files
-- `MODEL`: the dynamic case you want to initialize
-- `MODEL_FILE_PATH`: the path to the original dynamic case
-- `INITIALIZED_MODEL` and `INITIALIZED_FILE_PATH`: the name and path for the output initialized case
-- `AUX_MODEL` and `AUX_FILE_PATH`: the auxiliary case generated previously with BuildAux
-- `PLOT_VARIABLE`: the variable you want to plot after the final simulation
-
-Run the cells in order. The notebook simulates the auxiliary case, transfers the initialization values, and writes the initialized model, which is named `*_initialized`.
+The Modelica Standard Library comes from your Dynawo installation. Set `DYNAWO_DIR` in the notebook configuration cells to your Dynawo install path; `MODELICA_PKG_PATH` is derived from it.
