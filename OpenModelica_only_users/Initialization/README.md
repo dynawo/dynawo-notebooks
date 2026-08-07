@@ -6,14 +6,17 @@ This folder contains notebooks for creating initialized dynamic models and packa
 
 - `Initialization_single.ipynb`: initializes a single `.mo` model.
 - `Initialization_package.ipynb`: initializes a package model across its inheritance chain.
-- `scripts/`: helper code and initialization parameter dictionaries.
-- `models/`: input single-file models.
-- `MyIEEE14/` and `MyNordic/`: example dynamic packages.
+- `models/`: input models and packages, together with the `*_auxiliary` cases they are initialized from.
+- `outputs/`: generated initialized models and packages.
+
+Both notebooks reuse the shared helper modules in `../FullWorkflow/scripts/`.
 
 ## Configuration
 
-For a single-file model, configure `MODEL_DIR`, `MODEL`, `MODEL_FILE_PATH`, `INITIALIZED_MODEL`, `INITIALIZED_FILE_PATH`, `AUX_MODEL`, `AUX_FILE_PATH`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, and `PLOT_VARIABLE`.
+For a single-file model, configure `MODEL`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, `INIT_MODEL_BY_COMPONENT`, and `PLOT_VARIABLE`.
 
-For a package model, configure `MODEL_DIR`, `MODELS_PKG_PATH`, `AUX_DIR`, `AUX_PACKAGE_FILE`, `MODEL`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, `INIT_MODEL_BY_COMPONENT`, and `PLOT_VARIABLE`.
+For a package model, configure `MODEL`, `DYNAWO_PKG_PATH`, `MODELICA_PKG_PATH`, `INIT_MODEL_BY_COMPONENT`, and `PLOT_VARIABLE`. The package, auxiliary, and initialized paths are derived from `MODEL`.
 
-Run the cells in order. The auxiliary model is simulated, its initialization values are extracted, and the initialized dynamic model or package is written as `*_initialized`.
+Each notebook reads a pre-built auxiliary from `models/` (`<MODEL>_auxiliary.mo` for single models, or the `<PACKAGE>_auxiliary/` package). Generate it first with the matching `BuildAux` notebook (which writes to `BuildAux/outputs/`) and copy it into this folder's `models/`.
+
+Run the cells in order. The auxiliary model is simulated, its initialization values are extracted, and the initialized dynamic model or package is written to `outputs/` as `*_initialized`.
