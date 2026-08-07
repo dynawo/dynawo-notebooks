@@ -6,8 +6,9 @@ This folder contains notebooks for running parameter sweeps on OpenModelica mode
 
 - `ParametricStudies_MyBESS_Generalized.ipynb`: parameter sweep for a single-file MyBESS model.
 - `ParametricStudies_MyIEEE14_Package.ipynb`: parameter sweep for a MyIEEE14 package model.
-- `scripts/`: shared parametric-study helpers and single/package initialization helpers.
 - `outputs/`: generated Modelica cases and selected simulation results.
+
+The notebooks reuse the shared helper modules in `../scripts/`.
 
 ## Configuration
 

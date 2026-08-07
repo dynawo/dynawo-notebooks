@@ -9,7 +9,7 @@ This folder contains notebooks for generating auxiliary steady-state models and 
 - `models/`: input models — single `.mo` files and source packages (`MyIEEE14/`, `MyNordic/`).
 - `outputs/`: generated auxiliary models and packages.
 
-Both notebooks reuse the shared helper modules in `../FullWorkflow/scripts/`.
+Both notebooks reuse the shared helper modules in `../scripts/`.
 
 ## Configuration
 

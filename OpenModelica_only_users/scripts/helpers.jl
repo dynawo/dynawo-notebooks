@@ -1,10 +1,10 @@
 # scripts/helpers.jl
 # Public helper API for the full initialization workflow.
 
-module FullWorkflowHelpers
+module WorkflowHelpers
 
 using OMJulia
-using ..FullWorkflowDictionaries: REPLACEMENTS, AUX_ALLOWED_REFS, INIT_MODELS, INIT_PARAMS
+using ..WorkflowDictionaries: REPLACEMENTS, AUX_ALLOWED_REFS, INIT_MODELS, INIT_PARAMS
 
 include(joinpath(@__DIR__, "helpers", "modelica_parsing.jl"))
 include(joinpath(@__DIR__, "helpers", "openmodelica.jl"))

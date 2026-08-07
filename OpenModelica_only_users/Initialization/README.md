@@ -9,7 +9,7 @@ This folder contains notebooks for creating initialized dynamic models and packa
 - `models/`: input models and packages, together with the `*_auxiliary` cases they are initialized from.
 - `outputs/`: generated initialized models and packages.
 
-Both notebooks reuse the shared helper modules in `../FullWorkflow/scripts/`.
+Both notebooks reuse the shared helper modules in `../scripts/`.
 
 ## Configuration
 

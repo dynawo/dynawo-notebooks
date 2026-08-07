@@ -3,7 +3,7 @@
 module ParametricStudyHelpers
 
 using OMJulia
-using ..FullWorkflowHelpers
+using ..WorkflowHelpers
 
 export
     case_label,

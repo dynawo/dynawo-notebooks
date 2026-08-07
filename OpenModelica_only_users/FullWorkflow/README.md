@@ -8,7 +8,8 @@ This folder contains notebooks that build the auxiliary case and create the init
 - `FullWorkflow_package.ipynb`: runs the complete workflow for a package model.
 - `models/`: input models and packages.
 - `outputs/`: generated auxiliary and initialized models or packages.
-- `scripts/`: shared dictionaries and helper functions.
+
+The notebooks reuse the shared helper modules in `../scripts/`.
 
 ## Configuration
 

@@ -1,7 +1,7 @@
 # scripts/dictionaries.jl
 # Public dictionary API for the full initialization workflow.
 
-module FullWorkflowDictionaries
+module WorkflowDictionaries
 
 include(joinpath(@__DIR__, "dictionaries", "replacements.jl"))
 include(joinpath(@__DIR__, "dictionaries", "init_models.jl"))

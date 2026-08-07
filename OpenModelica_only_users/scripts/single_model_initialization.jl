@@ -3,7 +3,7 @@
 module ModelInitialization
 
 using OMJulia
-using ..FullWorkflowHelpers
+using ..WorkflowHelpers
 using ..ParametricStudyHelpers:
     case_label,
     load_modelica_file!,

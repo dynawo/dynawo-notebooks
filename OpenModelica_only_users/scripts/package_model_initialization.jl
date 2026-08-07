@@ -3,7 +3,7 @@
 module PackageModelInitialization
 
 using OMJulia
-using ..FullWorkflowHelpers
+using ..WorkflowHelpers
 using ..ParametricStudyHelpers:
     _transform_auxiliary_class!,
     _simulate_auxiliary_model!,

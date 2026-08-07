@@ -9,6 +9,7 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
 - [`FullWorkflow/`](FullWorkflow/): builds the auxiliary case and creates the initialized dynamic case in one workflow.
 - [`ParametricStudies/`](ParametricStudies/): runs parameter sweeps for single-file and package models, with optional reinitialization.
 - [`StabilityAnalysis/`](StabilityAnalysis/): retrieves linearized OpenModelica models and performs small-signal stability analysis.
+- [`scripts/`](scripts/): shared helper library (dictionaries, workflow helpers, and sweep/initialization helpers) reused across the notebooks.
 - `Compare_*.ipynb`: notebooks for comparing generated OpenModelica cases with Dynawo reference models.
 - `Older notebooks/`: previous examples and workflows kept for reference.
 
