@@ -10,7 +10,7 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
 - [`ParametricStudies/`](ParametricStudies/): runs parameter sweeps for single-file and package models, with optional reinitialization.
 - [`StabilityAnalysis/`](StabilityAnalysis/): retrieves linearized OpenModelica models and performs small-signal stability analysis.
 - [`scripts/`](scripts/): shared helper library (dictionaries, workflow helpers, and sweep/initialization helpers) reused across the notebooks.
-- `Compare_*.ipynb`: notebooks for comparing generated OpenModelica cases with Dynawo reference models.
+- [`dynawo_library/`](dynawo_library/): the Dynawo Modelica library, pinned in this repo (Dynawo master, commit `a35017621f5`).
 - `Older notebooks/`: previous examples and workflows kept for reference.
 
 ## Prerequisites
@@ -20,8 +20,7 @@ Before running the notebooks, install:
 - Julia
 - OpenModelica
 - Jupyter Notebook or JupyterLab
-- the Dynawo Modelica package on your machine
-- the Modelica Standard Library on your machine
+- a Dynawo installation (its Modelica Standard Library is used by the notebooks)
 - the OpenModelica packages `Complex` and `ModelicaServices`
 
 Then install the Julia packages used by the notebooks:
@@ -43,9 +42,6 @@ EOF
 omc /tmp/openmodelica_setup.mos
 ```
 
-The notebooks also expect local library paths for:
+The Dynawo Modelica library is pinned in this repo under `dynawo_library/`, so the notebooks load it directly — no download needed (`DYNAWO_PKG_PATH` points there).
 
-- `DYNAWO_PKG_PATH`: path to the Dynawo `package.mo`
-- `MODELICA_PKG_PATH`: path to the Modelica `package.mo`
-
-Update those paths in the notebook configuration cells before running anything.
+The Modelica Standard Library comes from your Dynawo installation. Set `DYNAWO_DIR` in the notebook configuration cells to your Dynawo install path; `MODELICA_PKG_PATH` is derived from it.
