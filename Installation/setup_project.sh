@@ -3,33 +3,17 @@
 # ==============================================================================
 # HYBRID SIMULATION ENVIRONMENT SETUP
 # ==============================================================================
-#
-# SCHEMATIC SUMMARY:
-#
-#   [START]
-#      |
-#      v
-#   [1. CHECKS] --> Verify Python, Java, OpenModelica, wget.
-#      |            (Julia is optional here)
-#      v
-#   [2. JULIA] ---> Check for System Julia.
-#      |            IF MISSING: Download & Install to local folder.
-#      v
-#   [3. VENV] ----> Create Python Virtual Env (venv_powsybl).
-#      |            *Magic Step*: Link Julia binary into this venv.
-#      |            Install: pypowsybl, pandas, lxml, jupyter.
-#      v
-#   [4. LINK] ----> Locate Dynawo Binary (C++ Engine).
-#      |            Create ~/.itools/config.yml.
-#      v
-#   [5. PKGS] ----> Install Julia Libraries (OMJulia, Plots...).
-#      |
-#   [END]
-#
+# Description: Industrialized setup script for Python + Julia + Dynawo using 'uv'.
 # ==============================================================================
 
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+# Navigate to the project root directory (one level up from 'Installation')
+cd "$(dirname "$0")/.."
+
 # --- Configuration ---
-VENV_NAME="venv_powsybl"
+VENV_NAME=".venv"
 JULIA_VER_MAJOR="1.10"
 JULIA_VER_FULL="1.10.0" # Current LTS recommended
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
@@ -49,11 +33,10 @@ echo -e "${BLUE}${BOLD}>>> Starting Hybrid Simulation Project Setup...${NC}"
 # ==============================================================================
 echo -e "\n${BLUE}[1/5] Validating Core System Dependencies...${NC}"
 
-# Function to check version and existence
 check_tool() {
     local cmd=$1
     local name=$2
-    
+
     if ! command -v "$cmd" &> /dev/null; then
         echo -e "${RED}  [X] $name is MISSING.${NC}"
         return 1
@@ -75,18 +58,19 @@ check_tool() {
     fi
 }
 
-# --- Auto-install uv if missing ---
+# Auto-install uv if missing
 if ! command -v uv &> /dev/null; then
     echo -e "${YELLOW}  [!] 'uv' not found. Installing automatically...${NC}"
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    # Source cargo env to make uv available in current session
     if [ -f "$HOME/.cargo/env" ]; then
         source "$HOME/.cargo/env"
-    elif [ -f "$HOME/.local/bin/env" ]; then # Fallback for some linux distros
+    elif [ -f "$HOME/.local/bin/env" ]; then
         source "$HOME/.local/bin/env"
     fi
 fi
 
+# Temporarily disable 'set -e' so missing tools don't crash the script immediately
+set +e
 EXIT_FLAG=0
 
 check_tool "python3" "Python 3" || EXIT_FLAG=1
@@ -100,20 +84,21 @@ if [ $EXIT_FLAG -eq 1 ]; then
     echo -e "\n${RED}[CRITICAL] Missing core dependencies. Please install them (apt/yum) and retry.${NC}"
     exit 1
 fi
+# Re-enable 'set -e'
+set -e
 
 # ==============================================================================
 # 2. JULIA DETECTION OR INSTALLATION
 # ==============================================================================
 echo -e "\n${BLUE}[2/5] Checking Julia Environment...${NC}"
 
-JULIA_CMD="julia"
 INSTALL_JULIA=false
 
 if command -v julia &> /dev/null; then
-    echo -e "${GREEN}  [OK] System Julia found.$(julia -v)${NC}"
+    echo -e "${GREEN}  [OK] System Julia found: $(julia -v)${NC}"
 else
     echo -e "${YELLOW}  [!] Julia not found on system.${NC}"
-    echo -e "  > Initiating automatic installation (Local user only, no sudo needed)..."
+    echo -e "  > Initiating automatic local installation..."
     INSTALL_JULIA=true
 fi
 
@@ -124,7 +109,6 @@ echo -e "\n${BLUE}[3/5] Setting up Python Virtual Environment with uv...${NC}"
 
 if [ ! -d "$VENV_NAME" ]; then
     echo -e "  Creating venv: $VENV_NAME..."
-    # Using uv to create the virtual environment
     uv venv "$VENV_NAME" --seed
 else
     echo -e "  Using existing venv: $VENV_NAME"
@@ -133,73 +117,62 @@ fi
 # Activate
 source "$VENV_NAME/bin/activate"
 
-# --- SMART JULIA INSTALLATION LOGIC ---
+# SMART JULIA INSTALLATION LOGIC
 if [ "$INSTALL_JULIA" = true ]; then
-    # Define install path inside user home
     JULIA_INSTALL_DIR="$HOME/.local/julia-${JULIA_VER_FULL}"
-    
+
     if [ -d "$JULIA_INSTALL_DIR" ]; then
         echo -e "  (Found existing local install at $JULIA_INSTALL_DIR)"
     else
         echo -e "  Downloading Julia ${JULIA_VER_FULL}..."
-        # URL for Linux x64
         JULIA_URL="https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VER_MAJOR}/julia-${JULIA_VER_FULL}-linux-x86_64.tar.gz"
-        
         wget -q --show-progress -O julia_tmp.tar.gz "$JULIA_URL"
-        
+
         echo -e "  Extracting..."
         mkdir -p "$JULIA_INSTALL_DIR"
         tar -xzf julia_tmp.tar.gz -C "$JULIA_INSTALL_DIR" --strip-components=1
         rm julia_tmp.tar.gz
     fi
-    
-    # Symlink Julia into the VENV bin directory
-    echo -e "  Linking Julia to Virtual Environment..."
+
+    echo -e "  Linking local Julia to Virtual Environment..."
     ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$VENV_NAME/bin/julia"
-    
-    JULIA_CMD="$VENV_NAME/bin/julia"
-    echo -e "${GREEN}  [OK] Julia installed and linked into venv.${NC}"
+else
+    echo -e "  Linking system Julia to Virtual Environment..."
+    ln -sf "$(command -v julia)" "$VENV_NAME/bin/julia"
 fi
 
-# Check Python Deps using uv
-echo -e "  Installing external libraries (Python) using uv pip..."
+echo -e "${GREEN}  [OK] Julia linked into venv.${NC}"
 
+# Python Dependencies
+echo -e "  Syncing base project dependencies (from uv.lock)..."
+uv sync --all-extras
+
+echo -e "  Ensuring specific external scientific libraries are installed..."
 uv pip install \
     pypowsybl \
-    pandas \
-    lxml \
     pyyaml \
-    matplotlib \
     jupyter \
     jupyterlab \
-    numpy \
     scipy \
     ipywidgets \
     OMPython \
     --quiet
 
-if [ $? -ne 0 ]; then
-    echo -e "${RED}  [ERROR] Pip install dependencies failed.${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}  [OK] External dependencies installed.${NC}"
-
-echo -e "  Checking for project package..."
-if [ -f "../pyproject.toml" ] || [ -f "../setup.py" ]; then
-    echo -e "  > Installing parent directory as editable package..."
-    
-    # Install from parent directory (..)
-    uv pip install --upgrade -e ..
+# EXPLICIT LOCAL PACKAGE INSTALLATION
+echo -e "  Checking and installing local project package (src)..."
+if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
+    echo -e "  > Installing current directory as editable package..."
+    # We use '.' because we already navigated to the root directory at the start of the script
+    uv pip install --upgrade -e .
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}  [OK] Local project installed successfully from parent dir.${NC}"
+        echo -e "${GREEN}  [OK] Local project installed successfully.${NC}"
     else
-        echo -e "${RED}  [ERROR] Failed to install project from parent dir.${NC}"
+        echo -e "${RED}  [ERROR] Failed to install local project.${NC}"
         exit 1
     fi
 else
-    echo -e "${YELLOW}  [!] No 'pyproject.toml' or 'setup.py' found in '../'. Skipping local project install.${NC}"
+    echo -e "${YELLOW}  [!] No 'pyproject.toml' or 'setup.py' found. Skipping local project install.${NC}"
 fi
 
 # ==============================================================================
@@ -208,7 +181,7 @@ fi
 echo -e "\n${BLUE}[4/5] Configuring Dynawo-Powsybl Link...${NC}"
 
 DYNAWO_HOME=""
-# A. Auto-detection
+# Auto-detection
 for path in "${DEFAULT_DYNAWO_PATHS[@]}"; do
     if [ -f "$path/bin/dynawo.sh" ] || [ -f "$path/myDynawo/bin/dynawo.sh" ] || [ -f "$path/bin/dynawo" ] || [ -f "$path/myDynawo/bin/dynawo" ]; then
         DYNAWO_HOME="$path"
@@ -216,11 +189,14 @@ for path in "${DEFAULT_DYNAWO_PATHS[@]}"; do
     fi
 done
 
-# B. Interactive Fallback
+# Interactive Fallback
 if [ -z "$DYNAWO_HOME" ]; then
     echo -e "${YELLOW}  Could not auto-detect Dynawo.${NC}"
+    # Read user input (temporarily disable exit on error if user makes a typo)
+    set +e
     read -p "  Enter absolute path to Dynawo installation: " USER_INPUT
-    
+    set -e
+
     if [ -f "$USER_INPUT/bin/dynawo.sh" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo.sh" ] || [ -f "$USER_INPUT/bin/dynawo" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo" ]; then
         DYNAWO_HOME="$USER_INPUT"
     else
@@ -229,7 +205,7 @@ if [ -z "$DYNAWO_HOME" ]; then
     fi
 fi
 
-# C. Write Configuration
+# Write Configuration
 mkdir -p "$HOME/.itools"
 cat <<EOF > "$HOME/.itools/config.yml"
 dynawo:
@@ -244,7 +220,7 @@ echo -e "${GREEN}  [OK] Link established in ~/.itools/config.yml${NC}"
 echo -e "\n${BLUE}[5/5] Setting up Julia Packages...${NC}"
 echo -e "  (Using: $(which julia))"
 
-# Use the 'julia' command available in path (system or venv linked)
+# Use the 'julia' command available in the VENV
 julia -e '
 using Pkg
 packages = ["OMJulia", "DataFrames", "CSV", "Plots", "DifferentialEquations", "IJulia"]
@@ -266,7 +242,7 @@ end
 # FINISH & IMPORTANT WARNINGS
 # ==============================================================================
 echo -e "\n${GREEN}${BOLD}======================================================${NC}"
-echo -e "${GREEN}${BOLD}       SETUP COMPLETED SUCCESSFULLY                   ${NC}"
+echo -e "${GREEN}${BOLD}        SETUP COMPLETED SUCCESSFULLY                  ${NC}"
 echo -e "${GREEN}${BOLD}======================================================${NC}"
 echo -e "Next steps:"
 echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
