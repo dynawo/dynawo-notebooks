@@ -6,3 +6,5 @@
 *.log
 *compare_parameters*
 *examples*
+omc-build/
+OpenModelica_only_users/StabilityAnalysis/outputs/
