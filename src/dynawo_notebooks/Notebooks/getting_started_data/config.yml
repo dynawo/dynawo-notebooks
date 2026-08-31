@@ -1,7 +1,6 @@
 dynawo:
     homeDir: "WORKING_DIR/dynawo"
     debug: true
-    debugDir: "WORKING_DIR/debugDir"
 
 dynawo-simulation-default-parameters:
     parametersFile: "WORKING_DIR/getting_started_data/Base_Case.par"
@@ -11,4 +10,3 @@ dynawo-simulation-default-parameters:
     solver.parametersFile: "WORKING_DIR/getting_started_data/Solver.par"
     solver.parametersId: "Solver"
     debug: true
-    debugDir: "WORKING_DIR/debugDir"
