@@ -1,4 +1,3 @@
-# FILE: src/dynawo_notebooks/Scripts/core/visualizer.py
 """
 Network Visualization Module.
 
@@ -8,8 +7,9 @@ ensure all components (generators, loads, lines) are visible.
 """
 
 import logging
-import pypowsybl as pp
 from typing import Dict
+
+import pypowsybl as pp
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class NetworkVisualizer:
                  Key 'network_area' contains the macro view.
                  Keys like 'Sub_X' contain the detailed views.
         """
-        diagrams = {}
+        diagrams: Dict[str, str] = {}
         logger.info("Generating full system visualization diagrams...")
 
         # 1. Macro view: Network Area Diagram (shows substations and lines)
@@ -44,8 +44,6 @@ class NetworkVisualizer:
             substations = network.get_substations().index.tolist()
             for sub_id in substations:
                 try:
-                    # SLD explicitly plots internal buses, generators, and shunts
-                    # Uses 'container_id' as per the latest PyPowSyBl API
                     diagrams[sub_id] = network.get_single_line_diagram(container_id=sub_id)
                     logger.debug(f"Successfully generated SLD for {sub_id}.")
                 except Exception as e:

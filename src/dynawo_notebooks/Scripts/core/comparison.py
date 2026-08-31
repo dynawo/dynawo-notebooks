@@ -1,4 +1,3 @@
-# FILE: src/dynawo_notebooks/Scripts/core/comparison.py
 """
 Load Flow Comparison Module.
 
@@ -6,17 +5,17 @@ This module provides utilities to cross-validate AC Load Flow results
 between OpenModelica dynamic simulations and PyPowSyBl steady-state calculations.
 """
 
-import os
 import tempfile
 import logging
 import json
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+
 import pandas as pd
 import numpy as np
 import pypowsybl as pp
-from typing import Dict, Any
 
 from .connector import OMCConnector
-from .mo_topology import MoTopologyToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class LoadFlowComparator:
         connector: OMCConnector,
         model_name: str,
         parsed_data: Dict[str, Any],
-        export_path: str = None,
+        export_path: Optional[str] = None,
         export_prefix: str = "grid_export",
     ) -> pd.DataFrame:
         """
@@ -51,9 +50,10 @@ class LoadFlowComparator:
         logger.info("Initiating cross-platform Load Flow comparison...")
 
         if export_path:
-            os.makedirs(export_path, exist_ok=True)
-            pps_file = os.path.join(export_path, f"{export_prefix}_PyPowSyBl.xiidm")
-            network.save(pps_file)
+            export_dir = Path(export_path)
+            export_dir.mkdir(parents=True, exist_ok=True)
+            pps_file = export_dir / f"{export_prefix}_PyPowSyBl.xiidm"
+            network.save(str(pps_file))
             logger.info(f"PyPowSyBl Load Flow saved to: {pps_file}")
 
         comparison_data = []
@@ -62,24 +62,19 @@ class LoadFlowComparator:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
             connector.set_working_directory(tmpdir)
 
-            # 1. Execute OpenModelica Simulation
+            om_file = None
             if export_path:
-                om_file = os.path.join(export_path, f"{export_prefix}_Modelica.csv")
-            else:
-                om_file = None
+                om_file = str(Path(export_path) / f"{export_prefix}_Modelica.csv")
 
             if not connector.simulate_model(model_name, stop_time=0.0, om_file=om_file):
                 logger.error("Cannot compare: OM Simulation failed.")
                 connector.set_working_directory(original_dir)
                 return pd.DataFrame()
 
-            # 2. Retrieve PyPowSyBl DataFrames
             buses_df = network.get_buses()
             vl_df = network.get_voltage_levels()
 
-            # 3. Iterate and Cross-Reference Data
             for bus_id in parsed_data.get("buses", {}).keys():
-                # --- OpenModelica Data Extraction ---
                 v_pu_om = connector.get_simulation_value(f"{bus_id}.UPu", 0.0)
                 theta_rad_om = connector.get_simulation_value(f"{bus_id}.UPhase", 0.0)
 
@@ -88,7 +83,6 @@ class LoadFlowComparator:
                 if theta_rad_om is None:
                     theta_rad_om = connector.get_simulation_value(f"{bus_id}.theta", 0.0)
 
-                # Process virtual buses by extracting complex voltage components
                 bus_info = parsed_data.get("buses", {}).get(bus_id, {})
                 if v_pu_om is None and bus_info.get("is_virtual"):
                     om_ref = bus_info.get("om_reference")
@@ -101,7 +95,6 @@ class LoadFlowComparator:
                             theta_rad_om = np.arctan2(v_im, v_re)
                             v_nom = float(bus_info.get("nominal_v", 225.0))
 
-                            # Normalize magnitude to p.u. if the base voltage is > 0
                             if v_mag > 2.0 and v_nom > 0:
                                 v_pu_om = v_mag / v_nom
                             else:
@@ -111,16 +104,12 @@ class LoadFlowComparator:
                 if v_pu_om is None:
                     v_pu_om = np.nan
 
-                # --- PyPowSyBl Data Extraction ---
                 v_pu_pps = np.nan
                 theta_deg_pps = np.nan
-
                 vl_id = f"VL_{bus_id}"
 
                 try:
-                    # Filter by voltage_level_id to bypass PyPowSyBl internal auto-renaming conventions
                     matched_buses = buses_df[buses_df["voltage_level_id"] == vl_id]
-
                     if not matched_buses.empty:
                         b_row = matched_buses.iloc[0]
                         v_mag_kv = b_row.get("v_mag", np.nan)
@@ -138,17 +127,15 @@ class LoadFlowComparator:
                 except Exception as e:
                     logger.error(f"Error extracting data for bus '{bus_id}': {e}")
 
-                # --- Error Metric Calculation ---
                 error_v = (
                     abs(v_pu_om - v_pu_pps) if pd.notna(v_pu_om) and pd.notna(v_pu_pps) else np.nan
                 )
-
-                # Initial theta error (refined subsequently during slack alignment)
                 error_theta = (
                     abs(theta_deg_om - theta_deg_pps)
                     if pd.notna(theta_deg_om) and pd.notna(theta_deg_pps)
                     else np.nan
                 )
+
                 if pd.notna(error_theta) and error_theta > 180:
                     error_theta = 360 - error_theta
 
@@ -170,8 +157,7 @@ class LoadFlowComparator:
 
             connector.set_working_directory(original_dir)
 
-        # --- Slack Angle Alignment ---
-        # Shift OpenModelica angles to match the PyPowSyBl reference frame at the slack bus
+        # Slack Angle Alignment
         slack_bus_record = next(
             (row for row in comparison_data if row["Theta_PPS (deg)"] == 0.0), None
         )
@@ -180,7 +166,6 @@ class LoadFlowComparator:
 
             for row in comparison_data:
                 if pd.notna(row["Theta_OM (deg)"]):
-                    # Apply shift and normalize to [-180, 180]
                     shifted = (row["Theta_OM (deg)"] - theta_shift + 180) % 360 - 180
                     row["Theta_OM (deg)"] = round(shifted, 4)
 
@@ -195,9 +180,7 @@ class LoadFlowComparator:
 
 class NetworkParameterComparator:
     """
-    Utility class for auditing and comparing network parameters (R, X, G, B, P, Q, V)
-    between OpenModelica, an exported JSON structure, and a PyPowSyBl XIIDM file.
-    Exports the comparative results into component-specific CSV files.
+    Utility class for auditing and comparing network parameters.
     """
 
     @staticmethod
@@ -207,14 +190,18 @@ class NetworkParameterComparator:
         xiidm_path: str,
         export_path: str = ".",
         output_prefix: str = "audit_",
-    ):
+    ) -> None:
         """
-        Extracts parameters from the three pipeline stages, converts physical XIIDM
-        values back to per-unit (p.u.), and exports the results to CSV files.
+        Extracts parameters from the pipeline stages and exports the results to CSV files.
+
+        :param om_data: Dictionary with the OpenModelica parsed data.
+        :param json_path: Path to the exported JSON topology file.
+        :param xiidm_path: Path to the exported PyPowSyBl XIIDM file.
+        :param export_path: Target directory to export the CSV reports.
+        :param output_prefix: Prefix string for the generated CSV files.
         """
         logger.info("Initiating parameter audit across multiple CSV files...")
 
-        # 1. Load the intermediate JSON topology
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
@@ -222,7 +209,6 @@ class NetworkParameterComparator:
             logger.error(f"Error loading JSON: {e}")
             json_data = {}
 
-        # 2. Load the PyPowSyBl physical network (XIIDM)
         try:
             net = pp.network.load(xiidm_path)
         except Exception as e:
@@ -236,23 +222,18 @@ class NetworkParameterComparator:
         shunts_df = net.get_shunt_compensators()
         vl_df = net.get_voltage_levels()
 
-        lines_rows = []
-        tfos_rows = []
-        loads_rows = []
-        gens_rows = []
-        shunts_rows = []
+        lines_rows, tfos_rows, loads_rows, gens_rows, shunts_rows = [], [], [], [], []
 
-        # --- Helper Functions ---
-        def get_vl_vnom(vl_id):
+        def get_vl_vnom(vl_id: str) -> float:
             if vl_id in vl_df.index:
                 return float(vl_df.at[vl_id, "nominal_v"])
             return 225.0
 
-        def get_vl_base(vl_id, sn=100.0):
+        def get_vl_base(vl_id: str, sn: float = 100.0) -> float:
             vnom = get_vl_vnom(vl_id)
             return (vnom**2) / sn
 
-        def safe_get(d, keys, default=np.nan):
+        def safe_get(d: Dict, keys: List[str], default: float = np.nan) -> float:
             if not isinstance(d, dict):
                 return default
             for k in keys:
@@ -260,9 +241,7 @@ class NetworkParameterComparator:
                     return float(d[k])
             return default
 
-        # ==========================================
-        # 1. LINES (X, R, G, B)
-        # ==========================================
+        # 1. LINES
         for lid, om_info in om_data.get("lines", {}).items():
             j_info = json_data.get("lines", {}).get(lid, {})
             x_r, x_x, x_g, x_b = np.nan, np.nan, np.nan, np.nan
@@ -271,7 +250,6 @@ class NetworkParameterComparator:
                 l_row = lines_df.loc[lid]
                 z_base = get_vl_base(l_row.get("voltage_level1_id"))
 
-                # Revert from physical Ohms/Siemens to per-unit using .get() for safety
                 r_phys = l_row.get("r", np.nan)
                 x_phys = l_row.get("x", np.nan)
                 b_phys = l_row.get("b1", 0.0) + l_row.get("b2", 0.0)
@@ -300,9 +278,7 @@ class NetworkParameterComparator:
                 }
             )
 
-        # ==========================================
-        # 2. TRANSFORMERS (X, R, G, B, Ratio)
-        # ==========================================
+        # 2. TRANSFORMERS
         for tid, om_info in om_data.get("transformers", {}).items():
             j_info = json_data.get("transformers", {}).get(tid, {})
             x_r, x_x, x_g, x_b, x_ratio = np.nan, np.nan, np.nan, np.nan, np.nan
@@ -346,9 +322,7 @@ class NetworkParameterComparator:
                 }
             )
 
-        # ==========================================
-        # 3. LOADS (P, Q)
-        # ==========================================
+        # 3. LOADS
         for lid, om_info in om_data.get("loads", {}).items():
             j_info = json_data.get("loads", {}).get(lid, {})
             x_p, x_q = np.nan, np.nan
@@ -373,9 +347,7 @@ class NetworkParameterComparator:
                 }
             )
 
-        # ==========================================
-        # 4. GENERATORS (P, Q, V)
-        # ==========================================
+        # 4. GENERATORS
         for gid, om_info in om_data.get("generators", {}).items():
             j_info = json_data.get("generators", {}).get(gid, {})
             x_p, x_q, x_v = np.nan, np.nan, np.nan
@@ -408,9 +380,7 @@ class NetworkParameterComparator:
                 }
             )
 
-        # ==========================================
-        # 5. SHUNTS (B, G)
-        # ==========================================
+        # 5. SHUNTS
         for sid, om_info in om_data.get("shunts", {}).items():
             j_info = json_data.get("shunts", {}).get(sid, {})
             x_b, x_g = np.nan, np.nan
@@ -419,7 +389,6 @@ class NetworkParameterComparator:
                 s_row = shunts_df.loc[sid]
                 z_base = get_vl_base(s_row.get("voltage_level_id"))
 
-                # Safely handle 'b_per_section' vs 'b' variants across different PyPowSyBl versions
                 b_val = s_row.get("b_per_section", s_row.get("b", np.nan))
                 g_val = s_row.get("g_per_section", s_row.get("g", np.nan))
 
@@ -429,7 +398,6 @@ class NetworkParameterComparator:
             shunts_rows.append(
                 {
                     "ID": sid,
-                    # Note: Modelica uses negative B for capacitors, while XIIDM is positive.
                     "OM_B": safe_get(om_info, ["b_pu"]),
                     "JSON_B": safe_get(j_info, ["b_pu"]),
                     "XIIDM_B": x_b,
@@ -439,20 +407,19 @@ class NetworkParameterComparator:
                 }
             )
 
-        # --- Report Generation ---
-        def save_df(rows, name):
+        def save_df(rows: List[Dict], name: str) -> None:
             if rows:
                 df = pd.DataFrame(rows)
-                # Round to 6 decimal places to mitigate floating-point artifacts
                 cols_to_round = [c for c in df.columns if c != "ID"]
                 df[cols_to_round] = df[cols_to_round].round(6)
 
-                filename = f"{output_prefix}{name}.csv"
-                filepath = os.path.join(export_path, filename)
+                export_dir = Path(export_path)
+                export_dir.mkdir(parents=True, exist_ok=True)
+                filepath = export_dir / f"{output_prefix}{name}.csv"
+
                 df.to_csv(filepath, index=False)
                 logger.info(f"Audit report saved: {filepath}")
 
-        # Export all component types
         save_df(lines_rows, "lines")
         save_df(tfos_rows, "transformers")
         save_df(loads_rows, "loads")

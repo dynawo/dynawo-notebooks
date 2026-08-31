@@ -1,4 +1,3 @@
-# FILE: src/dynawo_notebooks/Scripts/core/connector.py
 """
 OpenModelica Connector Module.
 
@@ -6,11 +5,12 @@ This module provides the OMCConnector class, which manages the communication
 and interaction with the OpenModelica Compiler (OMC) via the OMPython API.
 """
 
-import os
 import logging
 import re
 import shutil
-from typing import Optional, List, Any
+from pathlib import Path
+from typing import Optional, List, Any, Dict
+
 from OMPython import OMCSessionZMQ
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class OMCConnector:
     components, and topology definitions from Modelica code.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the connection to the OpenModelica Compiler (OMC).
         Sets up the ZeroMQ session and initializes cache dictionaries for performance.
@@ -38,8 +38,8 @@ class OMCConnector:
             raise e
 
         # Caching mechanisms to improve query performance
-        self._list_cache = {}
-        self._param_cache = {}
+        self._list_cache: Dict[str, str] = {}
+        self._param_cache: Dict[str, Optional[str]] = {}
 
     def load_libraries(self, dynawo_pkg_path: str) -> None:
         """
@@ -52,15 +52,15 @@ class OMCConnector:
         self._omc.sendExpression("loadModel(Complex)")
         self._omc.sendExpression("loadModel(ModelicaServices)")
 
-        abs_pkg_path = os.path.abspath(dynawo_pkg_path).replace("\\", "/")
-        if not abs_pkg_path.endswith("package.mo"):
-            load_path = f"{abs_pkg_path}/package.mo"
-        else:
-            load_path = abs_pkg_path
+        pkg_path = Path(dynawo_pkg_path).resolve()
+        if not pkg_path.name == "package.mo":
+            pkg_path = pkg_path / "package.mo"
 
-        logger.info(f"Loading Dynawo Package from: {load_path}")
-        if not self._omc.sendExpression(f'loadFile("{load_path}")'):
-            logger.error("Failed to load Dynawo package. Check path.")
+        load_path_str = str(pkg_path).replace("\\", "/")
+        logger.info(f"Loading Dynawo Package from: {load_path_str}")
+
+        if not self._omc.sendExpression(f'loadFile("{load_path_str}")'):
+            logger.error("Failed to load Dynawo package. Please check the path.")
 
     def load_local_files(self, source_dir: str, file_list: List[str]) -> None:
         """
@@ -69,12 +69,13 @@ class OMCConnector:
         :param source_dir: The root directory containing the source files.
         :param file_list: List of file names to load.
         """
-        abs_source = os.path.abspath(source_dir).replace("\\", "/")
-        logger.info(f"Loading {len(file_list)} local files from {abs_source}...")
-        for f in file_list:
-            full_path = f"{abs_source}/{f}"
+        src_path = Path(source_dir).resolve()
+        logger.info(f"Loading {len(file_list)} local files from {src_path}...")
+
+        for file_name in file_list:
+            full_path = str(src_path / file_name).replace("\\", "/")
             if not self._omc.sendExpression(f'loadFile("{full_path}")'):
-                logger.warning(f"Failed to load file: {f}")
+                logger.warning(f"Failed to load local file: {file_name}")
 
     def check_model(self, model_name: str) -> bool:
         """
@@ -90,7 +91,6 @@ class OMCConnector:
     def instantiate_model(self, model_name: str) -> Optional[str]:
         """
         Attempts to force OMC to compile and flatten the model safely.
-        Flattening resolves equations, functions, and inheritances into a single scope.
 
         :param model_name: Name of the Modelica model.
         :return: Flattened model string if successful, None otherwise.
@@ -100,7 +100,7 @@ class OMCConnector:
             res = self._omc.sendExpression(f"instantiateModel({model_name})")
             if res and "Error" not in str(res):
                 return str(res)
-        except Exception as e:
+        except Exception:
             logger.warning("OMC could not flatten the model. Falling back to AST parsing.")
         return None
 
@@ -109,7 +109,7 @@ class OMCConnector:
         Retrieves a list of component declarations inside the specified model.
 
         :param model_name: Name of the Modelica model.
-        :return: A list containing the model's components.
+        :return: List of components.
         """
         return self._omc.sendExpression(f"getComponents({model_name})")
 
@@ -118,8 +118,8 @@ class OMCConnector:
         Retrieves the modifier string used during component instantiation.
 
         :param model_name: Name of the Modelica model.
-        :param index: The 1-based index of the component.
-        :return: String value of the modifier.
+        :param index: Component index.
+        :return: Modifier string.
         """
         try:
             res = self._omc.sendExpression(
@@ -134,7 +134,7 @@ class OMCConnector:
         Retrieves the electrical or mathematical connections defined in the model.
 
         :param model_name: Name of the Modelica model.
-        :return: A list of connection pairs (e.g., [['compA.pin', 'compB.pin'], ...]).
+        :return: List of connection pairs.
         """
         count_str = self._omc.sendExpression(f"getConnectionCount({model_name})")
         connections = []
@@ -151,11 +151,11 @@ class OMCConnector:
 
     def get_parameter_value(self, model_name: str, parameter_path: str) -> Optional[str]:
         """
-        Retrieves the static value assigned to a specific parameter, utilizing an internal cache.
+        Retrieves the static value assigned to a specific parameter using cache.
 
         :param model_name: Name of the Modelica model.
-        :param parameter_path: Dot-notation path to the parameter.
-        :return: String representation of the value, or None if not found or an error occurs.
+        :param parameter_path: Parameter path.
+        :return: Parameter value as string.
         """
         cache_key = f"{model_name}::{parameter_path}"
         if cache_key in self._param_cache:
@@ -177,13 +177,12 @@ class OMCConnector:
         self, model_name: str, component_name: str, parameter_name: str
     ) -> Optional[str]:
         """
-        Fallback method: Parses the raw source code definition to extract a modifier's value
-        when standard API methods fail (e.g., inside complex inherited structures).
+        Fallback method: Parses the raw source code definition to extract a modifier's value.
 
         :param model_name: Name of the Modelica model.
-        :param component_name: Target component instance name.
-        :param parameter_name: Modifier parameter name to find.
-        :return: String value of the modifier, or None if not found.
+        :param component_name: Component name.
+        :param parameter_name: Parameter name.
+        :return: Parameter value.
         """
         try:
             if model_name not in self._list_cache:
@@ -234,7 +233,6 @@ class OMCConnector:
                     break
                 value_str += char
 
-            # Strip out strings and comments to leave clean math/values
             val = value_str.strip()
             val = val.split('"')[0].split("/*")[0].split("//")[0].strip()
             return val if val else None
@@ -246,7 +244,7 @@ class OMCConnector:
         Fetches the classes that the given model inherits from.
 
         :param model_name: Name of the Modelica model.
-        :return: List of parent class names.
+        :return: List of inherited classes.
         """
         try:
             cmd = f"getInheritedClasses({model_name})"
@@ -259,41 +257,42 @@ class OMCConnector:
             pass
         return []
 
-    def simulate_model(self, model_name: str, stop_time: float = 0.0, om_file: str = None) -> bool:
+    def simulate_model(
+        self, model_name: str, stop_time: float = 0.0, om_file: Optional[str] = None
+    ) -> bool:
         """
         Runs a Modelica simulation to evaluate initialization and steady-state values.
 
-        :param model_name: Name of the Modelica model to simulate.
-        :param stop_time: Simulation stop time (default 0.0 for Load Flow / Init).
-        :param om_file: Path to the output file for the simulation results.
-        :return: True if the simulation was successful, False otherwise.
+        :param model_name: Name of the Modelica model.
+        :param stop_time: Stop time.
+        :param om_file: Output CSV file.
+        :return: True if successful, False otherwise.
         """
-        logger.info(
-            f"Starting OMC simulation for '{model_name}' (stopTime={stop_time}). This may take a moment..."
-        )
+        logger.info(f"Starting OMC simulation for '{model_name}' (stopTime={stop_time}).")
 
         if om_file:
             res = self._omc.sendExpression(
                 f'simulate({model_name}, stopTime={stop_time}, outputFormat="csv")'
             )
-            shutil.copy2(res["resultFile"], om_file)
+            if isinstance(res, dict) and "resultFile" in res:
+                shutil.copy2(res["resultFile"], om_file)
 
         res = self._omc.sendExpression(f"simulate({model_name}, stopTime={stop_time})")
 
         if res and "timeCompile" in str(res) and "Error" not in str(res):
             logger.info("OMC Simulation completed successfully.")
             return True
-        else:
-            logger.error(f"OMC Simulation failed: {res}")
-            return False
+
+        logger.error(f"OMC Simulation failed: {res}")
+        return False
 
     def get_simulation_value(self, variable_name: str, time: float = 0.0) -> Optional[float]:
         """
-        Extracts the numerical value of a variable at a specific time from the last simulation.
+        Extracts the numerical value of a variable at a specific time.
 
-        :param variable_name: The exact dot-notation path to the variable (e.g., 'bus_1.UPu').
-        :param time: The time point to query.
-        :return: The float value, or None if extraction fails.
+        :param variable_name: Variable name.
+        :param time: Simulation time.
+        :return: Float value or None.
         """
         try:
             val = self._omc.sendExpression(f"val({variable_name}, {time})")
@@ -306,20 +305,17 @@ class OMCConnector:
             return None
 
     def get_working_directory(self) -> str:
-        """
-        Gets the current working directory of the OMC session.
-        """
+        """Gets the current working directory of the OMC session."""
         res = self._omc.sendExpression("cd()")
         return str(res).strip('"') if res else ""
 
     def set_working_directory(self, path: str) -> bool:
         """
         Sets the working directory for the OMC session.
-        OpenModelica requires forward slashes for paths.
 
-        :param path: The target directory path.
+        :param path: Directory path.
         :return: True if successful, False otherwise.
         """
-        clean_path = str(path).replace("\\", "/")
+        clean_path = str(Path(path).resolve()).replace("\\", "/")
         res = self._omc.sendExpression(f'cd("{clean_path}")')
         return "Error" not in str(res)

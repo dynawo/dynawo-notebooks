@@ -1,4 +1,3 @@
-# FILE: src/dynawo_notebooks/Scripts/core/parser.py
 """
 Modelica Topology Parser Module.
 
@@ -8,11 +7,12 @@ the OpenModelica compiler, inspecting flat models and resolving variable mapping
 to build a standardized topological dictionary.
 """
 
-import os
 import json
 import logging
 import re
-from typing import Dict, Any, Optional, List
+from pathlib import Path
+from typing import Dict, Any, Optional, List, Set
+
 from .connector import OMCConnector
 
 logger = logging.getLogger(__name__)
@@ -38,9 +38,7 @@ class ModelicaParser:
         self.model_name = model_name
         self.flat_model = self.conn.instantiate_model(model_name) or ""
 
-        # Recursively fetch the source code of the model AND its inherited base classes.
-        # This ensures constants like ZBASE69_0 are found during expression resolution.
-        def _get_full_code(model: str, visited: set = None) -> str:
+        def _get_full_code(model: str, visited: Optional[Set[str]] = None) -> str:
             if visited is None:
                 visited = set()
             if model in visited:
@@ -52,24 +50,18 @@ class ModelicaParser:
             return code
 
         self.top_code = _get_full_code(self.model_name)
-
-        self._flat_cache = {}
+        self._flat_cache: Dict[str, str] = {}
 
         # --- LOAD PARAMETER MAPPING ---
         self.param_map = self._load_param_mapping()
 
         # --- OPTIMIZATION: BULK PARSING ---
-        # Instead of thousands of individual ZMQ calls, we pre-parse the data into
-        # lookup dictionaries once during initialization.
         self._flat_assignments = self._prebuild_assignment_map(self.flat_model)
         self._source_assignments = self._prebuild_source_map(self.top_code)
 
     def _load_param_mapping(self, filename: str = "param_mapping.json") -> Dict[str, str]:
-        """
-        Loads the parameter mapping dictionary from an external JSON configuration file.
-        """
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(script_dir, filename)
+        """Loads the parameter mapping dictionary from an external JSON configuration file."""
+        filepath = Path(__file__).resolve().parent / filename
 
         try:
             with open(filepath, "r", encoding="utf-8") as f:
@@ -83,11 +75,7 @@ class ModelicaParser:
             return {}
 
     def _prebuild_assignment_map(self, flat_str: str) -> Dict[str, str]:
-        """
-        Scans the flattened model string once to map all parameter assignments to their expressions.
-        """
-        # Captures the parameter name and the full expression up to the semicolon,
-        # aggressively stripping out Modelica documentation strings and inline comments.
+        """Scans the flattened model string once to map all parameter assignments."""
         pattern = re.compile(r"([\w\.]+)(?:\([^)]*\))?\s*=\s*([^;]+);")
         return {
             match.group(1).strip(): match.group(2)
@@ -99,19 +87,13 @@ class ModelicaParser:
         }
 
     def _prebuild_source_map(self, source_str: str) -> Dict[str, str]:
-        """
-        Scans the raw source code string once to map all parameter assignments to their expressions.
-        """
+        """Scans the raw source code string once to map all parameter assignments."""
         assignments = {}
-
-        # 1. Match standard semicolon-terminated assignments
         pattern_semi = re.compile(r"\b([\w\.]+)\s*=\s*([^;]+);")
         for match in pattern_semi.finditer(source_str):
             val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
             assignments[match.group(1).strip()] = val
 
-        # 2. Match comma or parenthesis-terminated assignments (e.g., inside 'extends' modifiers)
-        # Restricts value characters to math operations to avoid splitting complex function calls
         pattern_args = re.compile(r"\b([\w\.]+)\s*=\s*([+\-\w\.\s\*\/\^\(\)]+)[,\)]")
         for match in pattern_args.finditer(source_str):
             key = match.group(1).strip()
@@ -121,7 +103,7 @@ class ModelicaParser:
 
         return assignments
 
-    def parse_topology(self) -> Dict[str, Dict]:
+    def parse_topology(self) -> Dict[str, Dict[str, Any]]:
         """
         Executes the full parsing pipeline. Extracts all components, categorizes them
         based on their types, extracts their parameters, and resolves their connectivity.
@@ -143,7 +125,7 @@ class ModelicaParser:
                 f"OpenModelica could not resolve equations for {self.model_name}. "
             )
 
-        topo = {
+        topo: Dict[str, Dict[str, Any]] = {
             "buses": {},
             "lines": {},
             "generators": {},
@@ -163,8 +145,6 @@ class ModelicaParser:
                 modifiers_str = ""
 
             params = self._extract_parameters(declaring_model, comp_name, modifiers_str)
-
-            # Store the Modelica type to allow the Converter to infer equipment behavior (e.g., PQ vs PV nodes)
             params["modelica_type"] = comp_type
             type_lower = comp_type.lower()
 
@@ -185,8 +165,6 @@ class ModelicaParser:
         if raw_connections:
             self._build_topological_nodes(topo, raw_connections)
 
-        # Assign the deduced voltages to the buses to prevent PyPowSyBl from defaulting to 130kV
-        # which destroys transformer ratios and absolute impedances.
         for cat in ["lines", "shunts"]:
             for comp_name, params in topo.get(cat, {}).items():
                 if "_deduced_v" in params:
@@ -198,7 +176,6 @@ class ModelicaParser:
                     if bus2 and bus2 in topo["buses"]:
                         topo["buses"][bus2]["nominal_v"] = v
 
-        # Clean up deduced voltages from other components to avoid JSON pollution
         for cat in topo.keys():
             for params in topo[cat].values():
                 params.pop("_deduced_v", None)
@@ -206,7 +183,7 @@ class ModelicaParser:
         return topo
 
     def _collect_all_components_recursive(
-        self, current_model: Optional[str] = None, visited: Optional[set] = None
+        self, current_model: Optional[str] = None, visited: Optional[Set[str]] = None
     ) -> Dict[str, Any]:
         """
         Recursively queries the OMC to retrieve all declared components
@@ -241,7 +218,7 @@ class ModelicaParser:
         return components
 
     def _collect_all_connections_recursive(
-        self, current_model: Optional[str] = None, visited: Optional[set] = None
+        self, current_model: Optional[str] = None, visited: Optional[Set[str]] = None
     ) -> List[List[str]]:
         """
         Recursively retrieves explicit electrical connection statements (connect())
@@ -265,24 +242,23 @@ class ModelicaParser:
         return connections
 
     def _build_topological_nodes(
-        self, topo: Dict[str, Dict], connections: List[List[str]]
+        self, topo: Dict[str, Dict[str, Any]], connections: List[List[str]]
     ) -> None:
         """
         Processes connection statements to deduce physical topological nodes.
-        Groups interconnected pins/terminals into logical buses, creating Virtual
-        Buses when implicit junctions are detected without an explicit Bus component.
+        Groups interconnected pins/terminals into logical buses.
 
         :param topo: The topological dictionary containing extracted components.
         :param connections: List of connection terminal pairs.
         """
-        adj = {}
+        adj: Dict[str, List[str]] = {}
         for c in connections:
             if len(c) >= 2:
                 term1, term2 = str(c[0]), str(c[1])
                 adj.setdefault(term1, []).append(term2)
                 adj.setdefault(term2, []).append(term1)
 
-        visited = set()
+        visited: Set[str] = set()
         node_groups = []
         for terminal in adj.keys():
             if terminal not in visited:
@@ -312,8 +288,6 @@ class ModelicaParser:
                 bus_id = f"VirtualBus_{virtual_bus_idx}"
                 virtual_bus_idx += 1
 
-                # Capture the first pin in the topological group as a reference point.
-                # This allows the comparator to query the complex voltage (V.re, V.im) directly.
                 om_ref = list(group)[0] if group else None
                 topo["buses"][bus_id] = {
                     "nominal_v": 225.0,
@@ -340,9 +314,7 @@ class ModelicaParser:
                         topo[cat][comp_name]["bus"] = bus_id
 
     def _extract_from_flat(self, comp_name: str, param: str) -> Optional[float]:
-        """
-        Extracts parameters utilizing the pre-built memory map to bypass ZMQ latency.
-        """
+        """Extracts parameters utilizing the pre-built memory map."""
         raw_val = self._flat_assignments.get(f"{comp_name}.{param}")
         if raw_val is not None:
             resolved = self._resolve_val(raw_val)
@@ -351,9 +323,7 @@ class ModelicaParser:
         return None
 
     def _extract_raw_value_from_modifiers(self, mods_str: str, param: str) -> Optional[str]:
-        """
-        Extracts a parameter's assigned value from a raw Modelica modifier string.
-        """
+        """Extracts a parameter's assigned value from a raw Modelica modifier string."""
         if not mods_str:
             return None
         s = str(mods_str).strip().strip("\"'")
@@ -361,7 +331,6 @@ class ModelicaParser:
         match = pattern.search(s)
         if match:
             raw_val = match.group(1).strip()
-            # Clean up trailing comments or descriptions
             clean_val = raw_val.split('"')[0].split("/*")[0].split("//")[0].strip()
             return clean_val if clean_val else None
         return None
@@ -375,7 +344,6 @@ class ModelicaParser:
     ) -> Any:
         """
         Safely casts a raw Modelica string value into a Python float or complex number.
-        Can resolve mathematical expressions and recursively fetch variable definitions.
 
         :param val_str: The raw string expression assigned to a parameter.
         :param pj: Parameter JSON key (for debugging/context).
@@ -386,19 +354,10 @@ class ModelicaParser:
         if not val_str or depth > 5:
             return None
 
-        # Truncate Modelica docstrings and inline comments before processing.
-        # This removes descriptive text (e.g., '"Resistance in pu (base SnRef)"')
-        # to prevent syntax errors during Python eval().
         clean = val_str.split('"')[0].split("//")[0].split("/*")[0].strip()
         clean = clean.replace("'", "")
-
         clean = clean.replace("SystemBase.SnRef", "100.0")
-
-        # Convert Modelica power operator (^) to Python (**)
         clean = clean.replace("^", "**")
-
-        # Convert Nordic impedance bases to their mathematical representation (V^2 / S)
-        # Example: XBase_130 becomes ((130**2)/100.0)
         clean = re.sub(r"XBase_(\d+)", r"((\1**2)/100.0)", clean)
 
         try:
@@ -412,7 +371,6 @@ class ModelicaParser:
             if var in ["Complex", "sin", "cos", "tan", "sqrt", "j"]:
                 continue
 
-            # Optimized variable lookup using both source and flat maps.
             var_val = self._source_assignments.get(var)
             if var_val is None:
                 var_val = self._flat_assignments.get(var)
@@ -438,26 +396,21 @@ class ModelicaParser:
 
         py_expr = resolved_expr.replace("^", "**")
 
-        def Complex_func(r, i):
+        def complex_func(r: float, i: float) -> complex:
             return complex(r, i)
 
         try:
-            return eval(py_expr, {"__builtins__": None}, {"Complex": Complex_func})
+            return eval(py_expr, {"__builtins__": None}, {"Complex": complex_func})
         except Exception:
             return None
 
     def _extract_parameters(
         self, declaring_model: str, comp_name: str, modifiers: str = ""
     ) -> Dict[str, float]:
-        """
-        Extracts physical parameters for a specific component using multi-strategy lookups.
-        Checks both local dot-notation (g01.P0Pu) and top-level aliases (P0Pu_g01).
-        """
-        extracted = {}
-        extraction_priority = {}  # Tracks priority of extracted variables (1 is highest)
+        """Extracts physical parameters for a specific component using multi-strategy lookups."""
+        extracted: Dict[str, float] = {}
+        extraction_priority: Dict[str, int] = {}
         critical_params = {"r_pu", "x_pu", "b_pu", "g_pu", "r", "x", "b", "g"}
-
-        # --- Parameter Constraints: Values that must be strictly positive ---
         positive_only_params = {
             "u_pu",
             "nominal_v",
@@ -471,9 +424,8 @@ class ModelicaParser:
             val = None
             current_priority = 99
 
-            # Generate the two standard Dynawo naming conventions
-            dot_notation = f"{comp_name}.{pm}"  # e.g., g01.P0Pu
-            top_level_alias = f"{pm}_{comp_name}"  # e.g., P0Pu_g01
+            dot_notation = f"{comp_name}.{pm}"
+            top_level_alias = f"{pm}_{comp_name}"
 
             raw_flat = self._flat_assignments.get(dot_notation)
             if raw_flat is None:
@@ -483,10 +435,8 @@ class ModelicaParser:
             if raw_src is None:
                 raw_src = self._source_assignments.get(top_level_alias)
 
-            # --- VOLTAGE DEDUCTION ---
             for raw_text in [raw_src, raw_flat]:
                 if raw_text and isinstance(raw_text, str):
-                    # Check for ZBASE (e.g., ZBASE130_0)
                     match_zbase = re.search(r"ZBASE(\d+)_(\d+)", raw_text, re.IGNORECASE)
                     if match_zbase:
                         extracted["_deduced_v"] = float(
@@ -494,20 +444,17 @@ class ModelicaParser:
                         )
                         break
 
-                    # Check for XBase (e.g., XBase_130)
                     match_xbase = re.search(r"XBase_(\d+)", raw_text, re.IGNORECASE)
                     if match_xbase:
                         extracted["_deduced_v"] = float(match_xbase.group(1))
                         break
 
-            # PRIORITY 1: EXPLICIT SOURCE CODE OVERRIDES
             if raw_src is not None:
                 resolved = self._resolve_val(raw_src, pj, comp_name)
                 if resolved is not None:
                     val = resolved
                     current_priority = 1
 
-            # PRIORITY 2: SIMULATION VALUES (Evaluated by OMC)
             if val is None:
                 for query_str in [dot_notation, top_level_alias]:
                     try:
@@ -519,7 +466,6 @@ class ModelicaParser:
                     except Exception:
                         pass
 
-            # PRIORITY 3: FLAT MEMORY MAP
             if val is None:
                 if raw_flat is not None:
                     resolved = self._resolve_val(raw_flat, pj, comp_name)
@@ -527,7 +473,6 @@ class ModelicaParser:
                         val = resolved
                         current_priority = 3
 
-            # PRIORITY 4: OMC KERNEL EVALUATION (Top-Level Overrides resolution)
             if val is None:
                 for query_str in [dot_notation, top_level_alias]:
                     raw_api = self.conn.get_parameter_value(self.model_name, query_str)
@@ -538,7 +483,6 @@ class ModelicaParser:
                             current_priority = 4
                             break
 
-            # PRIORITY 5: EXPLICIT MODIFIERS
             if val is None:
                 raw_mod = self._extract_raw_value_from_modifiers(modifiers, pm)
                 if raw_mod:
@@ -547,7 +491,6 @@ class ModelicaParser:
                         val = resolved
                         current_priority = 5
 
-            # PRIORITY 6: AST MODIFIER FALLBACK
             if val is None:
                 raw_ast = self.conn.get_modifier_value(declaring_model, comp_name, pm)
                 if raw_ast:
@@ -556,7 +499,6 @@ class ModelicaParser:
                         val = resolved
                         current_priority = 6
 
-            # --- ASSIGNMENT & ALIAS OVERRIDE PROTECTION ---
             if val is not None:
                 numeric_val = val.real if isinstance(val, complex) else float(val)
                 final_val = abs(numeric_val) if pj in ["p_pu", "p"] else numeric_val
@@ -577,7 +519,6 @@ class ModelicaParser:
                         extracted[pj] = final_val
                         extraction_priority[pj] = current_priority
 
-        # --- SPECIAL HANDLING: COMPLEX POWER (s0Pu, s10Pu, s20Pu) ---
         for s_param in ["s0Pu", "s10Pu", "s20Pu"]:
             p_val = None
             q_val = None
