@@ -5,10 +5,11 @@ This is the main entry point for the toolkit. It orchestrates the Connector,
 Parser, and Converter modules to provide a seamless experience for the user.
 """
 
-import os
-import logging
 import json
+import logging
+from pathlib import Path
 from typing import List, Dict, Any
+
 import pypowsybl as pp
 
 from dynawo_notebooks.Scripts.core.connector import OMCConnector
@@ -63,7 +64,7 @@ class MoTopologyToolkit:
         logger.info(">>> STEP 1: PARSING TOPOLOGY")
         return self.parser.parse_topology()
 
-    def build_powsybl_network(self, data: Dict[str, Any]):
+    def build_powsybl_network(self, data: Dict[str, Any]) -> pp.network.Network:
         """
         Converts the parsed dictionary into a PyPowSybl Network object.
 
@@ -73,21 +74,26 @@ class MoTopologyToolkit:
         logger.info(">>> STEP 2: CONVERTING TO POWSYBL")
         return PowsyblConverter.build_network(data)
 
-    def export_to_standard_json(self, data: Dict, filename: str = "topology.json") -> None:
+    def export_to_standard_json(
+        self, data: Dict[str, Any], filename: str = "topology.json"
+    ) -> None:
         """
         Utility to export the parsed topology to a JSON file.
 
         :param data: The parsed topology dictionary.
         :param filename: The target filename for the JSON export.
         """
+        file_path = Path(filename)
         try:
-            with open(filename, "w") as f:
+            # Ensure parent directories exist
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
-            logger.info(f"Data exported successfully to: {filename}")
+            logger.info(f"Data exported successfully to: {file_path}")
         except IOError as e:
             logger.error(f"Failed to export data: {e}")
 
-    def import_from_standard_json(self, filepath: str) -> dict:
+    def import_from_standard_json(self, filepath: str) -> Dict[str, Any]:
         """
         Utility method to import previously parsed topology data from a JSON file.
 
@@ -96,22 +102,21 @@ class MoTopologyToolkit:
         :raises Exception: Propagates any IO or JSON decoding errors encountered.
         """
         logger.info(f"Importing topology data from JSON file: {filepath}")
+        file_path = Path(filepath)
 
         try:
-            # Open and parse the JSON file utilizing standard UTF-8 encoding
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            logger.info(f"Successfully loaded data from {filepath}")
+            logger.info(f"Successfully loaded data from {file_path}")
 
-            # Log the quantity of loaded items per category for enhanced observability
             for category, items in data.items():
                 logger.info(f" - Loaded {len(items)} {category}")
 
             return data
 
         except Exception as e:
-            logger.error(f"Error reading {filepath}: {e}")
+            logger.error(f"Error reading {file_path}: {e}")
             raise
 
     def save_powsybl_network(
@@ -126,12 +131,10 @@ class MoTopologyToolkit:
         """
         logger.info(f">>> SAVING PYPOWSYBL NETWORK TO: {export_path}")
         try:
-            # Ensure the target directory exists before executing the save operation
-            if not os.path.exists(export_path):
-                os.makedirs(export_path)
+            export_dir = Path(export_path)
+            export_dir.mkdir(parents=True, exist_ok=True)
 
-            # The PyPowSyBl 'save' method exports the network data for external analysis
-            network.save(export_path)
+            network.save(str(export_dir))
             logger.info("Network saved successfully. Ready for manual inspection.")
 
         except Exception as e:
