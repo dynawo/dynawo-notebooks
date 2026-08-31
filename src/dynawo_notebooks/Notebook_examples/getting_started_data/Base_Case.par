@@ -1,3 +1,128 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
+    <set id="GEN_1">
+        <!-- Mechanical & Nominal Parameters -->
+        <par type="DOUBLE" name="generator_H" value="3.0"/>
+        <par type="DOUBLE" name="generator_DPu" value="0.0"/>
+        <par type="DOUBLE" name="generator_PNomAlt" value="500.0"/>
+        <par type="DOUBLE" name="generator_PNomTurb" value="500.0"/>
+        <par type="DOUBLE" name="generator_SNom" value="800.0"/>
+        <par type="DOUBLE" name="generator_SnTfo" value="800.0"/>
+        <par type="DOUBLE" name="generator_UBaseHV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UBaseLV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNom" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNomHV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNomLV" value="400.0"/>
+
+        <!-- Reactances & Resistances -->
+        <par type="DOUBLE" name="generator_RaPu" value="0.002"/>
+        <par type="DOUBLE" name="generator_RsPu" value="0.005"/>
+        <par type="DOUBLE" name="generator_XdPu" value="1.8"/>
+        <par type="DOUBLE" name="generator_XqPu" value="1.7"/>
+        <par type="DOUBLE" name="generator_XpdPu" value="0.3"/>
+        <par type="DOUBLE" name="generator_XppdPu" value="0.2"/>
+        <par type="DOUBLE" name="generator_XppqPu" value="0.2"/>
+        <par type="DOUBLE" name="generator_XpqPu" value="0.3"/>
+        <par type="DOUBLE" name="generator_XlPu" value="0.15"/>
+        <par type="DOUBLE" name="generator_XTfPu" value="0.15"/>
+        <par type="DOUBLE" name="generator_RTfPu" value="0.0"/>
+
+        <!-- Time Constants -->
+        <par type="DOUBLE" name="generator_Tpd0" value="6.0"/>
+        <par type="DOUBLE" name="generator_Tpq0" value="0.5"/>
+        <par type="DOUBLE" name="generator_Tppd0" value="0.05"/>
+        <par type="DOUBLE" name="generator_Tppq0" value="0.05"/>
+
+        <!-- Excitation & Miscellaneous -->
+        <par type="INT" name="generator_ExcitationPu" value="1"/>
+        <par type="DOUBLE" name="generator_MdPuEfd" value="1.0"/>
+        <par type="BOOL" name="generator_UseApproximation" value="true"/>
+
+        <!-- Saturation parameters (Non-zero to avoid math singularities) -->
+        <par type="DOUBLE" name="generator_md" value="0.1"/>
+        <par type="DOUBLE" name="generator_mq" value="0.05"/>
+        <par type="DOUBLE" name="generator_nd" value="1.0"/>
+        <par type="DOUBLE" name="generator_nq" value="1.0"/>
+
+        <!-- Default Overrides (Ensuring strict compliance) -->
+        <par type="INT" name="generator_NbSwitchOffSignals" value="3"/>
+        <par type="INT" name="generator_State0" value="2"/>
+        <par type="BOOL" name="generator_SwitchOffSignal10" value="false"/>
+        <par type="BOOL" name="generator_SwitchOffSignal20" value="false"/>
+        <par type="BOOL" name="generator_SwitchOffSignal30" value="false"/>
+        <par type="DOUBLE" name="generator_iStart0Pu_im" value="0.0"/>
+        <par type="DOUBLE" name="generator_iStart0Pu_re" value="0.0"/>
+
+        <!-- Voltage Regulator Parameters -->
+        <par type="DOUBLE" name="voltageRegulator_EfdMaxPu" value="10.0"/>
+        <par type="DOUBLE" name="voltageRegulator_IrLimPu" value="99.0"/>
+        <par type="DOUBLE" name="voltageRegulator_KPss" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_KTgr" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_OelMode" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_tDerOmega" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_tLagPss" value="0.1"/>
+        <par type="DOUBLE" name="voltageRegulator_tLagTgr" value="0.1"/>
+        <par type="DOUBLE" name="voltageRegulator_tLeadPss" value="0.1"/>
+        <par type="DOUBLE" name="voltageRegulator_tLeadTgr" value="0.1"/>
+        <par type="DOUBLE" name="voltageRegulator_tOelMin" value="10.0"/>
+        <par type="DOUBLE" name="voltageRegulator_add_k1" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_add_k2" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_const_k" value="1.0"/>
+        <par type="INT" name="voltageRegulator_derivative_initType" value="1"/>
+        <par type="DOUBLE" name="voltageRegulator_derivative_x_start" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_derivative_y_start" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_gain1_k" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_gain_k" value="10.0"/>
+        <par type="DOUBLE" name="voltageRegulator_greaterEqualThreshold_threshold" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag1_a_1_" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag1_b_1_" value="1.0"/>
+        <par type="INT" name="voltageRegulator_leadLag1_na" value="2"/>
+        <par type="INT" name="voltageRegulator_leadLag1_nb" value="2"/>
+        <par type="INT" name="voltageRegulator_leadLag1_nx" value="1"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag1_x_start_0_" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag1_y_start" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag2_a_1_" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag2_b_1_" value="1.0"/>
+        <par type="INT" name="voltageRegulator_leadLag2_na" value="2"/>
+        <par type="INT" name="voltageRegulator_leadLag2_nb" value="2"/>
+        <par type="INT" name="voltageRegulator_leadLag2_nx" value="1"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag2_x_start_0_" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag2_y_start" value="0.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag_a_1_" value="1.0"/>
+        <par type="DOUBLE" name="voltageRegulator_leadLag_b_1_" value="1.0"/>
+        <par type="INT" name="voltageRegulator_leadLag_na" value="2"/>
+        <par type="INT" name="voltageRegulator_leadLag_nb" value="2"/>
+        <par type="INT" name="voltageRegulator_leadLag_nx" value="1"/>
+        <par type="INT" name="voltageRegulator_limIntegrator_initType" value="3"/>
+        <par type="DOUBLE" name="voltageRegulator_limIntegrator_k" value="1.0"/>
+
+        <!-- FIX: Disable limits at initialization for KINSOL convergence -->
+        <par type="BOOL" name="voltageRegulator_limIntegrator_limitsAtInit" value="false"/>
+        <par type="DOUBLE" name="voltageRegulator_limIntegrator_outMin" value="-10.0"/>
+        <par type="BOOL" name="voltageRegulator_limIntegrator_strict" value="false"/>
+        <par type="BOOL" name="voltageRegulator_limIntegrator_use_reset" value="false"/>
+        <par type="BOOL" name="voltageRegulator_limIntegrator_use_set" value="false"/>
+        <par type="INT" name="voltageRegulator_limiter_homotopyType" value="1"/>
+
+        <!-- FIX: Disable limits at initialization for KINSOL convergence -->
+        <par type="BOOL" name="voltageRegulator_limiter_limitsAtInit" value="false"/>
+        <par type="BOOL" name="voltageRegulator_limiter_strict" value="false"/>
+        <par type="DOUBLE" name="voltageRegulator_limiter_uMax" value="10.0"/>
+        <par type="DOUBLE" name="voltageRegulator_overExcitationLimitation_Y0" value="-1.0"/>
+        <par type="INT" name="voltageRegulator_timer_initType" value="3"/>
+        <par type="DOUBLE" name="voltageRegulator_timer_k" value="1.0"/>
+
+        <!-- FIX: Disable limits at initialization for KINSOL convergence -->
+        <par type="BOOL" name="voltageRegulator_timer_limitsAtInit" value="false"/>
+        <par type="DOUBLE" name="voltageRegulator_timer_outMax" value="99.0"/>
+        <par type="BOOL" name="voltageRegulator_timer_strict" value="false"/>
+        <par type="BOOL" name="voltageRegulator_timer_use_reset" value="false"/>
+        <par type="BOOL" name="voltageRegulator_timer_use_set" value="false"/>
+
+        <!-- IIDM References for proper steady-state initialization -->
+        <reference type="DOUBLE" name="generator_P0Pu" origData="IIDM" origName="p_pu"/>
+        <reference type="DOUBLE" name="generator_Q0Pu" origData="IIDM" origName="q_pu"/>
+        <reference type="DOUBLE" name="generator_U0Pu" origData="IIDM" origName="v_pu"/>
+        <reference type="DOUBLE" name="generator_UPhase0" origData="IIDM" origName="angle"/>
+    </set>
 </parametersSet>
