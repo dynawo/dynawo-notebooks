@@ -1,4 +1,3 @@
-# FILE: src/dynawo_notebooks/Scripts/core/dynamic_model_linker.py
 """
 Dynamic Model Linker Module.
 
@@ -9,17 +8,22 @@ JSON registry to resolve the correct model mappings and handles API variations
 across different PyPowSyBl versions.
 """
 
-import pypowsybl as pp
-import pandas as pd
 import json
 import logging
+from pathlib import Path
+from typing import Optional
+
+import pandas as pd
+import pypowsybl as pp
 
 # Configure module-level logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DynamicModelLinker")
 
 
-def link_models(network, parsed_models_json_path):
+def link_models(
+    network: pp.network.Network, parsed_models_json_path: str
+) -> Optional[pp.dynamic.ModelMapping]:
     """
     Links static network elements with their dynamic counterparts.
 
@@ -32,12 +36,14 @@ def link_models(network, parsed_models_json_path):
     :param parsed_models_json_path: Path to the JSON file containing the dynamic model registry.
     :return: A populated PyPowSyBl ModelMapping object, or None if the registry cannot be loaded.
     """
+    json_path = Path(parsed_models_json_path).resolve()
+
     try:
-        with open(parsed_models_json_path, "r") as f:
+        with open(json_path, "r", encoding="utf-8") as f:
             registry_data = json.load(f)
             model_registry = registry_data.get("models_with_init_name", registry_data)
     except Exception as e:
-        logger.error(f"Failed to load the dynamic model registry: {e}")
+        logger.error(f"Failed to load the dynamic model registry at {json_path}: {e}")
         return None
 
     mapping = pp.dynamic.ModelMapping()
@@ -48,13 +54,11 @@ def link_models(network, parsed_models_json_path):
     equipment_categories = {
         "generators": (
             network.get_generators,
-            # Candidate names to support different versions of the PyPowSyBl API
             ["add_synchronous_generator", "add_synchronous_generator_model"],
             "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronous",
         ),
         "shunts": (
             network.get_shunt_compensators,
-            # Exhaustive list of likely method variations for shunt compensators
             [
                 "add_shunt_compensator",
                 "add_linear_shunt_compensator",
@@ -65,7 +69,6 @@ def link_models(network, parsed_models_json_path):
         ),
         "loads": (
             network.get_loads,
-            # 'add_base_load' is the optimal method for generic loads without embedded transformers
             ["add_base_load", "add_load", "add_load_model", "set_load_model"],
             "Dynawo.Electrical.Loads.LoadAlphaBeta",
         ),
@@ -80,7 +83,6 @@ def link_models(network, parsed_models_json_path):
         mapping_method = None
         used_method_name = ""
 
-        # Identify which mapping method is supported by the currently installed PyPowSyBl version
         for name in method_candidates:
             if hasattr(mapping, name):
                 mapping_method = getattr(mapping, name)
@@ -98,7 +100,6 @@ def link_models(network, parsed_models_json_path):
         try:
             elements_df = get_elements_func()
 
-            # Normalize the DataFrame to ensure iteration over rows with the 'id' column is possible
             if elements_df.index.name == "id":
                 elements_df = elements_df.reset_index()
 
@@ -118,9 +119,7 @@ def link_models(network, parsed_models_json_path):
 
         for index, row in elements_df.iterrows():
             current_id = row["id"]
-            # Extract the 'modelica_type' property previously injected by the topology Parser
             specific_type = row.get("modelica_type", "")
-
             selected_model = None
 
             # A. Exact Registry Lookup
@@ -142,19 +141,15 @@ def link_models(network, parsed_models_json_path):
                         selected_model = options[0]
 
             if selected_model:
-                # Append mapping utilizing 'static_id', as strictly required by the PyPowSyBl API documentation
                 mapping_list.append({"static_id": current_id, "model_name": selected_model})
 
         # 4. Apply Mappings to the PyPowSyBl ModelMapping Instance
         if mapping_list:
             df_map = pd.DataFrame(mapping_list)
 
-            # Enforce strict string typing to prevent internal C++ casting errors in PyPowSyBl
             df_map["static_id"] = df_map["static_id"].astype(str)
             df_map["model_name"] = df_map["model_name"].astype(str)
 
-            # PyPowSyBl architectural requirement: 'static_id' must serve as the DataFrame index
-            # while remaining accessible as a standard column for keyword arguments
             df_map.set_index("static_id", inplace=True, drop=False)
             df_map.index.name = "static_id"
 

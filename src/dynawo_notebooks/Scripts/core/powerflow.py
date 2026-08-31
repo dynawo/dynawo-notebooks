@@ -1,4 +1,3 @@
-# FILE: src/dynawo_notebooks/Scripts/core/powerflow.py
 """
 Power Flow Execution Module.
 
@@ -6,9 +5,11 @@ This module handles the execution of the AC Load Flow on PyPowSyBl networks
 using the default OpenLoadFlow engine.
 """
 
-import os
 import json
 import logging
+from pathlib import Path
+from typing import List
+
 import pypowsybl as pp
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class PowerFlowRunner:
     """
 
     @staticmethod
-    def load_slack_mapping(filename: str = "slack_bus_mapping.json") -> list:
+    def load_slack_mapping(filename: str = "slack_bus_mapping.json") -> List[str]:
         """
         Loads the valid slack bus identifiers from an external JSON file.
         Provides fallback identifiers if the file cannot be loaded or is missing.
@@ -29,8 +30,8 @@ class PowerFlowRunner:
         :param filename: The name of the JSON file containing the slack bus rules.
         :return: A list of strings representing valid slack bus name fragments.
         """
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(script_dir, filename)
+        script_dir = Path(__file__).resolve().parent
+        filepath = script_dir / filename
 
         try:
             with open(filepath, "r", encoding="utf-8") as f:
@@ -41,7 +42,6 @@ class PowerFlowRunner:
             logger.warning(
                 f"Failed to load slack bus mapping from {filepath}. Using defaults. Error: {e}"
             )
-            # Fallback default identifiers for known standard test systems
             return ["infinite", "slack", "gen1", "g20"]
 
     @staticmethod
@@ -56,18 +56,14 @@ class PowerFlowRunner:
         """
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
-        # Load dynamic identifiers for the slack bus
         valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
 
         try:
-            # 1. AUTO-DETECT THE SLACK BUS (IMPLEMENTED VIA JSON MAPPING)
             slack_bus_id = None
             try:
                 gens_df = network.get_generators()
                 for gid, row in gens_df.iterrows():
                     gid_str = str(gid).lower()
-
-                    # Check if any of the dynamic identifiers match the generator ID
                     if any(identifier in gid_str for identifier in valid_slack_identifiers):
                         slack_bus_id = row["bus_id"]
                         logger.info(
@@ -77,12 +73,9 @@ class PowerFlowRunner:
             except Exception as e:
                 logger.warning(f"Could not read generators for slack detection: {e}")
 
-            # 2. CONFIGURE PROVIDER PARAMETERS (OpenLoadFlow)
-            # Introduce specific OpenLoadFlow provider parameters to prevent solver
-            # failure upon large initial power mismatches and to disable distributed slack.
             provider_params = {
                 "maxNewtonRaphsonIterations": "100",
-                "lowImpedanceThreshold": "1e-8",  # Prevents PyPowSyBl from merging buses due to the small physical Ohms derived from 1.0kV bases
+                "lowImpedanceThreshold": "1e-8",
             }
 
             if slack_bus_id:
@@ -93,23 +86,19 @@ class PowerFlowRunner:
                     }
                 )
 
-            # 3. CONFIGURE GLOBAL LOAD FLOW PARAMETERS
-            # Utilizing the specific pp.loadflow.VoltageInitMode enumeration for accurate initialization
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
                 voltage_init_mode=pp.loadflow.VoltageInitMode.UNIFORM_VALUES,
             )
 
-            # 4. EXECUTE THE LOAD FLOW CALCULATION WITH SPECIFIED PARAMETERS
             results = pp.loadflow.run_ac(network, parameters=lf_params)
 
-            # results is a list of ComponentResult (one for each synchronous area)
             main_result = results[0]
             status = main_result.status
             status_name = (
-                results[0].status.name
-                if hasattr(results[0].status, "name")
-                else str(results[0].status)
+                main_result.status.name
+                if hasattr(main_result.status, "name")
+                else str(main_result.status)
             )
 
             if status_name == "CONVERGED":
@@ -118,44 +107,27 @@ class PowerFlowRunner:
             else:
                 logger.warning(f"WARNING: Load flow DID NOT CONVERGE. Status: {status}")
 
-                # Safely extract details using the correct ComponentResult attributes
                 status_text = (
                     main_result.status_text
-                    if hasattr(main_result, "status_text") and main_result.status_text
+                    if getattr(main_result, "status_text", None)
                     else "None"
                 )
-                iterations = (
-                    main_result.iteration_count
-                    if hasattr(main_result, "iteration_count")
-                    else "Unknown"
-                )
-                ref_bus = (
-                    main_result.reference_bus_id
-                    if hasattr(main_result, "reference_bus_id") and main_result.reference_bus_id
-                    else "None"
-                )
+                iterations = getattr(main_result, "iteration_count", "Unknown")
+                ref_bus = getattr(main_result, "reference_bus_id", "None")
 
                 if status_text != "None":
                     logger.warning(f"Status Details: {status_text}")
-
                 if iterations != "Unknown":
                     logger.warning(f"Iterations performed: {iterations}")
-
                 if ref_bus != "None":
                     logger.warning(f"Reference Bus (Slack) used: {ref_bus}")
                 else:
-                    logger.warning(
-                        "No Reference Bus (Slack) was detected. Calculation cannot start."
-                    )
+                    logger.warning("No Reference Bus (Slack) was detected.")
 
-                # --- DETAILED DIVERGENCE LOGGING ---
-                # Generate a comprehensive diagnostic file 'powerflow.log' capturing the network state
-                # and solver metrics when the AC Load Flow fails to converge.
                 try:
-                    if not os.path.exists(export_path):
-                        os.makedirs(export_path)
-
-                    log_filepath = os.path.join(export_path, "powerflow.log")
+                    export_dir = Path(export_path)
+                    export_dir.mkdir(parents=True, exist_ok=True)
+                    log_filepath = export_dir / "powerflow.log"
 
                     with open(log_filepath, "w", encoding="utf-8") as log_file:
                         log_file.write("=== OPENLOADFLOW DIVERGENCE REPORT ===\n")
@@ -164,22 +136,18 @@ class PowerFlowRunner:
                         log_file.write(f"Iterations: {iterations}\n")
                         log_file.write(f"Slack Bus: {ref_bus}\n\n")
 
-                        # Extract PyPowSyBl solver metrics (Iterative errors, mismatches, etc.)
                         log_file.write("--- SOLVER METRICS ---\n")
                         for i, res in enumerate(results):
                             log_file.write(f"Synchronous Component {i}:\n")
                             for attr in dir(res):
-                                # Filter out private methods and built-ins to safely dump attributes
                                 if not attr.startswith("_") and not callable(getattr(res, attr)):
                                     log_file.write(f"  {attr}: {getattr(res, attr)}\n")
                         log_file.write("\n")
 
-                        # Dump the network state to observe voltage collapses or limit violations
                         log_file.write("--- GENERATORS STATE ---\n")
                         log_file.write(network.get_generators().to_string() + "\n\n")
 
                         log_file.write("--- BUSES VOLTAGE STATE ---\n")
-                        # Using pandas to_string() ensures all columns are written to the text file
                         log_file.write(network.get_buses().to_string() + "\n\n")
 
                     logger.info(

@@ -6,15 +6,13 @@ to identify specific Dynawo dynamic models and their initialization attributes.
 It is designed to be robust and verbose regarding file discovery.
 """
 
-import os
-import glob
 import json
 import argparse
 import logging
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Dict, List
 
-# Configure module-level logger
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
@@ -33,13 +31,13 @@ def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
     output_filename = "parsed_models_data.json"
     models_data: Dict[str, List[str]] = {}
 
-    logger.info(f"Scanning directory: '{folder_path}' for XML definitions...")
+    root_path = Path(folder_path)
+    logger.info(f"Scanning directory: '{root_path}' for XML definitions...")
 
-    search_pattern = os.path.join(folder_path, "**", "*.xml")
-    xml_files = glob.glob(search_pattern, recursive=True)
+    xml_files = list(root_path.rglob("*.xml"))
 
     if not xml_files:
-        logger.warning(f"No XML files found in directory: {folder_path}")
+        logger.warning(f"No XML files found in directory: {root_path}")
         return
 
     parse_count = 0
@@ -49,12 +47,10 @@ def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
             root = tree.getroot()
             parse_count += 1
 
-            # Search dynamically for unit models across the XML structure
             for elem in root.iter():
                 model_name = elem.get(f"{{{namespaces['dyn']}}}unitDynamicModel")
-                if model_name:
-                    if model_name not in models_data:
-                        models_data[model_name] = []
+                if model_name and model_name not in models_data:
+                    models_data[model_name] = []
 
         except ET.ParseError:
             logger.error(f"Malformed XML file skipped: {file_path}")
@@ -63,10 +59,11 @@ def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
 
     logger.info(f"Extracted {len(models_data)} unique dynamic models from {parse_count} files.")
 
-    # Export dictionary to standard JSON format
-    output_path = os.path.join(output_folder, output_filename)
+    out_dir = Path(output_folder)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    output_path = out_dir / output_filename
+
     try:
-        os.makedirs(output_folder, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(models_data, f, indent=4)
         logger.info(f"Successfully exported parsed data to: {output_path}")
@@ -87,7 +84,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if os.path.exists(args.path):
-        parse_dynawo_xmls(args.path, args.output)
+    target_path = Path(args.path)
+    if target_path.exists():
+        parse_dynawo_xmls(str(target_path), args.output)
     else:
-        logger.error(f"Provided path does not exist: {args.path}")
+        logger.error(f"Provided path does not exist: {target_path}")
