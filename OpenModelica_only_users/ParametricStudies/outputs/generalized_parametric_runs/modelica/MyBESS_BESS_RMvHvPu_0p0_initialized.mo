@@ -1,6 +1,6 @@
-model MyBESS_BESS_RPu_0p5_initialized "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
+model MyBESS_BESS_RMvHvPu_0p0_initialized "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
   extends Dynawo.Icons.Example;
-  Dynawo.Electrical.BESS.WECC.BESSCurrentSource BESS(u0Pu = Complex(0.9999999999999981, -6.198299999999998e-8), KiPLL = 20, DDn = 126, Kqi = 1, U0Pu = 1, tFv = 0.05, Dbd2Pu = 0.05, Q0Pu = 9.997267555296222e-10, EMaxPu = 0.1, UInj0Pu = 1.0150000000000001, VDLIp11 = 0.2, VRef0Pu = 1, tG = 0.017, Kvp = 1e-6, Id0Pu = 0.5, VMaxPu = 1.1, QMaxPu = 0.75, VDLIp22 = 1.11, VUpPu = 99, Kc = 0, Kqv = 15, IMaxPu = 1.11, QFlag = false, SOCMaxPu = 0.8, RefFlag = false, VDLIq31 = 0.5, VFrz = 0, i0Pu = Complex(-0.030000000000000006, 8.59763244470379e-10), s0Pu = Complex(-0.03, 9.997267555296222e-10), tFilterPC = 0.02, QInj0Pu = -1.666061259216037e-8, VFlag = true, Ki = 1e-6, VDLIp32 = 1.11, VDLIq42 = 0.75, PfFlag = false, brkpt = 0.1, EMinPu = -0.1, VDLIp42 = 1.11, VDLIq41 = 1, VDLIq21 = 0.2, VDLIq12 = 0.75, IqrMinPu = -999, RPu = 0.5, lvpl1 = 1.22, P0Pu = -0.03, QMinPu = -0.75, PMinPu = -0.667, DPMaxPu = 999, DbdPu = 0, FEMaxPu = 999, tFilterGC = 0.02, SOCMinPu = 0.2, tIq = 0.017, Kqp = 1e-6, VDLIp12 = 1.11, IqrMaxPu = 999, RrpwrPu = 10, KpPLL = 3, zerox = 0.05, VDLIq11 = 0, PInj0Pu = 0.5075000000000001, DUp = 126, VDLIp21 = 0.5, FDbd1Pu = 0.00083, OmegaMaxPu = 1.5, iInj0Pu = Complex(0.5000000000000001, -1.432938740783965e-8), Iql1Pu = -0.75, SNom = 6, SOC0Pu = 0.5, FreqFlag = true, tFt = 1e-10, Iq0Pu = -1.641439664252253e-8, VMinPu = 0.9, XPu = 1e-10, Iqh1Pu = 0.75, Kig = 1e-6, VDLIq32 = 0.75, VDipPu = -99, Kvi = 0.1, VCompFlag = true, PF0 = 0.9999999999999996, tP = 0.05, FEMinPu = -999, VDLIp31 = 0.75, PQFlag = false, DPMinPu = -999, Lvplsw = false, tPord = 0.017, tRv = 0.01, Kpg = 1, Kp = 1e-6, PMaxPu = 1, tBattery = 999, tLag = 0.1, VDLIp41 = 1, FDbd2Pu = 0.00083, VDLIq22 = 0.75, uInj0Pu = Complex(1.0149999999999981, -6.240988162223516e-8), UPhaseInj0 = -6.198300000000002e-8, OmegaMinPu = 0.5, Dbd1Pu = -0.05) annotation(
+  Dynawo.Electrical.BESS.WECC.BESSCurrentSource BESS(u0Pu = Complex(0.9999999999999981, -6.198299999999998e-8), KiPLL = 20, DDn = 126, Kqi = 1, U0Pu = 1, tFv = 0.05, PConv0Pu = 0.5, UConv0Pu = 1.0, Dbd2Pu = 0.05, uConv0Pu = Complex(0.9999999999999981, -6.193299999999998e-8), Q0Pu = 9.997267555296222e-10, EMaxPu = 0.1, UInj0Pu = 1.0000050000123335, VDLIp11 = 0.2, VRef0Pu = 1, QMinREPCPu = -0.75, tG = 0.017, Kvp = 1e-6, PMinREPCPu = -0.667, Id0Pu = 0.5, VMaxPu = 1.1, XMvHvPu = 1e-10, VDLIp22 = 1.11, VUpPu = 99, Kc = 0, Kqv = 15, IMaxPu = 1.11, QFlag = false, PPcc0Pu = 0, RefFlag = false, SOCMaxPu = 0.8, VDLIq31 = 0.5, VFrz = 0, tFilterPC = 0.02, i0Pu = Complex(-0.030000000000000006, 8.59763244470379e-10), QInj0Pu = 2.483362887407843e-6, s0Pu = Complex(-0.03, 9.997267555296222e-10), VFlag = true, Ki = 1e-6, VDLIp32 = 1.11, VDLIq42 = 0.75, PfFlag = false, brkpt = 0.1, EMinPu = -0.1, VDLIp42 = 1.11, VDLIq41 = 1, VDLIq21 = 0.2, VDLIq12 = 0.75, IqrMinPu = -999, QMinREECPu = -0.75, lvpl1 = 1.22, P0Pu = -0.03, RMvHvPu = 0.0, DPMaxPu = 999, DbdPu = 0, FEMaxPu = 999, tFilterGC = 0.02, SOCMinPu = 0.2, GMvHvPu = 0, Kqp = 1e-6, VDLIp12 = 1.11, tIq = 0.017, IqrMaxPu = 999, RrpwrPu = 10, UPcc0Pu = 1, KpPLL = 3, BMvHvPu = 0, VDLIq11 = 0, tpREPC = 0.05, zerox = 0.05, PInj0Pu = 0.5000025, PPCLocal = true, DUp = 126, VDLIp21 = 0.5, PMaxREECPu = 1, FDbd1Pu = 0.00083, OmegaMaxPu = 1.5, Iql1Pu = -0.75, SNom = 6, SOC0Pu = 0.5, FreqFlag = true, RLvTrPu = 0, VMinPu = 0.9, XLvTrPu = 0, tFt = 1e-10, Iq0Pu = -1.663711259216037e-8, QConv0Pu = -1.663711259216037e-8, ConverterLVControl = true, Iqh1Pu = 0.75, Kig = 1e-6, VDLIq32 = 0.75, VDipPu = -99, Kvi = 0.1, VCompFlag = true, PF0 = 0.9999999999999994, rTfoPu = 1, QPcc0Pu = 0, FEMinPu = -999, VDLIp31 = 0.75, PQFlag = false, DPMinPu = -999, UPhaseConv0 = -6.193300000000002e-8, Lvplsw = false, PMaxREPCPu = 1, tPord = 0.017, tRv = 0.01, QMaxREECPu = 0.75, Kpg = 1, tpREEC = 0.05, iConv0Pu = Complex(0.5000000000000001, -1.432938740783965e-8), Kp = 1e-6, tBattery = 999, QMaxREPCPu = 0.75, PMinREECPu = -0.667, tLag = 0.1, VDLIp41 = 1, FDbd2Pu = 0.00083, VDLIq22 = 0.75, uInj0Pu = Complex(1.0000050000001413, 4.938066856706128e-6), uPcc0Pu = Complex(0.5403023058681398, 0.8414709848078965), OmegaMinPu = 0.5, Dbd1Pu = -0.05) annotation(
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
   Modelica.Blocks.Sources.Constant URefPu(k = 1) annotation(
     Placement(visible = true, transformation(origin = {90, 80}, extent = {{-10, 10}, {10, -10}}, rotation = 180)));
@@ -18,12 +18,17 @@ model MyBESS_BESS_RPu_0p5_initialized "WECC BESS with REEC-C and REGC-B with a p
     Placement(visible = true, transformation(origin = {-82, 0}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
   Modelica.Blocks.Sources.Constant PAuxPu(k = 0) annotation(
     Placement(visible = true, transformation(origin = {-50, -80}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
+  Modelica.Blocks.Sources.Constant const(k = 0) "External PCC active/reactive power (unused when PPCLocal = true)";
+  Modelica.ComplexBlocks.Sources.ComplexConstant complexConst(k = Complex(1, 0)) "External PCC voltage (unused when PPCLocal = true)";
 equation
-  line.switchOffSignal1.value = false;
-  line.switchOffSignal2.value = false;
-  BESS.injector.switchOffSignal1.value = false;
-  BESS.injector.switchOffSignal2.value = false;
-  BESS.injector.switchOffSignal3.value = false;
+  line.switchOffSignal1 = false;
+  line.switchOffSignal2 = false;
+  BESS.injector.switchOffSignal1 = false;
+  BESS.injector.switchOffSignal2 = false;
+  BESS.injector.switchOffSignal3 = false;
+  connect(const.y, BESS.PPccPu);
+  connect(const.y, BESS.QPccPu);
+  connect(complexConst.y, BESS.uPccPu);
   connect(URefPu.y, BESS.URefPu) annotation(
     Line(points = {{80, 80}, {20, 80}, {20, 22}}, color = {0, 0, 127}));
   connect(omegaRefPu.y, BESS.omegaRefPu) annotation(
@@ -46,4 +51,4 @@ equation
     __OpenModelica_commandLineOptions = "--matchingAlgorithm=PFPlusExt --indexReductionMethod=dynamicStateSelection -d=initialization,NLSanalyticJacobian,newInst",
     __OpenModelica_simulationFlags(lv = "LOG_STATS", s = "ida", maxIntegrationOrder = "2", nls = "kinsol", noHomotopyOnFirstTry = "()", noRestart = "()", noRootFinding = "()", initialStepSize = "0.00001", maxStepSize = "10"),
     Documentation(info = "hi "));
-end MyBESS_BESS_RPu_0p5_initialized;
+end MyBESS_BESS_RMvHvPu_0p0_initialized;

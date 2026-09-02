@@ -1,4 +1,4 @@
-model MyBESS_BESS_RPu_0p0_auxiliary "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
+model MyBESS_BESS_RMvHvPu_0p1_auxiliary "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
   extends Dynawo.Icons.Example;
   Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -0.03, U0Pu = 1) annotation(
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
@@ -6,13 +6,13 @@ model MyBESS_BESS_RPu_0p0_auxiliary "WECC BESS with REEC-C and REGC-B with a pla
     Placement(visible = true, transformation(origin = {-40, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 0)));
   Dynawo.Electrical.Buses.InfiniteBus infiniteBus(UPhase = 0, UPu = 1) annotation(
     Placement(visible = true, transformation(origin = {-82, 0}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
-  Dynawo.Electrical.BESS.WECC.BESS_INIT BESS_INIT(RPu = 0.0, SNom = 6, P0Pu = -0.03, U0Pu = 1, XPu = 1e-10, Q0Pu(fixed = false), UPhase0(fixed = false));
+  Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT BESS_INIT(PPCLocal = true, GMvHvPu = 0, U0Pu = 1, rTfoPu = 1, QPcc0Pu = 0, SNom = 6, UPcc0Pu = 1, P0Pu = -0.03, RLvTrPu = 0, XLvTrPu = 0, RMvHvPu = 0.1, XMvHvPu = 1e-10, BMvHvPu = 0, ConverterLVControl = true, PPcc0Pu = 0, Q0Pu(fixed = false), UPhase0(fixed = false));
 equation
-  line.switchOffSignal1.value = false;
-  line.switchOffSignal2.value = false;
-  BESS.switchOffSignal1.value = false;
-  BESS.switchOffSignal2.value = false;
-  BESS.switchOffSignal3.value = false;
+  line.switchOffSignal1 = false;
+  line.switchOffSignal2 = false;
+  BESS.switchOffSignal1 = false;
+  BESS.switchOffSignal2 = false;
+  BESS.switchOffSignal3 = false;
   connect(line.terminal1, infiniteBus.terminal) annotation(
     Line(points = {{-60, 0}, {-82, 0}}, color = {0, 0, 255}));
   connect(line.terminal2, BESS.terminal) annotation(
@@ -26,4 +26,4 @@ initial equation
     __OpenModelica_commandLineOptions = "--matchingAlgorithm=PFPlusExt --indexReductionMethod=dynamicStateSelection -d=initialization,NLSanalyticJacobian,newInst",
     __OpenModelica_simulationFlags(lv = "LOG_STATS", s = "ida", maxIntegrationOrder = "2", nls = "kinsol", noHomotopyOnFirstTry = "()", noRestart = "()", noRootFinding = "()", initialStepSize = "0.00001", maxStepSize = "10"),
     Documentation(info = "hi "));
-end MyBESS_BESS_RPu_0p0_auxiliary;
+end MyBESS_BESS_RMvHvPu_0p1_auxiliary;
