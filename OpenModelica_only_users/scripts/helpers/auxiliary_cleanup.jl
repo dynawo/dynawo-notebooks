@@ -3,6 +3,7 @@
 
 const CLEANUP_CLASS_PREFIXES = (
     "Modelica.Blocks.Sources.",
+    "Modelica.ComplexBlocks.Sources.",
     "Dynawo.Electrical.Events.",
     "Dynawo.Electrical.Loads.LoadConnect_INIT",
     "Dynawo.Electrical.Controls.Machines.",
@@ -32,7 +33,7 @@ Return `true` if `switch_signal.value` already appears on either side of an
 equation in `aux_model`.
 """
 function _has_switch_off_signal_equation(omc, aux_model::String, switch_signal::String)
-    target = switch_signal * ".value"
+    target = switch_signal
     count = sendExpression(omc, "getEquationItemsCount($aux_model)")
 
     for i in 1:count
@@ -89,7 +90,7 @@ function delete_connections!(
 
     for switch_signal in sort!(collect(deleted_switch_signals))
         _has_switch_off_signal_equation(omc, aux_model, switch_signal) && continue
-        omc_call(omc, "addEquation($aux_model, \"$switch_signal.value = false\", false)", parsed = false)
+        omc_call(omc, "addEquation($aux_model, \"$switch_signal = false\", false)", parsed = false)
     end
 
     return cleanup_targets
