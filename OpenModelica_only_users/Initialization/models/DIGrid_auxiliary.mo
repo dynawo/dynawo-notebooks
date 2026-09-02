@@ -50,25 +50,24 @@ model DIGrid_auxiliary
     Placement(visible = true, transformation(origin = {16, -26}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
   Dynawo.Electrical.Lines.Line line3(BPu = 0, GPu = 0, RPu = R3Pu*L3, XPu = X3Pu*L3) annotation(
     Placement(visible = true, transformation(origin = {50, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
-Dynawo.Electrical.Loads.Load_INIT load_INIT(Q0Pu = 0, P0Pu = 5, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_INIT(Q0Pu = 0, P0Pu = 5, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
   Dynawo.Electrical.Loads.Load_INIT loadPQ_INIT(Q0Pu = 0, P0Pu = 0, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
 equation
-  loadPQ.deltaP = 0;
 // deltaFrequency calculation
 //Switch-off equations inhibitions
-  load.switchOffSignal1.value = false;
-  load.switchOffSignal2.value = false;
-  loadPQ.switchOffSignal1.value = false;
-  loadPQ.switchOffSignal2.value = false;
-  line1.switchOffSignal1.value = false;
-  line1.switchOffSignal2.value = false;
-  line2.switchOffSignal1.value = false;
-  line2.switchOffSignal2.value = false;
-  line3.switchOffSignal1.value = false;
-  line3.switchOffSignal2.value = false;
-inertialGrid2.switchOffSignal1.value = false;
-  inertialGrid2.switchOffSignal2.value = false;
-  inertialGrid2.switchOffSignal3.value = false;
+  load.switchOffSignal1 = false;
+  load.switchOffSignal2 = false;
+  loadPQ.switchOffSignal1 = false;
+  loadPQ.switchOffSignal2 = false;
+  line1.switchOffSignal1 = false;
+  line1.switchOffSignal2 = false;
+  line2.switchOffSignal1 = false;
+  line2.switchOffSignal2 = false;
+  line3.switchOffSignal1 = false;
+  line3.switchOffSignal2 = false;
+  inertialGrid2.switchOffSignal1 = false;
+  inertialGrid2.switchOffSignal2 = false;
+  inertialGrid2.switchOffSignal3 = false;
 // No variations in PspPu for the inertial grids
 // No variations in the ZIP Load
   load.deltaP = 0;
@@ -100,6 +99,7 @@ inertialGrid2.switchOffSignal1.value = false;
     Line(points = {{60, 0}, {72, 0}}, color = {0, 0, 255}));
   connect(line3.terminal2, bus.terminal) annotation(
     Line(points = {{40, 0}, {16, 0}}, color = {0, 0, 255}));
+  loadPQ.deltaP = 0;
 initial equation
   load_INIT.U0Pu = Modelica.ComplexMath.'abs'(load.terminal.V);
   load_INIT.UPhase0 = Modelica.ComplexMath.arg(load.terminal.V);
