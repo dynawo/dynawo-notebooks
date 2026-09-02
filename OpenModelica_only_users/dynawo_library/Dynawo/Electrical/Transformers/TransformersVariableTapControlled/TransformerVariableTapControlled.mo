@@ -50,9 +50,9 @@ model TransformerVariableTapControlled
   parameter Types.PerUnit rTfoMaxPu "Maximum transformation ratio in pu: U2/U1 in no load conditions";
   parameter Integer NbTap "Number of taps";
 
-  // Output Connectors
-  Dynawo.Connectors.ImPin P1Pu(value(start = P10Pu)) "Active power on side 1";
-  Dynawo.Connectors.ImPin Q1Pu(value(start = Q10Pu)) "Reactive power on side 1";
+  // Output connectors
+  Modelica.Blocks.Interfaces.RealOutput P1Pu(start = P10Pu) "Active power on side 1";
+  Modelica.Blocks.Interfaces.RealOutput Q1Pu(start = Q10Pu) "Reactive power on side 1";
 
   // Terminals
   Dynawo.Connectors.ACPower terminal2(V(re(start = u20Pu.re), im(start = u20Pu.im)), i(re(start = i20Pu.re), im(start = i20Pu.im))) annotation(
@@ -87,18 +87,18 @@ equation
   tapChanger.UMonitored = transformerVariableTap.U2Pu;
   locked = tapChanger.locked;
 
-  when tapChanger.tap.value <> pre(tapChanger.tap.value) then
-    transformerVariableTap.tap.value = tapChanger.tap.value;
+  when tapChanger.tap <> pre(tapChanger.tap) then
+    transformerVariableTap.tap = tapChanger.tap;
   end when;
 
-  transformerVariableTap.switchOffSignal1.value = tapChanger.switchOffSignal1.value;
-  transformerVariableTap.switchOffSignal2.value = tapChanger.switchOffSignal2.value;
+  transformerVariableTap.switchOffSignal1 = tapChanger.switchOffSignal1;
+  transformerVariableTap.switchOffSignal2 = tapChanger.switchOffSignal2;
 
   connect(P1Pu, transformerVariableTap.P1Pu);
   connect(Q1Pu, transformerVariableTap.Q1Pu);
 
-  switchOffSignal1.value = transformerVariableTap.switchOffSignal1.value;
-  switchOffSignal2.value = transformerVariableTap.switchOffSignal2.value;
+  switchOffSignal1 = transformerVariableTap.switchOffSignal1;
+  switchOffSignal2 = transformerVariableTap.switchOffSignal2;
 
   connect(transformerVariableTap.terminal1, terminal1) annotation(
     Line(points = {{-10, 0}, {-100, 0}}, color = {0, 0, 255}));

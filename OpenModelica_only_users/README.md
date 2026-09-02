@@ -10,7 +10,7 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
 - [`ParametricStudies/`](ParametricStudies/): runs parameter sweeps for single-file and package models, with optional reinitialization.
 - [`StabilityAnalysis/`](StabilityAnalysis/): retrieves linearized OpenModelica models and performs small-signal stability analysis.
 - [`scripts/`](scripts/): shared helper library (dictionaries, workflow helpers, and sweep/initialization helpers) reused across the notebooks.
-- [`dynawo_library/`](dynawo_library/): the Dynawo Modelica library, pinned in this repo (Dynawo master, commit `a35017621f5`).
+- [`dynawo_library/`](dynawo_library/): the Dynawo Modelica library, downloaded from the `nightly` GitHub release on 2026-09-02 (Dynawo 1.8.0 development version).
 - [`docs/`](docs/): rendered HTML exports of the notebooks, with their outputs, to view the results without running them.
 - `Older notebooks/`: previous examples and workflows kept for reference.
 
