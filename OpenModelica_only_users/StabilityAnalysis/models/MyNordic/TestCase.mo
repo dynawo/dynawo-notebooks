@@ -191,7 +191,7 @@ equation
   g19.omegaRefPu = omegaCOI;
   g20.omegaRefPu = omegaCOI;
 
-  line_4032_4044.switchOffSignal1.value = false;
+  line_4032_4044.switchOffSignal1 = false;
 
   annotation(preferredView = "diagram",
     experiment(StartTime = 0, StopTime = 169.8, Tolerance = 0.005, Interval = 0.01),
