@@ -60,91 +60,91 @@ model NetworkWithAlphaBetaLoads_initialized "Nordic test grid with buses, lines,
   parameter Dynawo.Types.ReactivePowerPu Q0Pu_load_71;
   parameter Dynawo.Types.ActivePowerPu P0Pu_load_72;
   parameter Dynawo.Types.ReactivePowerPu Q0Pu_load_72;
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_01(u0Pu = Complex(0.09214850758580931, -0.9945390569862863), i0Pu = Complex(-0.923232256013996, -6.118487184390865), alpha = Alpha, s0Pu = Complex(6.0, 1.482), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_01(u0Pu = Complex(0.09214850758581088, -0.9945390569862865), i0Pu = Complex(-0.9232322560139863, -6.118487184390865), alpha = Alpha, s0Pu = Complex(6.0, 1.482), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-55, -107}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_01(Value0 = P0Pu_load_01);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_01(Value0 = Q0Pu_load_01);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_02(u0Pu = Complex(0.33439593440688026, -0.9436956612817097), i0Pu = Complex(0.4324525007375053, -3.3436517421768146), alpha = Alpha, s0Pu = Complex(3.3, 0.71), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_02(u0Pu = Complex(0.3343959344068814, -0.943695661281709), i0Pu = Complex(0.43245250073750957, -3.3436517421768146), alpha = Alpha, s0Pu = Complex(3.3, 0.71), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {35, -97}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_02(Value0 = P0Pu_load_02);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_02(Value0 = Q0Pu_load_02);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_03(u0Pu = Complex(0.17378001698334614, -0.9821657626785423), i0Pu = Complex(-0.3731489253496437, -2.7132342908360663), alpha = Alpha, s0Pu = Complex(2.6, 0.838), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_03(u0Pu = Complex(0.1737800169833477, -0.982165762678542), i0Pu = Complex(-0.3731489253496395, -2.7132342908360663), alpha = Alpha, s0Pu = Complex(2.6, 0.838), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-65, -43}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_03(Value0 = P0Pu_load_03);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_03(Value0 = Q0Pu_load_03);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_04(u0Pu = Complex(0.33087368251957555, -0.9432942167450116), i0Pu = Complex(0.4025267735228971, -8.763770981929403), alpha = Alpha, s0Pu = Complex(8.4, 2.52), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_04(u0Pu = Complex(0.3308736825195769, -0.9432942167450113), i0Pu = Complex(0.4025267735229084, -8.7637709819294), alpha = Alpha, s0Pu = Complex(8.4, 2.52), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-25, -43}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_04(Value0 = P0Pu_load_04);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_04(Value0 = Q0Pu_load_04);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_05(u0Pu = Complex(0.2646828981291057, -0.9602700120947817), i0Pu = Complex(0.07797285959200025, -7.476399165987025), alpha = Alpha, s0Pu = Complex(7.2, 1.904), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_05(u0Pu = Complex(0.2646828981291071, -0.9602700120947817), i0Pu = Complex(0.07797285959201011, -7.476399165987021), alpha = Alpha, s0Pu = Complex(7.2, 1.904), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-25, -107}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_05(Value0 = P0Pu_load_05);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_05(Value0 = Q0Pu_load_05);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_11(u0Pu = Complex(0.9889674538302582, -0.1645626636486704), i0Pu = Complex(1.8551847924699258, -1.0043749641733317), alpha = Alpha, s0Pu = Complex(2.0, 0.688), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_11(u0Pu = Complex(0.9889674538302587, -0.16456266364866984), i0Pu = Complex(1.8551847924699258, -1.0043749641733304), alpha = Alpha, s0Pu = Complex(2.0, 0.688), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {21, 113}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_11(Value0 = P0Pu_load_11);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_11(Value0 = Q0Pu_load_11);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_12(u0Pu = Complex(0.992160893561163, -0.10313603850520318), i0Pu = Complex(2.9045183652679887, -1.146548433164205), alpha = Alpha, s0Pu = Complex(3.0, 0.838), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_12(u0Pu = Complex(0.9921608935611632, -0.10313603850520266), i0Pu = Complex(2.9045183652679887, -1.1465484331642033), alpha = Alpha, s0Pu = Complex(3.0, 0.838), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {39, 118}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_12(Value0 = P0Pu_load_12);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_12(Value0 = Q0Pu_load_12);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_13(u0Pu = Complex(0.9953464453069392, -0.0274621282819647), i0Pu = Complex(0.9943828368817291, -0.37304384898197757), alpha = Alpha, s0Pu = Complex(1.0, 0.344), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_13(u0Pu = Complex(0.9953464453069395, -0.027462128281964142), i0Pu = Complex(0.994382836881729, -0.3730438489819769), alpha = Alpha, s0Pu = Complex(1.0, 0.344), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {85, 113}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_13(Value0 = P0Pu_load_13);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_13(Value0 = Q0Pu_load_13);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_22(u0Pu = Complex(0.923446073749911, -0.3711123964006391), i0Pu = Complex(2.311139035785463, -1.7940325841204168), alpha = Alpha, s0Pu = Complex(2.8, 0.799), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_22(u0Pu = Complex(0.9234460737499117, -0.3711123964006384), i0Pu = Complex(2.3111390357854633, -1.7940325841204137), alpha = Alpha, s0Pu = Complex(2.8, 0.799), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-40, 33}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_22(Value0 = P0Pu_load_22);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_22(Value0 = Q0Pu_load_22);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_31(u0Pu = Complex(0.7752358651274474, -0.6382863164026233), i0Pu = Complex(0.6124346520773887, -0.8228575157664147), alpha = Alpha, s0Pu = Complex(1.0, 0.247), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_31(u0Pu = Complex(0.7752358651274482, -0.6382863164026227), i0Pu = Complex(0.6124346520773895, -0.8228575157664139), alpha = Alpha, s0Pu = Complex(1.0, 0.247), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-35, 3}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_31(Value0 = P0Pu_load_31);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_31(Value0 = Q0Pu_load_31);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_32(u0Pu = Complex(0.8908049638435415, -0.4494297365639585), i0Pu = Complex(1.6108514455338112, -1.2572500000198026), alpha = Alpha, s0Pu = Complex(2.0, 0.396), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_32(u0Pu = Complex(0.8908049638435419, -0.44942973656395746), i0Pu = Complex(1.610851445533813, -1.2572500000198008), alpha = Alpha, s0Pu = Complex(2.0, 0.396), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-89, 3}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_32(Value0 = P0Pu_load_32);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_32(Value0 = Q0Pu_load_32);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_41(u0Pu = Complex(0.5407888237677239, -0.8372804909615715), i0Pu = Complex(1.8319972372991677, -5.266187874306551), alpha = Alpha, s0Pu = Complex(5.4, 1.314), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_41(u0Pu = Complex(0.5407888237677251, -0.8372804909615712), i0Pu = Complex(1.8319972372991733, -5.266187874306547), alpha = Alpha, s0Pu = Complex(5.4, 1.314), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-81, -27}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_41(Value0 = P0Pu_load_41);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_41(Value0 = Q0Pu_load_41);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_42(u0Pu = Complex(0.49436246147971896, -0.8637565041689373), i0Pu = Complex(0.8854629270083756, -4.124148820485617), alpha = Alpha, s0Pu = Complex(4.0, 1.274), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_42(u0Pu = Complex(0.49436246147972024, -0.8637565041689369), i0Pu = Complex(0.8854629270083807, -4.124148820485615), alpha = Alpha, s0Pu = Complex(4.0, 1.274), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {55, 7}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_42(Value0 = P0Pu_load_42);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_42(Value0 = Q0Pu_load_42);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_43(u0Pu = Complex(0.40203979694795433, -0.9170260149485255), i0Pu = Complex(1.2803160560114717, -9.253022111142874), alpha = Alpha, s0Pu = Complex(9.0, 2.546), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_43(u0Pu = Complex(0.40203979694795566, -0.9170260149485252), i0Pu = Complex(1.2803160560114832, -9.253022111142869), alpha = Alpha, s0Pu = Complex(9.0, 2.546), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {25, -47}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_43(Value0 = P0Pu_load_43);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_43(Value0 = Q0Pu_load_43);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_46(u0Pu = Complex(0.3914261681013812, -0.9191578660023505), i0Pu = Complex(0.7947441475745697, -7.277222543702609), alpha = Alpha, s0Pu = Complex(7.0, 2.118), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_46(u0Pu = Complex(0.3914261681013825, -0.91915786600235), i0Pu = Complex(0.7947441475745795, -7.277222543702608), alpha = Alpha, s0Pu = Complex(7.0, 2.118), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {71, -47}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_46(Value0 = P0Pu_load_46);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_46(Value0 = Q0Pu_load_46);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_47(u0Pu = Complex(0.461330164898773, -0.8815476313854038), i0Pu = Complex(0.07419473451977171, -1.0955411783837548), alpha = Alpha, s0Pu = Complex(1.0, 0.44), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_47(u0Pu = Complex(0.46133016489877426, -0.8815476313854033), i0Pu = Complex(0.0741947345197732, -1.095541178383754), alpha = Alpha, s0Pu = Complex(1.0, 0.44), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {61, -93}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_47(Value0 = P0Pu_load_47);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_47(Value0 = Q0Pu_load_47);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_51(u0Pu = Complex(0.27770283462703504, -0.9583317199309935), i0Pu = Complex(-0.2539277885881081, -8.421422664860371), alpha = Alpha, s0Pu = Complex(8.0, 2.582), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_51(u0Pu = Complex(0.27770283462703654, -0.9583317199309932), i0Pu = Complex(-0.2539277885880949, -8.421422664860373), alpha = Alpha, s0Pu = Complex(8.0, 2.582), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {35, -113}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_51(Value0 = P0Pu_load_51);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_51(Value0 = Q0Pu_load_51);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_61(u0Pu = Complex(0.4856067915400001, -0.8683175665796578), i0Pu = Complex(1.3784194943129355, -4.987380537548093), alpha = Alpha, s0Pu = Complex(5.0, 1.225), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_61(u0Pu = Complex(0.4856067915400011, -0.8683175665796573), i0Pu = Complex(1.3784194943129413, -4.987380537548092), alpha = Alpha, s0Pu = Complex(5.0, 1.225), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-95, -67}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_61(Value0 = P0Pu_load_61);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_61(Value0 = Q0Pu_load_61);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_62(u0Pu = Complex(0.5421509044857595, -0.840532571976716), i0Pu = Complex(0.9216969018514128, -2.974663058112632), alpha = Alpha, s0Pu = Complex(3.0, 0.838), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_62(u0Pu = Complex(0.5421509044857605, -0.8405325719767154), i0Pu = Complex(0.9216969018514165, -2.9746630581126308), alpha = Alpha, s0Pu = Complex(3.0, 0.838), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-100, -93}, extent = {{-5, 5}, {5, -5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_62(Value0 = P0Pu_load_62);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_62(Value0 = Q0Pu_load_62);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_63(u0Pu = Complex(0.5945042163657526, -0.8030971189896601), i0Pu = Complex(1.3847952316908212, -6.321443914956917), alpha = Alpha, s0Pu = Complex(5.9, 2.646), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_63(u0Pu = Complex(0.5945042163657536, -0.8030971189896595), i0Pu = Complex(1.3847952316908283, -6.321443914956915), alpha = Alpha, s0Pu = Complex(5.9, 2.646), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-80, -147}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_63(Value0 = P0Pu_load_63);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_63(Value0 = Q0Pu_load_63);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_71(u0Pu = Complex(0.993478528504954, -0.13609762564907144), i0Pu = Complex(2.850644090081799, -1.2340134759385264), alpha = Alpha, s0Pu = Complex(3.0, 0.838), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_71(u0Pu = Complex(0.993478528504954, -0.13609762564907119), i0Pu = Complex(2.8506440900817993, -1.2340134759385255), alpha = Alpha, s0Pu = Complex(3.0, 0.838), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-95, 113}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_71(Value0 = P0Pu_load_71);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_71(Value0 = Q0Pu_load_71);
-  Dynawo.Electrical.Loads.LoadAlphaBeta load_72(u0Pu = Complex(0.9903327789519268, -0.11854725547437432), i0Pu = Complex(19.437924818398386, -6.326472043032807), alpha = Alpha, s0Pu = Complex(20.0, 3.961), beta = Beta) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBeta load_72(u0Pu = Complex(0.9903327789519268, -0.11854725547437428), i0Pu = Complex(19.43792481839839, -6.3264720430328065), alpha = Alpha, s0Pu = Complex(20.0, 3.961), beta = Beta) annotation(
     Placement(visible = true, transformation(origin = {-88, 63}, extent = {{-5, -5}, {5, 5}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_72(Value0 = P0Pu_load_72);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_72(Value0 = Q0Pu_load_72);
@@ -259,72 +259,72 @@ equation
   load_71.deltaQ = 0;
   load_72.deltaP = 0;
   load_72.deltaQ = 0;
-  load_11.switchOffSignal1.value = false;
-  load_11.switchOffSignal2.value = false;
-  load_12.switchOffSignal1.value = false;
-  load_12.switchOffSignal2.value = false;
-  load_13.switchOffSignal1.value = false;
-  load_13.switchOffSignal2.value = false;
-  load_22.switchOffSignal1.value = false;
-  load_22.switchOffSignal2.value = false;
-  load_01.switchOffSignal1.value = false;
-  load_01.switchOffSignal2.value = false;
-  load_02.switchOffSignal1.value = false;
-  load_02.switchOffSignal2.value = false;
-  load_03.switchOffSignal1.value = false;
-  load_03.switchOffSignal2.value = false;
-  load_04.switchOffSignal1.value = false;
-  load_04.switchOffSignal2.value = false;
-  load_05.switchOffSignal1.value = false;
-  load_05.switchOffSignal2.value = false;
-  load_31.switchOffSignal1.value = false;
-  load_31.switchOffSignal2.value = false;
-  load_32.switchOffSignal1.value = false;
-  load_32.switchOffSignal2.value = false;
-  load_41.switchOffSignal1.value = false;
-  load_41.switchOffSignal2.value = false;
-  load_42.switchOffSignal1.value = false;
-  load_42.switchOffSignal2.value = false;
-  load_43.switchOffSignal1.value = false;
-  load_43.switchOffSignal2.value = false;
-  load_46.switchOffSignal1.value = false;
-  load_46.switchOffSignal2.value = false;
-  load_47.switchOffSignal1.value = false;
-  load_47.switchOffSignal2.value = false;
-  load_51.switchOffSignal1.value = false;
-  load_51.switchOffSignal2.value = false;
-  load_61.switchOffSignal1.value = false;
-  load_61.switchOffSignal2.value = false;
-  load_62.switchOffSignal1.value = false;
-  load_62.switchOffSignal2.value = false;
-  load_63.switchOffSignal1.value = false;
-  load_63.switchOffSignal2.value = false;
-  load_71.switchOffSignal1.value = false;
-  load_71.switchOffSignal2.value = false;
-  load_72.switchOffSignal1.value = false;
-  load_72.switchOffSignal2.value = false;
-  shunt_1022.switchOffSignal1.value = false;
-  shunt_1022.switchOffSignal2.value = false;
-  shunt_1041.switchOffSignal1.value = false;
-  shunt_1041.switchOffSignal2.value = false;
-  shunt_1043.switchOffSignal1.value = false;
-  shunt_1043.switchOffSignal2.value = false;
-  shunt_1044.switchOffSignal1.value = false;
-  shunt_1044.switchOffSignal2.value = false;
-  shunt_1045.switchOffSignal1.value = false;
-  shunt_1045.switchOffSignal2.value = false;
-  shunt_4012.switchOffSignal1.value = false;
-  shunt_4012.switchOffSignal2.value = false;
-  shunt_4041.switchOffSignal1.value = false;
-  shunt_4041.switchOffSignal2.value = false;
-  shunt_4043.switchOffSignal1.value = false;
-  shunt_4043.switchOffSignal2.value = false;
-  shunt_4046.switchOffSignal1.value = false;
-  shunt_4046.switchOffSignal2.value = false;
-  shunt_4051.switchOffSignal1.value = false;
-  shunt_4051.switchOffSignal2.value = false;
-  shunt_4071.switchOffSignal1.value = false;
-  shunt_4071.switchOffSignal2.value = false;
+  load_11.switchOffSignal1 = false;
+  load_11.switchOffSignal2 = false;
+  load_12.switchOffSignal1 = false;
+  load_12.switchOffSignal2 = false;
+  load_13.switchOffSignal1 = false;
+  load_13.switchOffSignal2 = false;
+  load_22.switchOffSignal1 = false;
+  load_22.switchOffSignal2 = false;
+  load_01.switchOffSignal1 = false;
+  load_01.switchOffSignal2 = false;
+  load_02.switchOffSignal1 = false;
+  load_02.switchOffSignal2 = false;
+  load_03.switchOffSignal1 = false;
+  load_03.switchOffSignal2 = false;
+  load_04.switchOffSignal1 = false;
+  load_04.switchOffSignal2 = false;
+  load_05.switchOffSignal1 = false;
+  load_05.switchOffSignal2 = false;
+  load_31.switchOffSignal1 = false;
+  load_31.switchOffSignal2 = false;
+  load_32.switchOffSignal1 = false;
+  load_32.switchOffSignal2 = false;
+  load_41.switchOffSignal1 = false;
+  load_41.switchOffSignal2 = false;
+  load_42.switchOffSignal1 = false;
+  load_42.switchOffSignal2 = false;
+  load_43.switchOffSignal1 = false;
+  load_43.switchOffSignal2 = false;
+  load_46.switchOffSignal1 = false;
+  load_46.switchOffSignal2 = false;
+  load_47.switchOffSignal1 = false;
+  load_47.switchOffSignal2 = false;
+  load_51.switchOffSignal1 = false;
+  load_51.switchOffSignal2 = false;
+  load_61.switchOffSignal1 = false;
+  load_61.switchOffSignal2 = false;
+  load_62.switchOffSignal1 = false;
+  load_62.switchOffSignal2 = false;
+  load_63.switchOffSignal1 = false;
+  load_63.switchOffSignal2 = false;
+  load_71.switchOffSignal1 = false;
+  load_71.switchOffSignal2 = false;
+  load_72.switchOffSignal1 = false;
+  load_72.switchOffSignal2 = false;
+  shunt_1022.switchOffSignal1 = false;
+  shunt_1022.switchOffSignal2 = false;
+  shunt_1041.switchOffSignal1 = false;
+  shunt_1041.switchOffSignal2 = false;
+  shunt_1043.switchOffSignal1 = false;
+  shunt_1043.switchOffSignal2 = false;
+  shunt_1044.switchOffSignal1 = false;
+  shunt_1044.switchOffSignal2 = false;
+  shunt_1045.switchOffSignal1 = false;
+  shunt_1045.switchOffSignal2 = false;
+  shunt_4012.switchOffSignal1 = false;
+  shunt_4012.switchOffSignal2 = false;
+  shunt_4041.switchOffSignal1 = false;
+  shunt_4041.switchOffSignal2 = false;
+  shunt_4043.switchOffSignal1 = false;
+  shunt_4043.switchOffSignal2 = false;
+  shunt_4046.switchOffSignal1 = false;
+  shunt_4046.switchOffSignal2 = false;
+  shunt_4051.switchOffSignal1 = false;
+  shunt_4051.switchOffSignal2 = false;
+  shunt_4071.switchOffSignal1 = false;
+  shunt_4071.switchOffSignal2 = false;
   PrefPu_load_01.setPoint = load_01.PRefPu;
   QrefPu_load_01.setPoint = load_01.QRefPu;
   PrefPu_load_02.setPoint = load_02.PRefPu;
