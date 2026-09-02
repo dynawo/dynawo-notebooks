@@ -56,41 +56,41 @@ model IEEE14Base_initialized "Base class for IEEE 14-bus system benchmark formed
   parameter Dynawo.Types.ActivePowerPu P0Pu_Gen8;
   parameter Dynawo.Types.VoltageModulePu U0Pu_Gen8;
   // Generators
-  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen1(PNom = 1090, QGen0Pu = -0.1671217331176161, u0Pu = Complex(1.06, 0.0), i0Pu = Complex(-2.1923864512258886, -0.15766201237510952), UDeadBandPu = 1e-4, U0Pu = 1.06, URef0Pu = 1.06, limUQUp0 = false, limUQDown0 = false, PGen0Pu = 2.323929638299442, QDeadBandPu = 1e-4, PMaxPu = 10.9, QMinPu = -100, KGover = 1, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = -2.323929638299442, QMaxPu = 100, QNomAlt = 10000) annotation(
+  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen1(PNom = 1090, QGen0Pu = -0.16712173311761638, u0Pu = Complex(1.06, 0.0), i0Pu = Complex(-2.1923864512258895, -0.1576620123751098), UDeadBandPu = 1e-4, U0Pu = 1.06, URef0Pu = 1.06, limUQUp0 = false, limUQDown0 = false, PGen0Pu = 2.3239296382994428, QDeadBandPu = 1e-4, PMaxPu = 10.9, QMinPu = -100, KGover = 1, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = -2.3239296382994428, QMaxPu = 100, QNomAlt = 10000) annotation(
     Placement(visible = true, transformation(origin = {-170, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen2(PNom = 1008, QGen0Pu = 0.4372255687774643, u0Pu = Complex(1.041121504941116, -0.09078269181482619), i0Pu = Complex(-0.3449592973139177, 0.45003575483792607), UDeadBandPu = 1e-4, U0Pu = 1.045072, URef0Pu = 1.045072, limUQUp0 = false, limUQDown0 = false, PGen0Pu = 0.4, QDeadBandPu = 1e-4, PMaxPu = 10.08, QMinPu = -100, KGover = 1, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = -0.4, QMaxPu = 100, QNomAlt = 10000) annotation(
+  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen2(PNom = 1008, QGen0Pu = 0.43722556877746405, u0Pu = Complex(1.041121504941116, -0.09078269181482622), i0Pu = Complex(-0.3449592973139178, 0.45003575483792585), UDeadBandPu = 1e-4, U0Pu = 1.045072, URef0Pu = 1.045072, limUQUp0 = false, limUQDown0 = false, PGen0Pu = 0.4, QDeadBandPu = 1e-4, PMaxPu = 10.08, QMinPu = -100, KGover = 1, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = -0.4, QMaxPu = 100, QNomAlt = 10000) annotation(
     Placement(visible = true, transformation(origin = {-90, -160}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen3(PNom = 1485, QGen0Pu = 0.24999424708595905, u0Pu = Complex(0.9851972593866368, -0.22245529909862763), i0Pu = Complex(0.05451675816924148, 0.24144068923783213), UDeadBandPu = 1e-4, U0Pu = 1.01, URef0Pu = 1.01, limUQUp0 = false, limUQDown0 = false, PGen0Pu = -0.0, QDeadBandPu = 1e-4, PMaxPu = 14.85, QMinPu = -100, KGover = 0, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = 0.0, QMaxPu = 100, QNomAlt = 10000) annotation(
+  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen3(PNom = 1485, QGen0Pu = 0.2499942470859591, u0Pu = Complex(0.9851972593866368, -0.22245529909862766), i0Pu = Complex(0.054516758169241494, 0.24144068923783218), UDeadBandPu = 1e-4, U0Pu = 1.01, URef0Pu = 1.01, limUQUp0 = false, limUQDown0 = false, PGen0Pu = -0.0, QDeadBandPu = 1e-4, PMaxPu = 14.85, QMinPu = -100, KGover = 0, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = 0.0, QMaxPu = 100, QNomAlt = 10000) annotation(
     Placement(visible = true, transformation(origin = {90, -200}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen6(PNom = 74.4, QGen0Pu = 0.1288567472021684, u0Pu = Complex(1.0374884992195077, -0.2629416248661545), i0Pu = Complex(0.029577643559466012, 0.11670447781928897), UDeadBandPu = 1e-4, U0Pu = 1.07029, URef0Pu = 1.07029, limUQUp0 = false, limUQDown0 = false, PGen0Pu = -0.0, QDeadBandPu = 1e-4, PMaxPu = 0.744, QMinPu = -100, KGover = 0, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = 0.0, QMaxPu = 100, QNomAlt = 10000) annotation(
+  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen6(PNom = 74.4, QGen0Pu = 0.12885674720216886, u0Pu = Complex(1.0374884992195077, -0.2629416248661545), i0Pu = Complex(0.029577643559466123, 0.1167044778192894), UDeadBandPu = 1e-4, U0Pu = 1.07029, URef0Pu = 1.07029, limUQUp0 = false, limUQDown0 = false, PGen0Pu = -0.0, QDeadBandPu = 1e-4, PMaxPu = 0.744, QMinPu = -100, KGover = 0, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = 0.0, QMaxPu = 100, QNomAlt = 10000) annotation(
     Placement(visible = true, transformation(origin = {-60, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen8(PNom = 228, QGen0Pu = 0.17522229551909219, u0Pu = Complex(1.0603689562543586, -0.2517967387339282), i0Pu = Complex(0.037145142129139316, 0.15642599577517088), UDeadBandPu = 1e-4, U0Pu = 1.089855, URef0Pu = 1.089855, limUQUp0 = false, limUQDown0 = false, PGen0Pu = -0.0, QDeadBandPu = 1e-4, PMaxPu = 2.28, QMinPu = -100, KGover = 0, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = 0.0, QMaxPu = 100, QNomAlt = 10000) annotation(
+  Dynawo.Electrical.Machines.SignalN.GeneratorPV Gen8(PNom = 228, QGen0Pu = 0.17522229551909205, u0Pu = Complex(1.0603689562543586, -0.25179673873392827), i0Pu = Complex(0.037145142129139296, 0.15642599577517075), UDeadBandPu = 1e-4, U0Pu = 1.089855, URef0Pu = 1.089855, limUQUp0 = false, limUQDown0 = false, PGen0Pu = -0.0, QDeadBandPu = 1e-4, PMaxPu = 2.28, QMinPu = -100, KGover = 0, qStatus0 = Dynawo.Electrical.Machines.SignalN.GeneratorPV.QStatus.Standard, PMinPu = 0, PRef0Pu = 0.0, QMaxPu = 100, QNomAlt = 10000) annotation(
     Placement(visible = true, transformation(origin = {170, 60}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   // Generators control
   Dynawo.Electrical.Controls.Frequency.SignalN ModelSignalN;
   Dynawo.Types.Angle Theta_Bus1;
   // Loads
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load2(tFilter = tfilter, u0Pu = Complex(1.0411215049411164, -0.09078269181482623), Beta = beta, i0Pu = Complex(0.1962999239775282, -0.1391006091166242), s0Pu = Complex(0.217, 0.127), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load2(tFilter = tfilter, u0Pu = Complex(1.0411215049411162, -0.09078269181482625), Beta = beta, i0Pu = Complex(0.1962999239775282, -0.13910060911662422), s0Pu = Complex(0.217, 0.127), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {-120, -160}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load2(Value0 = P0Pu_Load2);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load2(Value0 = Q0Pu_Load2);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load3(tFilter = tfilter, u0Pu = Complex(0.985197259386639, -0.22245529909862813), Beta = beta, i0Pu = Complex(0.8683357626835315, -0.38892301836522625), s0Pu = Complex(0.942, 0.19), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load3(tFilter = tfilter, u0Pu = Complex(0.985197259386639, -0.22245529909862816), Beta = beta, i0Pu = Complex(0.8683357626835315, -0.38892301836522625), s0Pu = Complex(0.942, 0.19), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {118, -200}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load3(Value0 = P0Pu_Load3);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load3(Value0 = Q0Pu_Load3);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load4(tFilter = tfilter, u0Pu = Complex(1.0012925563693795, -0.18219588613683527), Beta = beta, i0Pu = Complex(0.46894368041083034, -0.04637966107438875), s0Pu = Complex(0.478, -0.039), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load4(tFilter = tfilter, u0Pu = Complex(1.0012925563693795, -0.1821958861368353), Beta = beta, i0Pu = Complex(0.46894368041083034, -0.04637966107438876), s0Pu = Complex(0.478, -0.039), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {90, -88}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load4(Value0 = P0Pu_Load4);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load4(Value0 = Q0Pu_Load4);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load5(tFilter = tfilter, u0Pu = Complex(1.0076614475344188, -0.15553506059090114), Beta = beta, i0Pu = Complex(0.07127323142261782, -0.02687955010494834), s0Pu = Complex(0.076, 0.016), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load5(tFilter = tfilter, u0Pu = Complex(1.0076614475344188, -0.15553506059090116), Beta = beta, i0Pu = Complex(0.07127323142261781, -0.02687955010494834), s0Pu = Complex(0.076, 0.016), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {-50, -20}, extent = {{-10, -10}, {10, 10}}, rotation = -90)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load5(Value0 = P0Pu_Load5);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load5(Value0 = Q0Pu_Load5);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load6(tFilter = tfilter, u0Pu = Complex(1.0374884992195124, -0.2629416248661557), Beta = beta, i0Pu = Complex(0.08422204102182815, -0.09363523584975125), s0Pu = Complex(0.112, 0.075), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load6(tFilter = tfilter, u0Pu = Complex(1.0374884992195124, -0.26294162486615574), Beta = beta, i0Pu = Complex(0.08422204102182816, -0.09363523584975125), s0Pu = Complex(0.112, 0.075), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {0, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load6(Value0 = P0Pu_Load6);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load6(Value0 = Q0Pu_Load6);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load9(tFilter = tfilter, u0Pu = Complex(1.020339651607223, -0.2721834998561073), Beta = beta, i0Pu = Complex(0.22939656023271177, -0.22388423135302046), s0Pu = Complex(0.295, 0.166), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load9(tFilter = tfilter, u0Pu = Complex(1.020339651607223, -0.27218349985610735), Beta = beta, i0Pu = Complex(0.22939656023271174, -0.2238842313530205), s0Pu = Complex(0.295, 0.166), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {70, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load9(Value0 = P0Pu_Load9);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load9(Value0 = Q0Pu_Load9);
@@ -98,19 +98,19 @@ model IEEE14Base_initialized "Base class for IEEE 14-bus system benchmark formed
     Placement(visible = true, transformation(origin = {30, 82}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load10(Value0 = P0Pu_Load10);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load10(Value0 = Q0Pu_Load10);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load11(tFilter = tfilter, u0Pu = Complex(1.0220893006730634, -0.26985303615102435), Beta = beta, i0Pu = Complex(0.0276654362412032, -0.024915241700858945), s0Pu = Complex(0.035, 0.018), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load11(tFilter = tfilter, u0Pu = Complex(1.0220893006730634, -0.2698530361510244), Beta = beta, i0Pu = Complex(0.0276654362412032, -0.024915241700858945), s0Pu = Complex(0.035, 0.018), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {10, 120}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load11(Value0 = P0Pu_Load11);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load11(Value0 = Q0Pu_Load11);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load12(tFilter = tfilter, u0Pu = Complex(1.0191408658466026, -0.2745230227242302), Beta = beta, i0Pu = Complex(0.05186234672834589, -0.029669508114876075), s0Pu = Complex(0.061, 0.016), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load12(tFilter = tfilter, u0Pu = Complex(1.0191408658466026, -0.27452302272423024), Beta = beta, i0Pu = Complex(0.05186234672834589, -0.029669508114876075), s0Pu = Complex(0.061, 0.016), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {-130, 140}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load12(Value0 = P0Pu_Load12);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load12(Value0 = Q0Pu_Load12);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load13(tFilter = tfilter, u0Pu = Complex(1.0141026179519166, -0.2746905430193856), Beta = beta, i0Pu = Complex(0.109589902674579, -0.08687810120543354), s0Pu = Complex(0.135, 0.058), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load13(tFilter = tfilter, u0Pu = Complex(1.0141026179519166, -0.27469054301938567), Beta = beta, i0Pu = Complex(0.109589902674579, -0.08687810120543356), s0Pu = Complex(0.135, 0.058), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {-70, 220}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load13(Value0 = P0Pu_Load13);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load13(Value0 = Q0Pu_Load13);
-  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load14(tFilter = tfilter, u0Pu = Complex(0.9954175160970694, -0.2860319093029796), Beta = beta, i0Pu = Complex(0.12493644726695881, -0.0861305021931507), s0Pu = Complex(0.149, 0.05), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
+  Dynawo.Electrical.Loads.LoadAlphaBetaRestorative Load14(tFilter = tfilter, u0Pu = Complex(0.9954175160970694, -0.28603190930297967), Beta = beta, i0Pu = Complex(0.1249364472669588, -0.0861305021931507), s0Pu = Complex(0.149, 0.05), UMinPu = uMinPu, UMaxPu = uMaxPu, Alpha = alpha) annotation(
     Placement(visible = true, transformation(origin = {10, 200}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_Load14(Value0 = P0Pu_Load14);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_Load14(Value0 = Q0Pu_Load14);
