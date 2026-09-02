@@ -58,27 +58,31 @@ model DIGrid
     Placement(visible = true, transformation(origin = {50, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
   Dynawo.Types.Frequency deltaFrequency "Frequency difference between both inertial grids";
 
+  Modelica.Blocks.Sources.Constant OmegaRef(k = Dynawo.Electrical.SystemBase.omegaRef0Pu) "Reference angular frequency for the inertial grids";
 equation
+  connect(OmegaRef.y, inertialGrid1.omegaRefPu);
+  connect(OmegaRef.y, inertialGrid2.omegaRefPu);
+
 // deltaFrequency calculation
-  deltaFrequency = inertialGrid1.reducedOrderSFR.deltaFrequency - inertialGrid2.reducedOrderSFR.deltaFrequency;
+  deltaFrequency = inertialGrid1.reducedOrderSFR.frequency - inertialGrid2.reducedOrderSFR.frequency;
 
 //Switch-off equations inhibitions
-  load.switchOffSignal1.value = false;
-  load.switchOffSignal2.value = false;
-  loadPQ.switchOffSignal1.value = false;
-  loadPQ.switchOffSignal2.value = false;
-  line1.switchOffSignal1.value = false;
-  line1.switchOffSignal2.value = false;
-  line2.switchOffSignal1.value = false;
-  line2.switchOffSignal2.value = false;
-  line3.switchOffSignal1.value = false;
-  line3.switchOffSignal2.value = false;
-  inertialGrid1.injectorURI.switchOffSignal1.value = false;
-  inertialGrid1.injectorURI.switchOffSignal2.value = false;
-  inertialGrid1.injectorURI.switchOffSignal3.value = false;
-  inertialGrid2.injectorURI.switchOffSignal1.value = false;
-  inertialGrid2.injectorURI.switchOffSignal2.value = false;
-  inertialGrid2.injectorURI.switchOffSignal3.value = false;
+  load.switchOffSignal1 = false;
+  load.switchOffSignal2 = false;
+  loadPQ.switchOffSignal1 = false;
+  loadPQ.switchOffSignal2 = false;
+  line1.switchOffSignal1 = false;
+  line1.switchOffSignal2 = false;
+  line2.switchOffSignal1 = false;
+  line2.switchOffSignal2 = false;
+  line3.switchOffSignal1 = false;
+  line3.switchOffSignal2 = false;
+  inertialGrid1.injectorURI.switchOffSignal1 = false;
+  inertialGrid1.injectorURI.switchOffSignal2 = false;
+  inertialGrid1.injectorURI.switchOffSignal3 = false;
+  inertialGrid2.injectorURI.switchOffSignal1 = false;
+  inertialGrid2.injectorURI.switchOffSignal2 = false;
+  inertialGrid2.injectorURI.switchOffSignal3 = false;
 
 // No variations in PspPu for the inertial grids
   der(inertialGrid1.reducedOrderSFR.PspPu) = 0;

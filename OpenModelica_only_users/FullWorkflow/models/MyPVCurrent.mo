@@ -62,20 +62,32 @@ model MyPVCurrent "WECC PV Model on infinite bus"
     OmegaMaxPu = 1.5,
     OmegaMinPu = 0.5,
     P0Pu = -0.7,
-    PMaxPu = 1,
-    PMinPu = 0,
+    PMaxREECPu = 1,
+    PMaxREPCPu = 1,
+    PMinREECPu = 0,
+    PMinREPCPu = 0,
     PQFlag = false,
     PfFlag = false,
-    Q0Pu = -0.2,
     QFlag = true,
-    QMaxPu = 0.4,
-    QMinPu = -0.4,
-    RPu = 0,
+    QMaxREECPu = 0.4,
+    QMaxREPCPu = 0.4,
+    QMinREECPu = -0.4,
+    QMinREPCPu = -0.4,
+    RLvTrPu = 0,
+    RMvHvPu = 0,
+    XMvHvPu = 0.15,
+    BMvHvPu = 0,
+    GMvHvPu = 0,
+    rTfoPu = 1,
+    ConverterLVControl = true,
+    PPCLocal = true,
+    PPcc0Pu = 0,
+    QPcc0Pu = 0,
+    UPcc0Pu = 1,
     RefFlag = true,
     RrpwrPu = 10,
     SNom = 100,
     U0Pu = 1,
-    UPhase0 = 1.44621e-6,
     VCompFlag = false,
     VDipPu = 0.9,
     VFlag = true,
@@ -85,7 +97,7 @@ model MyPVCurrent "WECC PV Model on infinite bus"
     VRef0Pu = 1,
     VRef1Pu = 0,
     VUpPu = 1.1,
-    XPu = 0.15,
+    XLvTrPu = 0,
     brkpt = 0.1,
     lvpl1 = 1.22,
     tFilterGC = 0.02,
@@ -95,7 +107,8 @@ model MyPVCurrent "WECC PV Model on infinite bus"
     tG = 0.02,
     tIq = 0.02,
     tLag = 0.1,
-    tP = 0.04,
+    tpREEC = 0.04,
+    tpREPC = 0.04,
     tPord = 0.02,
     tRv = 0.02,
     zerox = 0.05) annotation(
@@ -111,17 +124,22 @@ model MyPVCurrent "WECC PV Model on infinite bus"
   Modelica.Blocks.Sources.Constant PFaRef(k = 0) annotation(
     Placement(visible = true, transformation(origin = {90, -80}, extent = {{-10, 10}, {10, -10}}, rotation = 180)));
 
+  Modelica.Blocks.Sources.Constant const(k = 0) "External PCC active/reactive power (unused when PPCLocal = true)";
+  Modelica.ComplexBlocks.Sources.ComplexConstant complexConst(k = Complex(1, 0)) "External PCC voltage (unused when PPCLocal = true)";
 equation
-  line.switchOffSignal1.value = false;
-  line.switchOffSignal2.value = false;
-  PV.injector.switchOffSignal1.value = false;
-  PV.injector.switchOffSignal2.value = false;
-  PV.injector.switchOffSignal3.value = false;
+  line.switchOffSignal1 = false;
+  line.switchOffSignal2 = false;
+  PV.injector.switchOffSignal1 = false;
+  PV.injector.switchOffSignal2 = false;
+  PV.injector.switchOffSignal3 = false;
 
   connect(line.terminal2, PV.terminal) annotation(
     Line(points = {{-20, 0}, {0, 0}, {0, 0}, {0, 0}}, color = {0, 0, 255}));
   connect(infiniteBus.terminal, line.terminal1) annotation(
     Line(points = {{-82, 0}, {-60, 0}, {-60, 0}, {-60, 0}}, color = {0, 0, 255}));
+  connect(const.y, PV.PPccPu);
+  connect(const.y, PV.QPccPu);
+  connect(complexConst.y, PV.uPccPu);
   connect(omegaRefPu.y, PV.omegaRefPu) annotation(
     Line(points = {{79, 40}, {60, 40}, {60, 12}, {42, 12}}, color = {0, 0, 127}));
   connect(QRefPu.y, PV.QRefPu) annotation(

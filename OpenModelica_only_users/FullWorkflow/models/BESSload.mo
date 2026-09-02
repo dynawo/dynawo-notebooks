@@ -38,15 +38,27 @@ model BESSload "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A 
     OmegaMaxPu = 1.5,
     OmegaMinPu = 0.5,
     P0Pu = -0.03,
-    PMaxPu = 1,
-    PMinPu = -0.667,
+    PMaxREECPu = 1,
+    PMaxREPCPu = 1,
+    PMinREECPu = -0.667,
+    PMinREPCPu = -0.667,
     PQFlag = false,
     PfFlag = false,
-    Q0Pu = 0,
     QFlag = false,
-    QMaxPu = 0.75,
-    QMinPu = -0.75,
-    RPu = 0,
+    QMaxREECPu = 0.75,
+    QMaxREPCPu = 0.75,
+    QMinREECPu = -0.75,
+    QMinREPCPu = -0.75,
+    RLvTrPu = 0,
+    RMvHvPu = 0,
+    BMvHvPu = 0,
+    GMvHvPu = 0,
+    rTfoPu = 1,
+    ConverterLVControl = true,
+    PPCLocal = true,
+    PPcc0Pu = 0,
+    QPcc0Pu = 0,
+    UPcc0Pu = 1,
     RefFlag = false,
     RrpwrPu = 10,
     SNom = 6,
@@ -54,7 +66,6 @@ model BESSload "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A 
     SOCMaxPu = 0.8,
     SOCMinPu = 0.2,
     U0Pu = 1,
-    UPhaseInj0 = 0.00000144621,
     VCompFlag = true,
     VDLIp11 = 0.2,
     VDLIp12 = 1.11,
@@ -79,7 +90,8 @@ model BESSload "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A 
     VMinPu = 0.9,
     VRef0Pu = 1,
     VUpPu = 99,
-    XPu = 1e-10,
+    XLvTrPu = 0,
+    XMvHvPu = 1e-10,
     brkpt = 0.1,
     lvpl1 = 1.22,
     tBattery = 999,
@@ -90,23 +102,13 @@ model BESSload "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A 
     tG = 0.017,
     tIq = 0.017,
     tLag = 0.1,
-    tP = 0.05,
+    tpREEC = 0.05,
+    tpREPC = 0.05,
     tPord = 0.017,
     tRv = 0.01,
-    zerox = 0.05,
+    zerox = 0.05) annotation(
     
     // From internal initialization
-    Id0Pu = 0.5,
-    Iq0Pu = 1.5e-12,
-    PF0 = 1,
-    PInj0Pu = 0.5,
-    QInj0Pu = 1.5e-12,
-    UInj0Pu = 1,
-    i0Pu = Complex(-0.03, -4.3386e-8),
-    iInj0Pu = Complex(0.5, 7.231e-7),
-    s0Pu = Complex(-0.03,0),
-    u0Pu = Complex(1, 1.446e-6),
-    uInj0Pu = Complex(1, 1.446e-6)) annotation(
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
   
   Modelica.Blocks.Sources.Constant URefPu(k = 1) annotation(
@@ -152,18 +154,20 @@ model BESSload "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A 
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_01(Value0 = 0.05);
 
 
+  Modelica.Blocks.Sources.Constant const(k = 0) "External PCC active/reactive power (unused when PPCLocal = true)";
+  Modelica.ComplexBlocks.Sources.ComplexConstant complexConst(k = Complex(1, 0)) "External PCC voltage (unused when PPCLocal = true)";
 equation
-  line.switchOffSignal1.value = false;
-  line.switchOffSignal2.value = false;
-  lineFeeder.switchOffSignal1.value = false;
-  lineFeeder.switchOffSignal2.value = false;
-  loadPQ1.switchOffSignal1.value = false;
-  loadPQ1.switchOffSignal2.value = false;
+  line.switchOffSignal1 = false;
+  line.switchOffSignal2 = false;
+  lineFeeder.switchOffSignal1 = false;
+  lineFeeder.switchOffSignal2 = false;
+  loadPQ1.switchOffSignal1 = false;
+  loadPQ1.switchOffSignal2 = false;
 
 
-  BESS.injector.switchOffSignal1.value = false;
-  BESS.injector.switchOffSignal2.value = false;
-  BESS.injector.switchOffSignal3.value = false;
+  BESS.injector.switchOffSignal1 = false;
+  BESS.injector.switchOffSignal2 = false;
+  BESS.injector.switchOffSignal3 = false;
 
   // Fix PQ load references
   loadPQ1.deltaP = 0;
@@ -173,6 +177,9 @@ equation
   loadPQ1.QRefPu = QrefPu_load_01.setPoint;
 
   
+  connect(const.y, BESS.PPccPu);
+  connect(const.y, BESS.QPccPu);
+  connect(complexConst.y, BESS.uPccPu);
   connect(URefPu.y, BESS.URefPu) annotation(
     Line(points = {{80, 80}, {20, 80}, {20, 22}}, color = {0, 0, 127}));
   connect(omegaRefPu.y, BESS.omegaRefPu) annotation(

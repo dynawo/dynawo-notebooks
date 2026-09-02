@@ -17,13 +17,13 @@ model MyPVCurrent_auxiliary "WECC PV Model on infinite bus"
     Placement(visible = true, transformation(origin = {-40, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 0)));
   Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed PV(PGen0Pu = -0.7, U0Pu = 1) annotation(
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
-  Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource_INIT PV_INIT(RPu = 0, SNom = 100, P0Pu = -0.7, U0Pu = 1, XPu = 0.15, Q0Pu(fixed = false), UPhase0(fixed = false));
+  Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT PV_INIT(PPCLocal = true, GMvHvPu = 0, U0Pu = 1, rTfoPu = 1, QPcc0Pu = 0, SNom = 100, UPcc0Pu = 1, P0Pu = -0.7, RLvTrPu = 0, XLvTrPu = 0, RMvHvPu = 0, XMvHvPu = 0.15, BMvHvPu = 0, ConverterLVControl = true, PPcc0Pu = 0, Q0Pu(fixed = false), UPhase0(fixed = false));
 equation
-  line.switchOffSignal1.value = false;
-  line.switchOffSignal2.value = false;
-  PV.switchOffSignal1.value = false;
-  PV.switchOffSignal2.value = false;
-  PV.switchOffSignal3.value = false;
+  line.switchOffSignal1 = false;
+  line.switchOffSignal2 = false;
+  PV.switchOffSignal1 = false;
+  PV.switchOffSignal2 = false;
+  PV.switchOffSignal3 = false;
   connect(line.terminal2, PV.terminal) annotation(
     Line(points = {{-20, 0}, {0, 0}, {0, 0}, {0, 0}}, color = {0, 0, 255}));
   connect(infiniteBus.terminal, line.terminal1) annotation(
