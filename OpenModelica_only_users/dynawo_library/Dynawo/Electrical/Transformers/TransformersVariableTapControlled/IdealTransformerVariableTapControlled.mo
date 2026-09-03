@@ -78,15 +78,15 @@ equation
   tapChanger.UMonitored = idealTransformerVariableTap.U2Pu;
   locked = tapChanger.locked;
 
-  when tapChanger.tap.value <> pre(tapChanger.tap.value) then
-    idealTransformerVariableTap.tap.value = tapChanger.tap.value;
+  when tapChanger.tap <> pre(tapChanger.tap) then
+    idealTransformerVariableTap.tap = tapChanger.tap;
   end when;
 
-  idealTransformerVariableTap.switchOffSignal1.value = tapChanger.switchOffSignal1.value;
-  idealTransformerVariableTap.switchOffSignal2.value = tapChanger.switchOffSignal2.value;
+  idealTransformerVariableTap.switchOffSignal1 = tapChanger.switchOffSignal1;
+  idealTransformerVariableTap.switchOffSignal2 = tapChanger.switchOffSignal2;
 
-  switchOffSignal1.value = idealTransformerVariableTap.switchOffSignal1.value;
-  switchOffSignal2.value = idealTransformerVariableTap.switchOffSignal2.value;
+  switchOffSignal1 = idealTransformerVariableTap.switchOffSignal1;
+  switchOffSignal2 = idealTransformerVariableTap.switchOffSignal2;
 
   connect(idealTransformerVariableTap.terminal1, terminal1) annotation(
     Line(points = {{-10, 0}, {-100, 0}}, color = {0, 0, 255}));

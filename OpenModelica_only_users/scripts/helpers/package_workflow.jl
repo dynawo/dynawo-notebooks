@@ -9,7 +9,7 @@ Build the derived package names and file paths used by the package workflow.
 function package_workflow_paths(model::String, model_dir::String, output_dir::String)
     model_parts = split(model, ".")
     length(model_parts) >= 2 ||
-        error("Package workflow expects a qualified model name, for example MyNordic.TestCase")
+        error("Package workflow expects a qualified model name, for example Demo_Nordic.TestCase")
 
     source_package = String(model_parts[1])
     root_model_name = String(model_parts[end])

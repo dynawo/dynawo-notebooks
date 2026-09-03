@@ -6,7 +6,7 @@ This folder contains notebooks for generating auxiliary steady-state models and 
 
 - `BuildAux_single.ipynb`: builds an auxiliary model from a single `.mo` file.
 - `BuildAux_package.ipynb`: builds an auxiliary package from a package-based model.
-- `models/`: input models — single `.mo` files and source packages (`MyIEEE14/`, `MyNordic/`).
+- `models/`: input models — single `.mo` files and source packages (`Demo_IEEE14/`, `Demo_Nordic/`).
 - `outputs/`: generated auxiliary models and packages.
 
 Both notebooks reuse the shared helper modules in `../scripts/`.

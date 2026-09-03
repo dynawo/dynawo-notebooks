@@ -32,12 +32,12 @@ model CurrentLimitAutomatonTwoLevels "Current Limit Automaton (CLA) monitoring t
   parameter Integer OrderToEmit2 "Order to emit by CLA 2 (it should be a value corresponding to a state: [1:OPEN, 2:CLOSED, 3:CLOSED_1, 4:CLOSED_2, 5:CLOSED_3, 6:UNDEFINED])";
 
   //Inputs
-  Dynawo.Connectors.BPin AutomatonExists(value = true) "Pin to indicate to deactivate internal automaton natively present in C++ object";
-  Dynawo.Connectors.ImPin IMonitored1 "Monitored current on element 1 (unit depending on IMax1 unit)";
-  Dynawo.Connectors.ImPin IMonitored2 "Monitored current on element 2 (unit depending on IMax2 unit)";
+  Modelica.Blocks.Interfaces.BooleanInput AutomatonExists = true "Pin to indicate to deactivate internal automaton natively present in C++ object";
+  Modelica.Blocks.Interfaces.RealInput IMonitored1 "Monitored current on element 1 (unit depending on IMax1 unit)";
+  Modelica.Blocks.Interfaces.RealInput IMonitored2 "Monitored current on element 2 (unit depending on IMax2 unit)";
 
-  //Outputs
-  Dynawo.Connectors.IntPin order "Order emitted by the CLA (it should be a value corresponding to a state: [1:OPEN, 2:CLOSED, 3:CLOSED_1, 4:CLOSED_2, 5:CLOSED_3, 6:UNDEFINED])";
+  //Output
+  Modelica.Blocks.Interfaces.IntegerOutput order "Order emitted by the CLA (it should be a value corresponding to a state: [1:OPEN, 2:CLOSED, 3:CLOSED_1, 4:CLOSED_2, 5:CLOSED_3, 6:UNDEFINED])";
 
 protected
   //CLA 1 internals and output
@@ -54,44 +54,44 @@ equation
   //CLA blocks substituted here to work around an annoying OMC bug
 
   //Block 1
-  when IMonitored1.value > IMax1 and Running1 and pre(Order1) <> OrderToEmit1 then
-    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax1, IMonitored1.value, String(tLagBeforeActing1, significantDigits = 2));
+  when IMonitored1 > IMax1 and Running1 and pre(Order1) <> OrderToEmit1 then
+    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax1, IMonitored1, String(tLagBeforeActing1, significantDigits = 2));
     tThresholdReached1 = time;
     Timeline.logEvent1(TimelineKeys.CurrentLimitAutomatonArming);
-  elsewhen IMonitored1.value < IMax1 and pre(tThresholdReached1) <> Constants.inf and pre(Order1) <> OrderToEmit1 then
-    Constraint.logConstraintEndData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax1, IMonitored1.value, String(tLagBeforeActing1, significantDigits = 2));
+  elsewhen IMonitored1 < IMax1 and pre(tThresholdReached1) <> Constants.inf and pre(Order1) <> OrderToEmit1 then
+    Constraint.logConstraintEndData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax1, IMonitored1, String(tLagBeforeActing1, significantDigits = 2));
     tThresholdReached1 = Constants.inf;
     Timeline.logEvent1(TimelineKeys.CurrentLimitAutomatonDisarming);
   end when;
 
-  when tThresholdReached1 <> Constants.inf and tOrder1 == Constants.inf and der(IMonitored1.value) < 0 then
-    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax1, pre(IMonitored1.value), String(tLagBeforeActing1, significantDigits = 2));
+  when tThresholdReached1 <> Constants.inf and tOrder1 == Constants.inf and der(IMonitored1) < 0 then
+    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax1, pre(IMonitored1), String(tLagBeforeActing1, significantDigits = 2));
   end when;
 
-  when time - tThresholdReached1 >= tLagBeforeActing1 then
-    Constraint.logConstraintBeginData(ConstraintKeys.OverloadOpenCLA, "OverloadOpen", IMax1, IMonitored1.value, String(tLagBeforeActing1, significantDigits = 2));
+  when time - tThresholdReached1 >= tLagBeforeActing1 and time > 0 then
+    Constraint.logConstraintBeginData(ConstraintKeys.OverloadOpenCLA, "OverloadOpen", IMax1, IMonitored1, String(tLagBeforeActing1, significantDigits = 2));
     Order1 = OrderToEmit1;
     tOrder1 = time;
     Timeline.logEvent1(TimelineKeys.CurrentLimitAutomatonActing);
   end when;
 
   //Block 2
-  when IMonitored2.value > IMax2 and Running2 and pre(Order2) <> OrderToEmit2 then
-    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax2, IMonitored2.value, String(tLagBeforeActing2, significantDigits = 2));
+  when IMonitored2 > IMax2 and Running2 and pre(Order2) <> OrderToEmit2 then
+    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax2, IMonitored2, String(tLagBeforeActing2, significantDigits = 2));
     tThresholdReached2 = time;
     Timeline.logEvent1(TimelineKeys.CurrentLimitAutomatonArming);
-  elsewhen IMonitored2.value < IMax2 and pre(tThresholdReached2) <> Constants.inf and pre(Order2) <> OrderToEmit2 then
-    Constraint.logConstraintEndData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax2, IMonitored2.value, String(tLagBeforeActing2, significantDigits = 2));
+  elsewhen IMonitored2 < IMax2 and pre(tThresholdReached2) <> Constants.inf and pre(Order2) <> OrderToEmit2 then
+    Constraint.logConstraintEndData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax2, IMonitored2, String(tLagBeforeActing2, significantDigits = 2));
     tThresholdReached2 = Constants.inf;
     Timeline.logEvent1(TimelineKeys.CurrentLimitAutomatonDisarming);
   end when;
 
-  when tThresholdReached2 <> Constants.inf and tOrder2 == Constants.inf and der(IMonitored2.value) < 0 then
-    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax2, pre(IMonitored2.value), String(tLagBeforeActing2, significantDigits = 2));
+  when tThresholdReached2 <> Constants.inf and tOrder2 == Constants.inf and der(IMonitored2) < 0 then
+    Constraint.logConstraintBeginData(ConstraintKeys.OverloadUpCLA, "OverloadUp", IMax2, pre(IMonitored2), String(tLagBeforeActing2, significantDigits = 2));
   end when;
 
-  when time - tThresholdReached2 >= tLagBeforeActing2 then
-    Constraint.logConstraintBeginData(ConstraintKeys.OverloadOpenCLA, "OverloadOpen", IMax2, IMonitored2.value, String(tLagBeforeActing2, significantDigits = 2));
+  when time - tThresholdReached2 >= tLagBeforeActing2 and time > 0 then
+    Constraint.logConstraintBeginData(ConstraintKeys.OverloadOpenCLA, "OverloadOpen", IMax2, IMonitored2, String(tLagBeforeActing2, significantDigits = 2));
     Order2 = OrderToEmit2;
     tOrder2 = time;
     Timeline.logEvent1(TimelineKeys.CurrentLimitAutomatonActing);
@@ -99,15 +99,16 @@ equation
 
   //Top-level orders merge
   when Order1 == 1 or Order2 == 1 or (Order1 == 3 and Order2 == 4) or (Order1 == 4 and Order2 == 3) then
-    order.value = 1;
+    order = 1;
   elsewhen Order1 == 2 and Order2 == 2 then
-    order.value = 2;
+    order = 2;
   elsewhen ((Order1 == 2 or Order1 == 0) and Order2 == 3) or (Order1 == 3 and (Order2 == 2 or Order2 == 0)) or (Order1 == 3 and Order2 == 3) then
-    order.value = 3;
+    order = 3;
   elsewhen ((Order1 == 2 or Order1 == 0) and Order2 == 4) or (Order1 == 4 and (Order2 == 2 or Order2 == 0)) or (Order1 == 4 and Order2 == 4) then
-    order.value = 4;
+    order = 4;
   end when;
 
-  annotation(preferredView = "text",
+  annotation(
+    preferredView = "text",
     Documentation(info = "<html><head></head><body>The automaton will open one component when the current stays higher than a predefined threshold during a certain amount of time on two monitored components (line, transformer, etc.) (one threshold and one time constant per element).</body></html>"));
 end CurrentLimitAutomatonTwoLevels;
