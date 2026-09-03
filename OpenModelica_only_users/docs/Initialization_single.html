@@ -7544,7 +7544,7 @@ a.anchor-link {
 <span class="n">mkpath</span><span class="p">(</span><span class="n">OUTPUT_DIR</span><span class="p">)</span>
 
 <span class="c"># 2. Select the model to initialize</span>
-<span class="n">MODEL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"DIGrid"</span>
+<span class="n">MODEL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Demo_DIGrid"</span>
 
 <span class="c"># 3. Path to the selected dynamic case file</span>
 <span class="n">MODEL_FILE_PATH</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">joinpath</span><span class="p">(</span><span class="n">MODEL_DIR</span><span class="p">,</span><span class="w"> </span><span class="n">MODEL</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="s">".mo"</span><span class="p">)</span>
@@ -7569,9 +7569,9 @@ a.anchor-link {
 
 <span class="c"># 9. Variable to plot after the initialized simulation</span>
 <span class="c"># PLOT_VARIABLE = "generatorSynchronous.terminal.i.re"  # SMIB option</span>
-<span class="c"># PLOT_VARIABLE = "BESS.terminal.V.im"  # MyBESS option</span>
-<span class="c"># PLOT_VARIABLE = "PV.measurements.PPu" # MyPVCurrent option</span>
-<span class="n">PLOT_VARIABLE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"deltaFrequency"</span><span class="w">  </span><span class="c"># DIGrid option</span>
+<span class="c"># PLOT_VARIABLE = "BESS.terminal.V.im"  # Demo_BESS option</span>
+<span class="c"># PLOT_VARIABLE = "PV.measurements.PPu" # Demo_PVCurrent option</span>
+<span class="n">PLOT_VARIABLE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"deltaFrequency"</span><span class="w">  </span><span class="c"># Demo_DIGrid option</span>
 </pre></div>
 </div>
 </div>
@@ -7642,7 +7642,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.fVGrWcdtLT"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.64iDJ75OoA"
 </pre>
 </div>
 </div>
@@ -7656,7 +7656,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.bycg9y3Jj2"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.l8Px9ytE2T"
 </pre>
 </div>
 </div>
@@ -7664,8 +7664,8 @@ a.anchor-link {
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Checking the auxiliary model...
-"Check of DIGrid_auxiliary completed successfully.
-Class DIGrid_auxiliary has 157 equation(s) and 157 variable(s).
+"Check of Demo_DIGrid_auxiliary completed successfully.
+Class Demo_DIGrid_auxiliary has 157 equation(s) and 157 variable(s).
 57 of these are trivial equation(s)."
 
 </pre>
@@ -7761,7 +7761,7 @@ Class DIGrid_auxiliary has 157 equation(s) and 157 variable(s).
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Wrote initialized model: /home/clarafercas/dynawo-notebooks/OpenModelica_only_users/Initialization/outputs/DIGrid_initialized.mo
+<pre>Wrote initialized model: /home/clarafercas/dynawo-notebooks/OpenModelica_only_users/Initialization/outputs/Demo_DIGrid_initialized.mo
 </pre>
 </div>
 </div>
@@ -7821,7 +7821,7 @@ Class DIGrid_auxiliary has 157 equation(s) and 157 variable(s).
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.seMIVKqsr9"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.hYlJocIv25"
 </pre>
 </div>
 </div>
@@ -7829,14 +7829,8 @@ Class DIGrid_auxiliary has 157 equation(s) and 157 variable(s).
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Checking the initialized model...
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>"Check of DIGrid_initialized completed successfully.
-Class DIGrid_initialized has 272 equation(s) and 272 variable(s).
+"Check of Demo_DIGrid_initialized completed successfully.
+Class Demo_DIGrid_initialized has 272 equation(s) and 272 variable(s).
 152 of these are trivial equation(s)."
 
 </pre>
@@ -7846,18 +7840,18 @@ Class DIGrid_initialized has 272 equation(s) and 272 variable(s).
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>record SimulationResult
-    resultFile = "/tmp/jl_f8kGE2/DIGrid_initialized_res.csv",
-    simulationOptions = "startTime = 0.0, stopTime = 50.0, numberOfIntervals = 50000, tolerance = 1e-8, method = 'dassl', fileNamePrefix = 'DIGrid_initialized', options = '', outputFormat = 'csv', variableFilter = '.*', cflags = '', simflags = ''",
+    resultFile = "/tmp/jl_vBHvFK/Demo_DIGrid_initialized_res.csv",
+    simulationOptions = "startTime = 0.0, stopTime = 50.0, numberOfIntervals = 50000, tolerance = 1e-8, method = 'dassl', fileNamePrefix = 'Demo_DIGrid_initialized', options = '', outputFormat = 'csv', variableFilter = '.*', cflags = '', simflags = ''",
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.047054984,
-    timeBackend = 0.437990498,
-    timeSimCode = 0.022252196000000002,
-    timeTemplates = 0.14963212,
-    timeCompile = 1.837947559,
-    timeSimulation = 6.003669423,
-    timeTotal = 8.498730688
+    timeFrontend = 0.021345866,
+    timeBackend = 0.25449891699999994,
+    timeSimCode = 0.011859785000000001,
+    timeTemplates = 0.031234315000000002,
+    timeCompile = 0.946691203,
+    timeSimulation = 3.033164365,
+    timeTotal = 4.298898046
 end SimulationResult;
 
 </pre>
@@ -7866,7 +7860,7 @@ end SimulationResult;
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[5]:</div>
 <div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
-<pre>"/tmp/jl_f8kGE2/DIGrid_initialized_res.csv"</pre>
+<pre>"/tmp/jl_vBHvFK/Demo_DIGrid_initialized_res.csv"</pre>
 </div>
 </div>
 </div>
@@ -7924,10 +7918,10 @@ for more information.
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
 <div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
-<div id="id_19f3c35e_ed49_405f_ae42_61a03c1fe3c2" style="width:600px;height:400px;"></div>
+<div id="id_be67d96c_0c10_4624_970e_af0b4a213561" style="width:600px;height:400px;"></div>
 <script>
     ;(()=> {
-    function plots_jl_plotly_id_19f3c35e_ed49_405f_ae42_61a03c1fe3c2() {
+    function plots_jl_plotly_id_be67d96c_0c10_4624_970e_af0b4a213561() {
             requirejs.config({
         paths: {
             plotly: 'https://cdn.plot.ly/plotly-2.6.3.min'
@@ -7935,7 +7929,7 @@ for more information.
     });
     require(['plotly'], function (Plotly) {
 
-        Plotly.newPlot('id_19f3c35e_ed49_405f_ae42_61a03c1fe3c2', [
+        Plotly.newPlot('id_be67d96c_0c10_4624_970e_af0b4a213561', [
     {
         "xaxis": "x",
         "colorbar": {
@@ -108140,9 +108134,9 @@ for more information.
     }
     let plotlyloader = window.document.createElement("script")
     let src="https://requirejs.org/docs/release/2.3.7/minified/require.js"
-    plotlyloader.addEventListener("load", plots_jl_plotly_id_19f3c35e_ed49_405f_ae42_61a03c1fe3c2);
+    plotlyloader.addEventListener("load", plots_jl_plotly_id_be67d96c_0c10_4624_970e_af0b4a213561);
     plotlyloader.src = src
-    document.querySelector("#id_19f3c35e_ed49_405f_ae42_61a03c1fe3c2").appendChild(plotlyloader)
+    document.querySelector("#id_be67d96c_0c10_4624_970e_af0b4a213561").appendChild(plotlyloader)
     })()
     </script>
 </div>

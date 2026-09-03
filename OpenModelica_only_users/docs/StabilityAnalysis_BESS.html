@@ -7517,7 +7517,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Stability-Analysis---MyBESS-Parameter-Sweep">Stability Analysis - MyBESS Parameter Sweep<a class="anchor-link" href="#Stability-Analysis---MyBESS-Parameter-Sweep">¶</a></h1><p>This notebook sweeps one parameter of <code>MyBESS</code>, linearizes the model at each value, and analyzes the eigenvalues to track how the modes and their stability change across the sweep.</p>
+<h1 id="Stability-Analysis---Demo_BESS-Parameter-Sweep">Stability Analysis - Demo_BESS Parameter Sweep<a class="anchor-link" href="#Stability-Analysis---Demo_BESS-Parameter-Sweep">¶</a></h1><p>This notebook sweeps one parameter of <code>Demo_BESS</code>, linearizes the model at each value, and analyzes the eigenvalues to track how the modes and their stability change across the sweep.</p>
 <p>Set <code>REINITIALIZE_EACH_CASE</code> to choose whether the model is initialized once before the sweep, or reinitialized after each parameter update.</p>
 </div>
 </div>
@@ -7563,8 +7563,8 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-julia"><pre><span></span><span class="n">BASE_MODEL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"MyBESS"</span>
-<span class="n">BASE_MODEL_FILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"models/MyBESS.mo"</span><span class="p">)</span>
+<div class="highlight hl-julia"><pre><span></span><span class="n">BASE_MODEL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"Demo_BESS"</span>
+<span class="n">BASE_MODEL_FILE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"models/Demo_BESS.mo"</span><span class="p">)</span>
 
 <span class="n">DYNAWO_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"/home/clarafercas/dynawo"</span>
 <span class="n">MODELICA_PKG_PATH</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"</span><span class="si">$DYNAWO_DIR</span><span class="s">/OpenModelica/lib/omlibrary/Modelica/package.mo"</span>
@@ -7584,7 +7584,7 @@ a.anchor-link {
 <span class="c"># Leave empty to disable slack-specific handling.</span>
 <span class="n">SLACK_COMPONENT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">""</span>
 
-<span class="n">OUTPUT_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"outputs/MyBESS_Kpg_stability_sweep"</span><span class="p">);</span>
+<span class="n">OUTPUT_DIR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">abspath</span><span class="p">(</span><span class="s">"outputs/Demo_BESS_Kpg_stability_sweep"</span><span class="p">);</span>
 </pre></div>
 </div>
 </div>
@@ -7644,7 +7644,7 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.3flrWBopsQ"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.PNuWH8bi4Z"
 </pre>
 </div>
 </div>
@@ -7824,14 +7824,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.YDKcjnQin1"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.pyevaJtCRU"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.gnjYMu84lL"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.U6xOqWc15L"
 </pre>
 </div>
 </div>
@@ -7845,14 +7845,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.n4TYS3S4Ba"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.ddlVvQTAG2"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.4IHsvp6Tye"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.OkYbwAQDdG"
 </pre>
 </div>
 </div>
@@ -7866,14 +7866,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.OTpDqhtAWx"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.ZOMGqBLcwj"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.txqV3laO18"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.NAEv9mYw8X"
 </pre>
 </div>
 </div>
@@ -7887,14 +7887,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.0pPbInlgWW"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.amjpt4c0eS"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.A9WeEb5rHA"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.pUk8AyxWvf"
 </pre>
 </div>
 </div>
@@ -7908,14 +7908,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.1cRwrDdiAN"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.pXqpiDe5EC"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.5e5Uj2mv90"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.Tw3moySxoE"
 </pre>
 </div>
 </div>
@@ -7929,14 +7929,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.dhqk8ou7Gu"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.MRLvdmVD3Z"
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.ogo8qpyFP0"
+<pre><span class="ansi-cyan-intense-fg ansi-bold">[ </span><span class="ansi-cyan-intense-fg ansi-bold">Info: </span>Path to zmq file="/tmp/openmodelica.clarafercas.port.julia.D7hlO2MyPf"
 </pre>
 </div>
 </div>
@@ -8282,10 +8282,10 @@ for more information.
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output" data-mime-type="text/html" tabindex="0">
-<div id="id_6dee3dbb_3086_42de_8f0a_623cf4d00e7f" style="width:600px;height:400px;"></div>
+<div id="id_8bdb85fd_455e_4e9c_880d_bdf93b6ed21a" style="width:600px;height:400px;"></div>
 <script>
     ;(()=> {
-    function plots_jl_plotly_id_6dee3dbb_3086_42de_8f0a_623cf4d00e7f() {
+    function plots_jl_plotly_id_8bdb85fd_455e_4e9c_880d_bdf93b6ed21a() {
             requirejs.config({
         paths: {
             plotly: 'https://cdn.plot.ly/plotly-2.6.3.min'
@@ -8293,7 +8293,7 @@ for more information.
     });
     require(['plotly'], function (Plotly) {
 
-        Plotly.newPlot('id_6dee3dbb_3086_42de_8f0a_623cf4d00e7f', [
+        Plotly.newPlot('id_8bdb85fd_455e_4e9c_880d_bdf93b6ed21a', [
     {
         "xaxis": "x",
         "colorbar": {
@@ -8807,9 +8807,9 @@ for more information.
     }
     let plotlyloader = window.document.createElement("script")
     let src="https://requirejs.org/docs/release/2.3.7/minified/require.js"
-    plotlyloader.addEventListener("load", plots_jl_plotly_id_6dee3dbb_3086_42de_8f0a_623cf4d00e7f);
+    plotlyloader.addEventListener("load", plots_jl_plotly_id_8bdb85fd_455e_4e9c_880d_bdf93b6ed21a);
     plotlyloader.src = src
-    document.querySelector("#id_6dee3dbb_3086_42de_8f0a_623cf4d00e7f").appendChild(plotlyloader)
+    document.querySelector("#id_8bdb85fd_455e_4e9c_880d_bdf93b6ed21a").appendChild(plotlyloader)
     })()
     </script>
 </div>
