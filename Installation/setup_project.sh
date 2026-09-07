@@ -149,16 +149,34 @@ echo -e "${GREEN}  [OK] Julia linked into venv.${NC}"
 echo -e "  Syncing base project dependencies (from uv.lock)..."
 uv sync --all-extras
 
-echo -e "  Ensuring specific external scientific libraries are installed..."
-uv pip install \
-    pypowsybl \
-    pyyaml \
-    jupyter \
-    jupyterlab \
-    scipy \
-    ipywidgets \
-    OMPython \
-    --quiet
+# Download and install requirements (with fallback)
+echo -e "  Fetching and installing Python requirements..."
+REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/requirements.txt"
+
+# Desactivamos temporalmente el error automático de bash para manejar nosotros el fallo
+set +e
+curl -f -s -L "$REQUIREMENTS_URL" -o requirements_frozen.txt
+REQ_DOWNLOAD_STATUS=$?
+set -e
+
+if [ $REQ_DOWNLOAD_STATUS -eq 0 ]; then
+    echo -e "  > Primary requirements file downloaded successfully."
+    echo -e "  > Fixing editable remote dependencies for 'uv' compatibility..."
+    sed -i 's/-e git+/git+/g' requirements_frozen.txt
+    uv pip install -r requirements_frozen.txt --quiet
+    rm requirements_frozen.txt
+else
+    echo -e "${YELLOW}  [!] Could not download requirements.txt. Falling back to downloading latest versions...${NC}"
+    uv pip install \
+        pypowsybl \
+        pyyaml \
+        jupyter \
+        jupyterlab \
+        scipy \
+        ipywidgets \
+        OMPython \
+        --quiet
+fi
 
 # EXPLICIT LOCAL PACKAGE INSTALLATION
 echo -e "  Checking and installing local project package (src)..."
@@ -192,30 +210,43 @@ done
 
 # Download logic if not found
 if [ -z "$DYNAWO_HOME" ]; then
-    echo -e "${YELLOW}  [!] Dynawo no detectado en las rutas por defecto.${NC}"
-    echo -e "  > Descargando la última versión de Dynawo para Linux desde GitHub..."
-    # Obtenemos la URL de descarga directamente del JSON de la API
-    DYNAWO_URL=$(curl -s -L https://api.github.com/repos/dynawo/dynawo/releases/latest | grep "browser_download_url" | grep -E "Dynawo_Linux_v[0-9]" | cut -d '"' -f 4)
-    if [ -z "$DYNAWO_URL" ]; then
-        echo -e "${RED}  [ERROR] No se pudo obtener la URL de descarga. Revisa tu conexión.${NC}"
-        exit 1
+    echo -e "${YELLOW}  [!] Dynawo not detected in default paths.${NC}"
+    echo -e "  > Attempting to download Dynawo from the primary release link..."
+    
+    PRIMARY_DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/Dynawo_Linux.zip"
+    
+    # Temporarily disable set -e to handle download failure gracefully
+    set +e
+    curl -f -s -L "$PRIMARY_DYNAWO_URL" -o Dynawo_Linux.zip
+    CURL_STATUS=$?
+    set -e
+
+    if [ $CURL_STATUS -eq 0 ]; then
+        echo -e "  > Primary download successful."
+    else
+        echo -e "${YELLOW}  [!] Primary link failed. Downloading the latest version of Dynawo for Linux from GitHub...${NC}"
+        DYNAWO_URL=$(curl -s -L https://api.github.com/repos/dynawo/dynawo/releases/latest | grep "browser_download_url" | grep -E "Dynawo_Linux_v[0-9]" | cut -d '"' -f 4)
+        
+        if [ -z "$DYNAWO_URL" ]; then
+            echo -e "${RED}  [ERROR] Could not retrieve the download URL. Check your connection.${NC}"
+            exit 1
+        fi
+        
+        curl -L "$DYNAWO_URL" -o Dynawo_Linux.zip
     fi
 
-    # Descargar el .zip en una carpeta temporal
-    curl -L "$DYNAWO_URL" -o Dynawo_Linux_latest.zip
-
-    # Extraer el contenido en la carpeta HOME del usuario (creará la carpeta dynawo ahí)
-    echo -e "  > Descomprimiendo Dynawo..."
-    unzip -o Dynawo_Linux_latest.zip -d "$HOME" > /dev/null 2>&1
-    rm Dynawo_Linux_latest.zip
+    echo -e "  > Unzipping Dynawo..."
+    unzip -o Dynawo_Linux.zip -d "$HOME" > /dev/null 2>&1
+    rm Dynawo_Linux.zip
     DYNAWO_HOME="$HOME/dynawo"
-    # Pruebas de ejecución para confirmar la descarga
+    
+    # Execution tests to confirm the download
     if [ -f "$DYNAWO_HOME/dynawo.sh" ]; then
-        echo -e "  > Probando ejecución de Dynawo..."
+        echo -e "  > Testing Dynawo execution..."
         "$DYNAWO_HOME/dynawo.sh" help > /dev/null 2>&1
-        echo -e "${GREEN}  [OK] Dynawo se ha instalado y ejecutado correctamente en $DYNAWO_HOME${NC}"
+        echo -e "${GREEN}  [OK] Dynawo has been successfully installed and executed at $DYNAWO_HOME${NC}"
     else
-        echo -e "${YELLOW}  [!] Dynawo se descargó, pero no se encontró 'dynawo.sh' para probar su ejecución.${NC}"
+        echo -e "${YELLOW}  [!] Dynawo was downloaded, but 'dynawo.sh' was not found to test its execution.${NC}"
     fi
 fi
 
