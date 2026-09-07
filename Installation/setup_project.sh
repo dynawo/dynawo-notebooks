@@ -31,7 +31,7 @@ echo -e "${BLUE}${BOLD}>>> Starting Hybrid Simulation Project Setup...${NC}"
 # ==============================================================================
 # 1. PRE-FLIGHT CHECKS
 # ==============================================================================
-echo -e "\n${BLUE}[1/5] Validating Core System Dependencies...${NC}"
+echo -e "\n${BLUE}[1/6] Validating Core System Dependencies...${NC}"
 
 check_tool() {
     local cmd=$1
@@ -78,6 +78,8 @@ check_tool "java" "Java Runtime (Required for Powsybl)" || EXIT_FLAG=1
 check_tool "omc" "OpenModelica Compiler" || EXIT_FLAG=1
 check_tool "wget" "Wget (Downloader)" || EXIT_FLAG=1
 check_tool "tar" "Tar (Extractor)" || EXIT_FLAG=1
+check_tool "curl" "Curl (API requests/Downloader)" || EXIT_FLAG=1
+check_tool "unzip" "Unzip (Extractor for Dynawo)" || EXIT_FLAG=1
 check_tool "uv" "uv (Package Manager)" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
@@ -90,7 +92,7 @@ set -e
 # ==============================================================================
 # 2. JULIA DETECTION OR INSTALLATION
 # ==============================================================================
-echo -e "\n${BLUE}[2/5] Checking Julia Environment...${NC}"
+echo -e "\n${BLUE}[2/6] Checking Julia Environment...${NC}"
 
 INSTALL_JULIA=false
 
@@ -105,7 +107,7 @@ fi
 # ==============================================================================
 # 3. PYTHON VENV & PROJECT INSTALL
 # ==============================================================================
-echo -e "\n${BLUE}[3/5] Setting up Python Virtual Environment with uv...${NC}"
+echo -e "\n${BLUE}[3/6] Setting up Python Virtual Environment with uv...${NC}"
 
 if [ ! -d "$VENV_NAME" ]; then
     echo -e "  Creating venv: $VENV_NAME..."
@@ -162,9 +164,7 @@ uv pip install \
 echo -e "  Checking and installing local project package (src)..."
 if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
     echo -e "  > Installing current directory as editable package..."
-    # We use '.' because we already navigated to the root directory at the start of the script
     uv pip install --upgrade -e .
-    
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}  [OK] Local project installed successfully.${NC}"
     else
@@ -176,34 +176,53 @@ else
 fi
 
 # ==============================================================================
-# 4. CONFIGURE DYNAWO LINK
+# 4. DYNAWO DETECTION OR DOWNLOAD
 # ==============================================================================
-echo -e "\n${BLUE}[4/5] Configuring Dynawo-Powsybl Link...${NC}"
+echo -e "\n${BLUE}[4/6] Checking and Installing Dynawo...${NC}"
 
 DYNAWO_HOME=""
 # Auto-detection
 for path in "${DEFAULT_DYNAWO_PATHS[@]}"; do
-    if [ -f "$path/bin/dynawo.sh" ] || [ -f "$path/myDynawo/bin/dynawo.sh" ] || [ -f "$path/bin/dynawo" ] || [ -f "$path/myDynawo/bin/dynawo" ]; then
+    if [ -f "$path/bin/dynawo.sh" ] || [ -f "$path/myDynawo/bin/dynawo.sh" ] || [ -f "$path/bin/dynawo" ] || [ -f "$path/myDynawo/bin/dynawo" ] || [ -f "$path/dynawo.sh" ]; then
         DYNAWO_HOME="$path"
+        echo -e "${GREEN}  [OK] Local Dynawo found at $DYNAWO_HOME${NC}"
         break
     fi
 done
 
-# Interactive Fallback
+# Download logic if not found
 if [ -z "$DYNAWO_HOME" ]; then
-    echo -e "${YELLOW}  Could not auto-detect Dynawo.${NC}"
-    # Read user input (temporarily disable exit on error if user makes a typo)
-    set +e
-    read -p "  Enter absolute path to Dynawo installation: " USER_INPUT
-    set -e
-
-    if [ -f "$USER_INPUT/bin/dynawo.sh" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo.sh" ] || [ -f "$USER_INPUT/bin/dynawo" ] || [ -f "$USER_INPUT/myDynawo/bin/dynawo" ]; then
-        DYNAWO_HOME="$USER_INPUT"
-    else
-        echo -e "${RED}  [ERROR] Invalid path. Neither 'bin/dynawo.sh' nor 'bin/dynawo' found.${NC}"
+    echo -e "${YELLOW}  [!] Dynawo no detectado en las rutas por defecto.${NC}"
+    echo -e "  > Descargando la última versión de Dynawo para Linux desde GitHub..."
+    # Obtenemos la URL de descarga directamente del JSON de la API
+    DYNAWO_URL=$(curl -s -L https://api.github.com/repos/dynawo/dynawo/releases/latest | grep "browser_download_url" | grep -E "Dynawo_Linux_v[0-9]" | cut -d '"' -f 4)
+    if [ -z "$DYNAWO_URL" ]; then
+        echo -e "${RED}  [ERROR] No se pudo obtener la URL de descarga. Revisa tu conexión.${NC}"
         exit 1
     fi
+
+    # Descargar el .zip en una carpeta temporal
+    curl -L "$DYNAWO_URL" -o Dynawo_Linux_latest.zip
+
+    # Extraer el contenido en la carpeta HOME del usuario (creará la carpeta dynawo ahí)
+    echo -e "  > Descomprimiendo Dynawo..."
+    unzip -o Dynawo_Linux_latest.zip -d "$HOME" > /dev/null 2>&1
+    rm Dynawo_Linux_latest.zip
+    DYNAWO_HOME="$HOME/dynawo"
+    # Pruebas de ejecución para confirmar la descarga
+    if [ -f "$DYNAWO_HOME/dynawo.sh" ]; then
+        echo -e "  > Probando ejecución de Dynawo..."
+        "$DYNAWO_HOME/dynawo.sh" help > /dev/null 2>&1
+        echo -e "${GREEN}  [OK] Dynawo se ha instalado y ejecutado correctamente en $DYNAWO_HOME${NC}"
+    else
+        echo -e "${YELLOW}  [!] Dynawo se descargó, pero no se encontró 'dynawo.sh' para probar su ejecución.${NC}"
+    fi
 fi
+
+# ==============================================================================
+# 5. CONFIGURE DYNAWO LINK
+# ==============================================================================
+echo -e "\n${BLUE}[5/6] Configuring Dynawo-Powsybl Link...${NC}"
 
 # Write Configuration
 mkdir -p "$HOME/.itools"
@@ -215,15 +234,15 @@ EOF
 echo -e "${GREEN}  [OK] Link established in ~/.itools/config.yml${NC}"
 
 # ==============================================================================
-# 5. JULIA PACKAGES SETUP
+# 6. JULIA PACKAGES SETUP
 # ==============================================================================
-echo -e "\n${BLUE}[5/5] Setting up Julia Packages...${NC}"
+echo -e "\n${BLUE}[6/6] Setting up Julia Packages...${NC}"
 echo -e "  (Using: $(which julia))"
 
 # Use the 'julia' command available in the VENV
 julia -e '
 using Pkg
-packages = ["OMJulia", "DataFrames", "CSV", "Plots", "DifferentialEquations", "IJulia"]
+packages = ["OMJulia", "DataFrames", "CSV", "Plots", "IJulia"]
 println("  > Updating Registry...")
 try
     Pkg.update()
