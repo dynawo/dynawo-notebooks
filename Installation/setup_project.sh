@@ -13,6 +13,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 # --- Configuration ---
+VERSION_TAG="v0.1"
 VENV_NAME=".venv"
 JULIA_VER_MAJOR="1.10"
 JULIA_VER_FULL="1.10.0" # Current LTS recommended
@@ -151,7 +152,7 @@ uv sync --all-extras
 
 # Download and install requirements (with fallback)
 echo -e "  Fetching and installing Python requirements..."
-REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/requirements.txt"
+REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/requirements.txt"
 
 set +e
 curl -f -s -L "$REQUIREMENTS_URL" -o requirements_frozen.txt
@@ -177,11 +178,14 @@ else
         --quiet
 fi
 
-# EXPLICIT LOCAL PACKAGE INSTALLATION
-echo -e "  Checking and installing local project package (src)..."
-if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
-    echo -e "  > Installing current directory as editable package..."
+# EXPLICIT PACKAGE INSTALLATION (INTERACTIVE)
+echo -e "  Installation mode selection..."
+read -p "Do you want to install the local version from '.' (L) or download the remote archive (R)? [L/R]: " INSTALL_CHOICE
+
+if [[ "$INSTALL_CHOICE" == "L" || "$INSTALL_CHOICE" == "l" ]]; then
+    echo -e "  Installing project package from local directory..."
     uv pip install --upgrade -e .
+    
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}  [OK] Local project installed successfully.${NC}"
     else
@@ -189,7 +193,15 @@ if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
         exit 1
     fi
 else
-    echo -e "${YELLOW}  [!] No 'pyproject.toml' or 'setup.py' found. Skipping local project install.${NC}"
+    echo -e "  Installing project package from remote archive..."
+    uv pip install --upgrade "https://github.com/dynawo/dynawo-notebooks/archive/refs/tags/${VERSION_TAG}.tar.gz"
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}  [OK] Project installed successfully from archive.${NC}"
+    else
+        echo -e "${RED}  [ERROR] Failed to install project from archive.${NC}"
+        exit 1
+    fi
 fi
 
 # ==============================================================================
@@ -212,7 +224,7 @@ if [ -z "$DYNAWO_HOME" ]; then
     echo -e "${YELLOW}  [!] Dynawo not detected in default paths.${NC}"
     echo -e "  > Attempting to download Dynawo from the primary release link..."
     
-    PRIMARY_DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/Dynawo_Linux.zip"
+    PRIMARY_DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/Dynawo_Linux.zip"
     
     # Temporarily disable set -e to handle download failure gracefully
     set +e
@@ -223,15 +235,8 @@ if [ -z "$DYNAWO_HOME" ]; then
     if [ $CURL_STATUS -eq 0 ]; then
         echo -e "  > Primary download successful."
     else
-        echo -e "${YELLOW}  [!] Primary link failed. Downloading the latest version of Dynawo for Linux from GitHub...${NC}"
-        DYNAWO_URL=$(curl -s -L https://api.github.com/repos/dynawo/dynawo/releases/latest | grep "browser_download_url" | grep -E "Dynawo_Linux_v[0-9]" | cut -d '"' -f 4)
-        
-        if [ -z "$DYNAWO_URL" ]; then
-            echo -e "${RED}  [ERROR] Could not retrieve the download URL. Check your connection.${NC}"
-            exit 1
-        fi
-        
-        curl -L "$DYNAWO_URL" -o Dynawo_Linux.zip
+        echo -e "${RED}  [ERROR] Primary link failed. Could not retrieve Dynawo from: $PRIMARY_DYNAWO_URL${NC}"
+        exit 1
     fi
 
     echo -e "  > Unzipping Dynawo..."
