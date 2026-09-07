@@ -9,9 +9,6 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Navigate to the project root directory (one level up from 'Installation')
-cd "$(dirname "$0")/.."
-
 # --- Configuration ---
 VERSION_TAG="v0.1"
 VENV_NAME=".venv"
@@ -28,6 +25,29 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}${BOLD}>>> Starting Hybrid Simulation Project Setup...${NC}"
+
+# ==============================================================================
+# 0. INSTALLATION MODE SELECTION
+# ==============================================================================
+echo -e "\n${BLUE}[0/6] Installation Mode Selection...${NC}"
+read -p "Do you want to use existing local files in '.' (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
+
+if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
+    cd "$(dirname "$0")"
+    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into current directory..."
+    # Clone into a temporary directory to avoid conflicts with existing non-empty directories
+    git clone --branch "$VERSION_TAG" --depth 1 https://github.com/dynawo/dynawo-notebooks.git _tmp_clone
+    
+    # Move all files (including hidden ones like .gitignore, pyproject.toml, uv.lock) to current directory
+    cp -r _tmp_clone/* . 2>/dev/null || true
+    cp -r _tmp_clone/.[!.]* . 2>/dev/null || true
+    rm -rf _tmp_clone
+    
+    echo -e "${GREEN}  [OK] Repository successfully cloned and extracted.${NC}"
+else
+    echo -e "  > Proceeding with existing local files."
+
+fi
 
 # ==============================================================================
 # 1. PRE-FLIGHT CHECKS
@@ -82,6 +102,7 @@ check_tool "tar" "Tar (Extractor)" || EXIT_FLAG=1
 check_tool "curl" "Curl (API requests/Downloader)" || EXIT_FLAG=1
 check_tool "unzip" "Unzip (Extractor for Dynawo)" || EXIT_FLAG=1
 check_tool "uv" "uv (Package Manager)" || EXIT_FLAG=1
+check_tool "git" "Git (Version Control)" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
     echo -e "\n${RED}[CRITICAL] Missing core dependencies. Please install them (apt/yum) and retry.${NC}"
@@ -147,7 +168,12 @@ fi
 echo -e "${GREEN}  [OK] Julia linked into venv.${NC}"
 
 # Python Dependencies
-echo -e "  Syncing base project dependencies (from uv.lock)..."
+echo -e "  Syncing base project dependencies from local files..."
+if [ ! -f "uv.lock" ] || [ ! -f "pyproject.toml" ]; then
+    echo -e "${RED}  [ERROR] Required configuration files (uv.lock, pyproject.toml) not found in current directory.${NC}"
+    exit 1
+fi
+
 uv sync --all-extras
 
 # Download and install requirements (with fallback)
@@ -178,30 +204,13 @@ else
         --quiet
 fi
 
-# EXPLICIT PACKAGE INSTALLATION (INTERACTIVE)
-echo -e "  Installation mode selection..."
-read -p "Do you want to install the local version from '.' (L) or download the remote archive (R)? [L/R]: " INSTALL_CHOICE
-
-if [[ "$INSTALL_CHOICE" == "L" || "$INSTALL_CHOICE" == "l" ]]; then
-    echo -e "  Installing project package from local directory..."
-    uv pip install --upgrade -e .
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}  [OK] Local project installed successfully.${NC}"
-    else
-        echo -e "${RED}  [ERROR] Failed to install local project.${NC}"
-        exit 1
-    fi
+echo -e "  Installing project package from local directory in editable mode..."
+uv pip install --upgrade -e .
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}  [OK] Project installed successfully in editable mode.${NC}"
 else
-    echo -e "  Installing project package from remote archive..."
-    uv pip install --upgrade "https://github.com/dynawo/dynawo-notebooks/archive/refs/tags/${VERSION_TAG}.tar.gz"
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}  [OK] Project installed successfully from archive.${NC}"
-    else
-        echo -e "${RED}  [ERROR] Failed to install project from archive.${NC}"
-        exit 1
-    fi
+    echo -e "${RED}  [ERROR] Failed to install local project.${NC}"
+    exit 1
 fi
 
 # ==============================================================================
