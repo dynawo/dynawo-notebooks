@@ -84,14 +84,24 @@ const INIT_MODELS = Dict{String, Any}(
 
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource" => Dict(
         "init_component_suffix" => "_INIT",
-        "init_class" => "Dynawo.Electrical.BESS.WECC.BESS_INIT",
+        "init_class" => "Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT",
 
         "write_modifiers" => Dict(
-            "RPu"  => "RPu",
-            "XPu"  => "XPu",
-            "SNom" => "SNom",
-            "P0Pu" => "P0Pu",
-            "U0Pu" => "U0Pu",
+            "RLvTrPu"            => "RLvTrPu",
+            "XLvTrPu"            => "XLvTrPu",
+            "RMvHvPu"            => "RMvHvPu",
+            "XMvHvPu"            => "XMvHvPu",
+            "BMvHvPu"            => "BMvHvPu",
+            "GMvHvPu"            => "GMvHvPu",
+            "rTfoPu"             => "rTfoPu",
+            "SNom"               => "SNom",
+            "P0Pu"               => "P0Pu",
+            "U0Pu"               => "U0Pu",
+            "ConverterLVControl" => "ConverterLVControl",
+            "PPCLocal"           => "PPCLocal",
+            "PPcc0Pu"            => "PPcc0Pu",
+            "QPcc0Pu"            => "QPcc0Pu",
+            "UPcc0Pu"            => "UPcc0Pu",
         ),
 
         "extra_modifiers_raw" => [
@@ -107,14 +117,24 @@ const INIT_MODELS = Dict{String, Any}(
 
     "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource" => Dict(
         "init_component_suffix" => "_INIT",
-        "init_class" => "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource_INIT",
+        "init_class" => "Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT",
 
         "write_modifiers" => Dict(
-            "RPu"  => "RPu",
-            "XPu"  => "XPu",
-            "SNom" => "SNom",
-            "P0Pu" => "P0Pu",
-            "U0Pu" => "U0Pu",
+            "RLvTrPu"            => "RLvTrPu",
+            "XLvTrPu"            => "XLvTrPu",
+            "RMvHvPu"            => "RMvHvPu",
+            "XMvHvPu"            => "XMvHvPu",
+            "BMvHvPu"            => "BMvHvPu",
+            "GMvHvPu"            => "GMvHvPu",
+            "rTfoPu"             => "rTfoPu",
+            "SNom"               => "SNom",
+            "P0Pu"               => "P0Pu",
+            "U0Pu"               => "U0Pu",
+            "ConverterLVControl" => "ConverterLVControl",
+            "PPCLocal"           => "PPCLocal",
+            "PPcc0Pu"            => "PPcc0Pu",
+            "QPcc0Pu"            => "QPcc0Pu",
+            "UPcc0Pu"            => "UPcc0Pu",
         ),
 
         "extra_modifiers_raw" => [

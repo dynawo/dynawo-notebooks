@@ -27,16 +27,16 @@ partial model BaseGeneratorSimplified "Base model for simplified generator model
 
   Types.ActivePower PGen(start = SystemBase.SnRef * PGen0Pu) "Active power at terminal in MW (generator convention)";
   Types.ActivePowerPu PGenPu(start = PGen0Pu) "Active power at terminal in pu (base SnRef) (generator convention)";
-  Dynawo.Connectors.ReactivePowerPuConnector QGenPu(start = QGen0Pu) "Reactive power at terminal in pu (base SnRef) (generator convention)";
+  Dynawo.Connectors.ReactivePowerPuOutput QGenPu(start = QGen0Pu) "Reactive power at terminal in pu (base SnRef) (generator convention)";
   Types.ComplexApparentPowerPu SGenPu(re(start = PGen0Pu), im(start = QGen0Pu)) "Complex apparent power at terminal in pu (base SnRef) (generator convention)";
-  Dynawo.Connectors.VoltageModulePuConnector UPu(start = U0Pu) "Voltage amplitude at terminal in pu (base UNom)";
+  Dynawo.Connectors.VoltageModulePuOutput UPu(start = U0Pu) "Voltage amplitude at terminal in pu (base UNom)";
 
 equation
   PGen = SystemBase.SnRef * PGenPu;
   SGenPu = Complex(PGenPu, QGenPu);
   SGenPu = -terminal.V * ComplexMath.conj(terminal.i);
 
-  if running.value then
+  if running then
     if ((terminal.V.re == 0) and (terminal.V.im == 0)) then
       UPu = 0.;
     else

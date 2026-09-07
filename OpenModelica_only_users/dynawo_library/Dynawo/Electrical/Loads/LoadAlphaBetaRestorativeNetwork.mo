@@ -33,12 +33,11 @@ protected
   Types.ReactivePower zQ(start = 1.0) "Bounded zQRaw";
 
 equation
-  if (running.value) then
-    if ((terminal.V.re == 0) and (terminal.V.im == 0)) then
+  if running then
+    if terminal.V == Complex(0) then
       Tp * der(zPRaw) = 0.;
       Tq * der(zQRaw) = 0.;
-      PPu = 0.;
-      QPu = 0.;
+      terminal.i = Complex(0);
     else
       Tp * der(zPRaw) = (ComplexMath.'abs'(terminal.V) / ComplexMath.'abs'(u0Pu)) ^ alphaLong - zPRaw * (ComplexMath.'abs'(terminal.V) / ComplexMath.'abs'(u0Pu)) ^ alpha;
       Tq * der(zQRaw) = (ComplexMath.'abs'(terminal.V) / ComplexMath.'abs'(u0Pu)) ^ betaLong - zQRaw * (ComplexMath.'abs'(terminal.V) / ComplexMath.'abs'(u0Pu)) ^ beta;

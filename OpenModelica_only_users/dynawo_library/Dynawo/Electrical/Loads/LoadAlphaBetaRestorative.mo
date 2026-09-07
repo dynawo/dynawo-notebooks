@@ -27,11 +27,13 @@ protected
   Types.VoltageModulePu UFilteredPu(start = ComplexMath.'abs'(u0Pu)) "Bounded filtered voltage amplitude at terminal in pu (base UNom)";
 
 equation
-  if (running.value) then
-    if ((terminal.V.re == 0) and (terminal.V.im == 0)) then
-      tFilter * der(UFilteredRawPu) = - UFilteredRawPu;
-      PPu = 0;
-      QPu = 0;
+  if running then
+    if (terminal.V == Complex(0)) then
+      tFilter * der(UFilteredRawPu) = -UFilteredRawPu;
+      terminal.i = Complex(0);
+    elseif UFilteredPu == 0 then
+      tFilter * der(UFilteredRawPu) = ComplexMath.'abs'(terminal.V) - UFilteredRawPu;
+      terminal.i = Complex(0);
     else
       tFilter * der(UFilteredRawPu) = ComplexMath.'abs'(terminal.V) - UFilteredRawPu;
       PPu = PRefPu * (1 + deltaP) * ((ComplexMath.'abs'(terminal.V) / UFilteredPu) ^ Alpha);

@@ -43,7 +43,7 @@ model GeneratorTransformer "Two winding transformer with a fixed ratio"
   Types.ReactivePowerPu Q1Pu "Reactive power on side 1 in pu (base SnRef) (receptor convention)";
   Types.ActivePowerPu P1GenPu "Active power on side 1 in pu (base SnRef) (generator convention)";
   Types.ReactivePowerPu Q1GenPu "Reactive power on side 1 in pu (base SnRef) (generator convention)";
-  Dynawo.Connectors.VoltageModulePuConnector U1Pu "Voltage on side 1 in pu (base U1Nom)";
+  Dynawo.Connectors.VoltageModulePuOutput U1Pu "Voltage on side 1 in pu (base U1Nom)";
 
   Types.ActivePowerPu P2Pu "Active power on side 2 in pu (base SnRef) (receptor convention)";
   Types.ReactivePowerPu Q2Pu "Reactive power on side 2 in pu (base SnRef) (receptor convention)";
@@ -64,7 +64,7 @@ model GeneratorTransformer "Two winding transformer with a fixed ratio"
   parameter Types.ComplexCurrentPu i20Pu "Start value of complex current at terminal 2 (base U2Nom, SnRef) (receptor convention)";
 
 equation
-  if (running.value) then
+  if running then
     rTfoPu * rTfoPu * terminal1.V = rTfoPu * terminal2.V + ZPu * terminal1.i;
     terminal1.i = rTfoPu * (YPu * terminal2.V - terminal2.i);
   else
@@ -72,7 +72,7 @@ equation
     terminal2.V = Complex(0);
   end if;
 
-  if (running.value) then
+  if running then
     U1Pu = ComplexMath.'abs'(terminal1.V);
     P1Pu = ComplexMath.real(terminal1.V * ComplexMath.conj(terminal1.i));
     Q1Pu = ComplexMath.imag(terminal1.V * ComplexMath.conj(terminal1.i));

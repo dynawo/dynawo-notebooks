@@ -40,13 +40,15 @@ record ParamsWTGQa
   Dialog(tab="Torque control"));
   parameter Boolean TFlag "Flag to specify PI controller input, if true : power control, if false : speed control" annotation(
   Dialog(tab="Torque control"));
-  parameter Types.Time tP "Power measurement lag time constant in s" annotation(
+  parameter Types.Time tpWTGQa "Power measurement lag time constant in WTGQa in s" annotation(
   Dialog(tab="Torque control"));
   parameter Types.Time tOmegaRef "Speed reference time constant ins s" annotation(
   Dialog(tab="Torque control"));
 
   // Initial parameter
-  parameter Types.ActivePowerPu PInj0Pu "Start value of active power at injector terminal in pu (base SNom) (generator convention)" annotation(
+  parameter Types.ActivePowerPu PConv0Pu "Start value of active power at converter terminal in pu (generator convention) (base SNom)" annotation(
+  Dialog(group="Initialization"));
+  parameter Types.AngularVelocityPu omegaRefWTGQPu0 "Start value of reference angular frequency of torque control in pu (base omegaNom)" annotation(
   Dialog(group="Initialization"));
 
   annotation(preferredView = "text");
