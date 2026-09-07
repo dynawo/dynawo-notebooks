@@ -9,10 +9,8 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Navigate to the project root directory (one level up from 'Installation')
-cd "$(dirname "$0")/.."
-
 # --- Configuration ---
+VERSION_TAG="v0.1"
 VENV_NAME=".venv"
 JULIA_VER_MAJOR="1.10"
 JULIA_VER_FULL="1.10.0" # Current LTS recommended
@@ -27,6 +25,29 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}${BOLD}>>> Starting Hybrid Simulation Project Setup...${NC}"
+
+# ==============================================================================
+# 0. INSTALLATION MODE SELECTION
+# ==============================================================================
+echo -e "\n${BLUE}[0/6] Installation Mode Selection...${NC}"
+read -p "Do you want to use existing local files in '.' (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
+
+if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
+    cd "$(dirname "$0")"
+    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into current directory..."
+    # Clone into a temporary directory to avoid conflicts with existing non-empty directories
+    git clone --branch "$VERSION_TAG" --depth 1 https://github.com/dynawo/dynawo-notebooks.git _tmp_clone
+    
+    # Move all files (including hidden ones like .gitignore, pyproject.toml, uv.lock) to current directory
+    cp -r _tmp_clone/* . 2>/dev/null || true
+    cp -r _tmp_clone/.[!.]* . 2>/dev/null || true
+    rm -rf _tmp_clone
+    
+    echo -e "${GREEN}  [OK] Repository successfully cloned and extracted.${NC}"
+else
+    echo -e "  > Proceeding with existing local files."
+
+fi
 
 # ==============================================================================
 # 1. PRE-FLIGHT CHECKS
@@ -81,6 +102,7 @@ check_tool "tar" "Tar (Extractor)" || EXIT_FLAG=1
 check_tool "curl" "Curl (API requests/Downloader)" || EXIT_FLAG=1
 check_tool "unzip" "Unzip (Extractor for Dynawo)" || EXIT_FLAG=1
 check_tool "uv" "uv (Package Manager)" || EXIT_FLAG=1
+check_tool "git" "Git (Version Control)" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
     echo -e "\n${RED}[CRITICAL] Missing core dependencies. Please install them (apt/yum) and retry.${NC}"
@@ -146,12 +168,17 @@ fi
 echo -e "${GREEN}  [OK] Julia linked into venv.${NC}"
 
 # Python Dependencies
-echo -e "  Syncing base project dependencies (from uv.lock)..."
+echo -e "  Syncing base project dependencies from local files..."
+if [ ! -f "uv.lock" ] || [ ! -f "pyproject.toml" ]; then
+    echo -e "${RED}  [ERROR] Required configuration files (uv.lock, pyproject.toml) not found in current directory.${NC}"
+    exit 1
+fi
+
 uv sync --all-extras
 
 # Download and install requirements (with fallback)
 echo -e "  Fetching and installing Python requirements..."
-REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/requirements.txt"
+REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/requirements.txt"
 
 set +e
 curl -f -s -L "$REQUIREMENTS_URL" -o requirements_frozen.txt
@@ -177,19 +204,13 @@ else
         --quiet
 fi
 
-# EXPLICIT LOCAL PACKAGE INSTALLATION
-echo -e "  Checking and installing local project package (src)..."
-if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
-    echo -e "  > Installing current directory as editable package..."
-    uv pip install --upgrade -e .
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}  [OK] Local project installed successfully.${NC}"
-    else
-        echo -e "${RED}  [ERROR] Failed to install local project.${NC}"
-        exit 1
-    fi
+echo -e "  Installing project package from local directory in editable mode..."
+uv pip install --upgrade -e .
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}  [OK] Project installed successfully in editable mode.${NC}"
 else
-    echo -e "${YELLOW}  [!] No 'pyproject.toml' or 'setup.py' found. Skipping local project install.${NC}"
+    echo -e "${RED}  [ERROR] Failed to install local project.${NC}"
+    exit 1
 fi
 
 # ==============================================================================
@@ -212,7 +233,7 @@ if [ -z "$DYNAWO_HOME" ]; then
     echo -e "${YELLOW}  [!] Dynawo not detected in default paths.${NC}"
     echo -e "  > Attempting to download Dynawo from the primary release link..."
     
-    PRIMARY_DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/Dynawo_Linux.zip"
+    PRIMARY_DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/Dynawo_Linux.zip"
     
     # Temporarily disable set -e to handle download failure gracefully
     set +e
@@ -223,15 +244,8 @@ if [ -z "$DYNAWO_HOME" ]; then
     if [ $CURL_STATUS -eq 0 ]; then
         echo -e "  > Primary download successful."
     else
-        echo -e "${YELLOW}  [!] Primary link failed. Downloading the latest version of Dynawo for Linux from GitHub...${NC}"
-        DYNAWO_URL=$(curl -s -L https://api.github.com/repos/dynawo/dynawo/releases/latest | grep "browser_download_url" | grep -E "Dynawo_Linux_v[0-9]" | cut -d '"' -f 4)
-        
-        if [ -z "$DYNAWO_URL" ]; then
-            echo -e "${RED}  [ERROR] Could not retrieve the download URL. Check your connection.${NC}"
-            exit 1
-        fi
-        
-        curl -L "$DYNAWO_URL" -o Dynawo_Linux.zip
+        echo -e "${RED}  [ERROR] Primary link failed. Could not retrieve Dynawo from: $PRIMARY_DYNAWO_URL${NC}"
+        exit 1
     fi
 
     echo -e "  > Unzipping Dynawo..."

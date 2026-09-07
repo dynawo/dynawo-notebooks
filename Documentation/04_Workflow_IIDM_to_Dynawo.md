@@ -3,7 +3,7 @@
 This workflow integrates the best practices discussed in the project meetings, specifically the "Recollement" process.
 
 ## Phase 1: Network Generation (Python)
-**Scripts:** `SMIB_nodeBreaker.py`, `fiche.py`
+**Code:** `SMIB_nodeBreaker.py`, `fiche.py`
 
 1.  **Topology Creation:** Use `pn.create_empty()` and helper functions to build the grid structure (Substations, Voltage Levels, Buses).
 2.  **Physical Parameters:** Calculate impedances ($R, X$) in per-unit ($pu$) values.
