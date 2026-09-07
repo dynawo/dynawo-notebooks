@@ -4,8 +4,8 @@ This folder contains notebooks for small-signal stability analysis of OpenModeli
 
 ## Contents
 
-- `StabilityAnalysis_BESS.ipynb`: stability sweep for a single-file MyBESS model.
-- `StabilityAnalysis_Nordic.ipynb`: stability sweep for a MyNordic package model.
+- `StabilityAnalysis_BESS.ipynb`: stability sweep for a single-file Demo_BESS model.
+- `StabilityAnalysis_Nordic.ipynb`: stability sweep for a Demo_Nordic package model.
 - `scripts/`: linearization helper used by both notebooks.
 - `models/`: input single-file model and example package.
 

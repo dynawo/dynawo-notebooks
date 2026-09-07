@@ -1,3 +1,0 @@
-within ;
-package MyIEEE14_LineB2B5_XPu_0p12_initialized
-end MyIEEE14_LineB2B5_XPu_0p12_initialized;

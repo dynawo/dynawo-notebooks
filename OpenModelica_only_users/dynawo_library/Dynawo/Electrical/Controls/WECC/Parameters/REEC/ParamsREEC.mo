@@ -23,6 +23,8 @@ record ParamsREEC "Common REEC parameters"
   parameter Boolean VFlag "Voltage control flag: voltage control (0) or Q ctrl (1)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
 
+  parameter Types.ApparentPowerModule SNom "Nominal apparent power in MVA";
+
   parameter Types.VoltageModulePu Dbd1Pu "Overvoltage deadband for reactive current injection in pu (base UNom) (typical: -0.1..0)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
   parameter Types.VoltageModulePu Dbd2Pu "Undervoltage deadband for reactive current injection in pu (base UNom) (typical: 0..0.1)" annotation(
@@ -47,19 +49,19 @@ record ParamsREEC "Common REEC parameters"
   Dialog(tab="Electrical Control", group = "REEC"));
   parameter Types.PerUnit Kvp "Proportional gain local voltage PI controller" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
-  parameter Types.ActivePowerPu PMaxPu "Active power upper limit in pu (base SNom) (typical: 1)" annotation(
+  parameter Types.ActivePowerPu PMaxREECPu "Active power upper limit in REEC in pu (base SNom) (typical: 1)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
-  parameter Types.ActivePowerPu PMinPu "Active power lower limit in pu (base SNom) (typical: 0)" annotation(
+  parameter Types.ActivePowerPu PMinREECPu "Active power lower limit in REEC in pu (base SNom) (typical: 0)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
-  parameter Types.ReactivePowerPu QMaxPu "Reactive power upper limit, when vFlag == 1 in pu (base SNom)" annotation(
+  parameter Types.ReactivePowerPu QMaxREECPu "Reactive power upper limit, when vFlag == 1 in REEC in pu (base SNom)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
-  parameter Types.ReactivePowerPu QMinPu "Reactive power lower limit, when vFlag == 1 in pu (base SNom)" annotation(
+  parameter Types.ReactivePowerPu QMinREECPu "Reactive power lower limit, when vFlag == 1 in REEC in pu (base SNom)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
   parameter Types.Time tIq "Filter time constant reactive current in s(typical: 0.01..0.02)" annotation(
    Dialog(tab="Electrical Control", group = "REEC"));
   parameter Types.Time tRv "Filter time constant terminal voltage in s(typical: 0.01..0.02)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
-  parameter Types.Time tP "Filter time constant active power in s (typical: 0.1..0.2)" annotation(
+  parameter Types.Time tpREEC "Active power filter time constant in REEC in s (typical: 0.1..0.2)" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
   parameter Types.Time tPord "Filter time constant inverter active power in s" annotation(
   Dialog(tab="Electrical Control", group = "REEC"));
@@ -78,9 +80,13 @@ record ParamsREEC "Common REEC parameters"
   parameter Types.CurrentModulePu Id0Pu "Start value of d-component current at injector terminal in pu (generator convention) (base SNom, UNom)";
   parameter Types.CurrentModulePu Iq0Pu "Start value of q-component current at injector terminal in pu (generator convention) (base SNom, UNom)";
   parameter Types.PerUnit PF0 "Start value of power factor";
-  parameter Types.ActivePowerPu PInj0Pu "Start value of active power at injector terminal in pu (generator convention) (base SNom)";
-  parameter Types.ReactivePowerPu QInj0Pu "Start value of reactive power at injector terminal in pu (generator convention) (base SNom)";
+  parameter Types.ActivePowerPu PConv0Pu "Start value of active power at converter terminal in pu (generator convention) (base SNom)";
+  parameter Types.ReactivePowerPu QConv0Pu "Start value of reactive power at converter terminal in pu (generator convention) (base SNom)";
   parameter Types.VoltageModulePu UInj0Pu "Start value of voltage magnitude at injector terminal in pu (base UNom)";
+  parameter Types.ComplexPerUnit s0Pu "Start value of complex apparent power at terminal in pu (base SnRef) (receptor convention)";
+  parameter Types.ComplexVoltagePu u0Pu "Start value of complex voltage at terminal in pu (base UNom)";
+  parameter Types.VoltageModulePu UConv0Pu "Start value of voltage module at converter terminal in pu (base UNom)";
+  parameter Types.ComplexPerUnit uConv0Pu "Start value of complex voltage at converter terminal in pu (base UNom)";
 
   annotation(preferredView = "text");
 end ParamsREEC;

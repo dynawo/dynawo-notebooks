@@ -145,7 +145,7 @@ end
 
 function _patch_switch_off_signals!(omc, aux_model::String, slack_component::String)
     for eq in _equation_items(omc, aux_model)
-        m = match(r"^([A-Za-z_]\w*)\.(injector|injectorURI|wT4Injector)\.(switchOffSignal[123]\.value)\s*=\s*false\s*;?$", eq)
+        m = match(r"^([A-Za-z_]\w*)\.(injector|injectorURI|wT4Injector)\.(switchOffSignal[123])\s*=\s*false\s*;?$", eq)
         m === nothing && continue
 
         if m.captures[1] == slack_component
@@ -160,7 +160,7 @@ end
 
 function _patch_time_switch_events!(omc, aux_model::String)
     for eq in _equation_items(omc, aux_model)
-        m = match(r"^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.(switchOffSignal[123]\.value)\s*=\s*[^;]*\btime\b[^;]*;?$", eq)
+        m = match(r"^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.(switchOffSignal[123])\s*=\s*[^;]*\btime\b[^;]*;?$", eq)
         m === nothing && continue
 
         omc_call(omc, "updateEquation($aux_model, \"$eq\", \"$(m.captures[1]).$(m.captures[2]) = false\")")
