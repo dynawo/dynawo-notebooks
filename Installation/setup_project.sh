@@ -153,7 +153,6 @@ uv sync --all-extras
 echo -e "  Fetching and installing Python requirements..."
 REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/v0.1/requirements.txt"
 
-# Desactivamos temporalmente el error automático de bash para manejar nosotros el fallo
 set +e
 curl -f -s -L "$REQUIREMENTS_URL" -o requirements_frozen.txt
 REQ_DOWNLOAD_STATUS=$?
