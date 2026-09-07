@@ -20,7 +20,7 @@ As detailed in the PR #3899 documentation update, Dynawo uses a dedicated auxili
 3.  **Output:** It calculates the precise internal state vector $x_{init}$ (e.g., rotor angle, flux linkages).
 4.  **Handshake:** This $x_{init}$ vector is passed to the main Dynamic Model to seed the integrators.
 
-### Practical Implications for Your Scripts
+### Practical Implications for Your Code
 When you run `recollement.py`, you are implicitly setting up this handshake.
 
 **Troubleshooting Initialization Failures:**

@@ -13,7 +13,7 @@ from typing import Dict, Set, Any
 
 import pandas as pd
 import pypowsybl as pp
-from dynawo_notebooks.Scripts.core.powerflow import PowerFlowRunner
+from dynawo_notebooks.Code.core.powerflow import PowerFlowRunner
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,11 @@ class PowsyblConverter:
         :return: A fully instantiated PyPowSybl Network.
         """
         logger.info("Initializing PyPowSyBl Network construction...")
-        network = pp.network.create_empty()
+
+        if "source_xiidm" in data:
+            network = pp.network.load(data["source_xiidm"])
+        else:
+            network = pp.network.create_empty()
 
         # Load external configuration for voltage naming conventions
         voltage_mapping = PowsyblConverter._load_voltage_mapping()
@@ -292,16 +296,21 @@ class PowsyblConverter:
         if not base_v or base_v == 0.0:
             base_v = 130.0
 
+        target_p_val = p_mw
+
+        min_p_val = -9999.0 if is_slack else min(p_mw, 0.0)
+        max_p_val = 9999.0 if is_slack else max(p_mw, 0.0)
+
         network.create_generators(
             id=str(gid),
             voltage_level_id=f"VL_{bid}",
             bus_id=str(bid),
-            target_p=abs(p_mw),
+            target_p=target_p_val,
             target_q=target_q,
             target_v=info.get("u_pu", 1.0) * base_v,
             voltage_regulator_on=is_regulator_on,
-            min_p=-9999.0 if is_slack else abs(p_mw),
-            max_p=9999.0 if is_slack else abs(p_mw),
+            min_p=min_p_val,
+            max_p=max_p_val,
         )
 
         min_q_val = -99999.0

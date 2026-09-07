@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dynawo-xml-parser = "dynawo_notebooks.Scripts.utils.get_init_dict:main"
+dynawo-xml-parser = "dynawo_notebooks.Code.utils.get_init_dict:main"
 
 [project.optional-dependencies]
 dev = [

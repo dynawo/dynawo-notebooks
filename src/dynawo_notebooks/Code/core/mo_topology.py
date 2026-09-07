@@ -12,9 +12,9 @@ from typing import List, Dict, Any
 
 import pypowsybl as pp
 
-from dynawo_notebooks.Scripts.core.connector import OMCConnector
-from dynawo_notebooks.Scripts.core.parser import ModelicaParser
-from dynawo_notebooks.Scripts.core.converter import PowsyblConverter
+from dynawo_notebooks.Code.core.connector import OMCConnector
+from dynawo_notebooks.Code.core.parser import ModelicaParser
+from dynawo_notebooks.Code.core.converter import PowsyblConverter
 
 logger = logging.getLogger("MoTopologyToolkit")
 

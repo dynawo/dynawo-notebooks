@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+    <set id="Network">
+        <par type="DOUBLE" name="line_currentLimit_maxTimeOperation" value="999.0"/>
+        <par type="DOUBLE" name="load_alpha" value="1.0"/>
+        <par type="DOUBLE" name="load_beta" value="2.0"/>
+        <par type="DOUBLE" name="transformer_tolV" value="0.01"/>
+        <par type="BOOL" name="VirtualBus_2_hasShortCircuitCapabilities" value="true"/>
+    </set>
+</parametersSet>

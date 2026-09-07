@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+
+    <set id="GenPV">
+        <par type="DOUBLE" name="generator_DPu" value="0.0"/>
+        <par type="INT" name="generator_ExcitationPu" value="0"/>
+        <par type="DOUBLE" name="generator_H" value="3.2"/>
+        <par type="DOUBLE" name="generator_MdPuEfd" value="0.0"/>
+        <par type="INT" name="generator_NbSwitchOffSignals" value="3"/>
+        <par type="DOUBLE" name="generator_P0Pu" value="0.0"/>
+        <par type="DOUBLE" name="generator_PNomAlt" value="1000.0"/>
+        <par type="DOUBLE" name="generator_PNomTurb" value="1000.0"/>
+        <par type="DOUBLE" name="generator_Q0Pu" value="0.0"/>
+        <par type="DOUBLE" name="generator_RTfPu" value="0.0"/>
+        <par type="DOUBLE" name="generator_RaPu" value="0.0025"/>
+        <par type="DOUBLE" name="generator_SNom" value="1000.0"/>
+        <par type="DOUBLE" name="generator_SnTfo" value="1000.0"/>
+        <par type="INT" name="generator_State0" value="2"/>
+        <par type="BOOL" name="generator_SwitchOffSignal10" value="false"/>
+        <par type="BOOL" name="generator_SwitchOffSignal20" value="false"/>
+        <par type="BOOL" name="generator_SwitchOffSignal30" value="false"/>
+        <par type="DOUBLE" name="generator_Tpd0" value="8.0"/>
+        <par type="DOUBLE" name="generator_Tppd0" value="0.03"/>
+        <par type="DOUBLE" name="generator_Tppq0" value="0.05"/>
+        <par type="DOUBLE" name="generator_Tpq0" value="0.4"/>
+        <par type="DOUBLE" name="generator_U0Pu" value="0.0"/>
+        <par type="DOUBLE" name="generator_UBaseHV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UBaseLV" value="20.0"/>
+        <par type="DOUBLE" name="generator_UNom" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNomHV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNomLV" value="20.0"/>
+        <par type="DOUBLE" name="generator_UPhase0" value="0.0"/>
+        <par type="BOOL" name="generator_UseApproximation" value="false"/>
+        <par type="DOUBLE" name="generator_XTfPu" value="0.0"/>
+        <par type="DOUBLE" name="generator_XdPu" value="1.8"/>
+        <par type="DOUBLE" name="generator_XlPu" value="0.15"/>
+        <par type="DOUBLE" name="generator_XpdPu" value="0.3"/>
+        <par type="DOUBLE" name="generator_XppdPu" value="0.25"/>
+        <par type="DOUBLE" name="generator_XppqPu" value="0.25"/>
+        <par type="DOUBLE" name="generator_XpqPu" value="0.55"/>
+        <par type="DOUBLE" name="generator_XqPu" value="1.7"/>
+        <par type="DOUBLE" name="generator_iStart0Pu_im" value="0"/>
+        <par type="DOUBLE" name="generator_iStart0Pu_re" value="0"/>
+        <par type="DOUBLE" name="generator_md" value="0.0"/>
+        <par type="DOUBLE" name="generator_mq" value="0.0"/>
+        <par type="DOUBLE" name="generator_nd" value="0.0"/>
+        <par type="DOUBLE" name="generator_nq" value="0.0"/>
+
+        <!-- PyPowSyBl IIDM References -->
+        <reference type="DOUBLE" name="generator_P0Pu" origData="IIDM" origName="p_pu"/>
+        <reference type="DOUBLE" name="generator_Q0Pu" origData="IIDM" origName="q_pu"/>
+        <reference type="DOUBLE" name="generator_U0Pu" origData="IIDM" origName="v_pu"/>
+        <reference type="DOUBLE" name="generator_UPhase0" origData="IIDM" origName="angle"/>
+    </set>
+    <set id="infiniteBus">
+        <par type="DOUBLE" name="generator_DPu" value="0.0"/>
+        <par type="INT" name="generator_ExcitationPu" value="0"/>
+        <par type="DOUBLE" name="generator_H" value="3.2"/>
+        <par type="DOUBLE" name="generator_MdPuEfd" value="0.0"/>
+        <par type="INT" name="generator_NbSwitchOffSignals" value="3"/>
+        <par type="DOUBLE" name="generator_P0Pu" value="0.0"/>
+        <par type="DOUBLE" name="generator_PNomAlt" value="1000.0"/>
+        <par type="DOUBLE" name="generator_PNomTurb" value="1000.0"/>
+        <par type="DOUBLE" name="generator_Q0Pu" value="0.0"/>
+        <par type="DOUBLE" name="generator_RTfPu" value="0.0"/>
+        <par type="DOUBLE" name="generator_RaPu" value="0.0025"/>
+        <par type="DOUBLE" name="generator_SNom" value="1000.0"/>
+        <par type="DOUBLE" name="generator_SnTfo" value="1000.0"/>
+        <par type="INT" name="generator_State0" value="2"/>
+        <par type="BOOL" name="generator_SwitchOffSignal10" value="false"/>
+        <par type="BOOL" name="generator_SwitchOffSignal20" value="false"/>
+        <par type="BOOL" name="generator_SwitchOffSignal30" value="false"/>
+        <par type="DOUBLE" name="generator_Tpd0" value="8.0"/>
+        <par type="DOUBLE" name="generator_Tppd0" value="0.03"/>
+        <par type="DOUBLE" name="generator_Tppq0" value="0.05"/>
+        <par type="DOUBLE" name="generator_Tpq0" value="0.4"/>
+        <par type="DOUBLE" name="generator_U0Pu" value="0.0"/>
+        <par type="DOUBLE" name="generator_UBaseHV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UBaseLV" value="20.0"/>
+        <par type="DOUBLE" name="generator_UNom" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNomHV" value="400.0"/>
+        <par type="DOUBLE" name="generator_UNomLV" value="20.0"/>
+        <par type="DOUBLE" name="generator_UPhase0" value="0.0"/>
+        <par type="BOOL" name="generator_UseApproximation" value="false"/>
+        <par type="DOUBLE" name="generator_XTfPu" value="0.0"/>
+        <par type="DOUBLE" name="generator_XdPu" value="1.8"/>
+        <par type="DOUBLE" name="generator_XlPu" value="0.15"/>
+        <par type="DOUBLE" name="generator_XpdPu" value="0.3"/>
+        <par type="DOUBLE" name="generator_XppdPu" value="0.25"/>
+        <par type="DOUBLE" name="generator_XppqPu" value="0.25"/>
+        <par type="DOUBLE" name="generator_XpqPu" value="0.55"/>
+        <par type="DOUBLE" name="generator_XqPu" value="1.7"/>
+        <par type="DOUBLE" name="generator_iStart0Pu_im" value="0"/>
+        <par type="DOUBLE" name="generator_iStart0Pu_re" value="0"/>
+        <par type="DOUBLE" name="generator_md" value="0.0"/>
+        <par type="DOUBLE" name="generator_mq" value="0.0"/>
+        <par type="DOUBLE" name="generator_nd" value="0.0"/>
+        <par type="DOUBLE" name="generator_nq" value="0.0"/>
+
+        <!-- PyPowSyBl IIDM References -->
+        <reference type="DOUBLE" name="generator_P0Pu" origData="IIDM" origName="p_pu"/>
+        <reference type="DOUBLE" name="generator_Q0Pu" origData="IIDM" origName="q_pu"/>
+        <reference type="DOUBLE" name="generator_U0Pu" origData="IIDM" origName="v_pu"/>
+        <reference type="DOUBLE" name="generator_UPhase0" origData="IIDM" origName="angle"/>
+    </set>
+
+    <set id="BESS_1">
+        <par type="DOUBLE" name="bess_SNom" value="6.0"/>
+        <reference type="DOUBLE" name="bess_P0Pu" origData="IIDM" origName="p_pu"/>
+        <reference type="DOUBLE" name="bess_Q0Pu" origData="IIDM" origName="q_pu"/>
+        <reference type="DOUBLE" name="bess_U0Pu" origData="IIDM" origName="v_pu"/>
+        <reference type="DOUBLE" name="bess_UPhase0" origData="IIDM" origName="angle"/>
+    </set>
+</parametersSet>
