@@ -12,8 +12,8 @@ set -e
 # --- Configuration ---
 VERSION_TAG="v0.1"
 VENV_NAME=".venv"
-JULIA_VER_MAJOR="1.10"
-JULIA_VER_FULL="1.10.0" # Current LTS recommended
+JULIA_VER_FULL="1.10.12"                  # Latest patch of the Julia LTS series
+JULIA_VER_MAJOR="${JULIA_VER_FULL%.*}"    # 1.10, the directory used by the download URL
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
 
 # Colors
@@ -189,10 +189,21 @@ if [ $REQ_DOWNLOAD_STATUS -eq 0 ]; then
     echo -e "  > Primary requirements file downloaded successfully."
     echo -e "  > Fixing editable remote dependencies for 'uv' compatibility..."
     sed -i 's/-e git+/git+/g' requirements_frozen.txt
+
+    set +e
     uv pip install -r requirements_frozen.txt --quiet
-    rm requirements_frozen.txt
-else
-    echo -e "${YELLOW}  [!] Could not download requirements.txt. Falling back to downloading latest versions...${NC}"
+    REQ_INSTALL_STATUS=$?
+    set -e
+    rm -f requirements_frozen.txt
+
+    if [ $REQ_INSTALL_STATUS -ne 0 ]; then
+        echo -e "${YELLOW}  [!] The pinned versions cannot be installed with Python $(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])').${NC}"
+        REQ_DOWNLOAD_STATUS=1
+    fi
+fi
+
+if [ $REQ_DOWNLOAD_STATUS -ne 0 ]; then
+    echo -e "${YELLOW}  [!] Falling back to the latest versions available for this Python...${NC}"
     uv pip install \
         pypowsybl \
         pyyaml \
@@ -294,11 +305,14 @@ try
         println("  > Checking package: ", pkg)
         Pkg.add(pkg)
     end
-    println("  > Julia setup successful.")
 catch e
     println("  > Error in Julia setup: ", e)
     exit(1)
 end
+using IJulia
+println("  > Registering Jupyter kernel: Julia (clean)")
+IJulia.installkernel("Julia (clean)", env=Dict("LD_LIBRARY_PATH" => ""))
+println("  > Julia setup successful.")
 '
 
 # ==============================================================================
@@ -311,14 +325,3 @@ echo -e "Next steps:"
 echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
 echo -e "2. Run Jupyter Lab:       ${YELLOW}jupyter lab${NC}"
 
-# --- DISCLAIMER ---
-echo -e "\n${RED}${BOLD}[IMPORTANT] OpenModelica Configuration Required:${NC}"
-echo -e "${YELLOW}Dynawo requires Modelica Standard Library (MSL) version 3.2.3.${NC}"
-echo -e "Recent OpenModelica versions default to MSL 4.0.0."
-echo -e "Please do the following manually if you use OMEdit:"
-echo -e "  1. Open OMEdit."
-echo -e "  2. Go to ${BOLD}Tools -> Options -> Libraries${NC}."
-echo -e "  3. Uncheck 'Load latest Modelica version'."
-echo -e "  4. Add/Select 'Modelica' version ${BOLD}3.2.3+maint.om${NC}."
-echo -e "  5. Add/Select 'ModelicaServices' version ${BOLD}3.2.3+maint.om${NC}."
-echo -e ""
