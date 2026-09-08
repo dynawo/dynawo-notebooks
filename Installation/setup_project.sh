@@ -12,6 +12,7 @@ set -e
 # --- Configuration ---
 VERSION_TAG="v0.1"
 VENV_NAME=".venv"
+PYTHON_VER="3.12"
 JULIA_VER_FULL="1.10.12"                  # Latest patch of the Julia LTS series
 JULIA_VER_MAJOR="${JULIA_VER_FULL%.*}"    # 1.10, the directory used by the download URL
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
@@ -133,7 +134,7 @@ echo -e "\n${BLUE}[3/6] Setting up Python Virtual Environment with uv...${NC}"
 
 if [ ! -d "$VENV_NAME" ]; then
     echo -e "  Creating venv: $VENV_NAME..."
-    uv venv "$VENV_NAME" --seed
+    uv venv "$VENV_NAME" --seed --python "$PYTHON_VER"
 else
     echo -e "  Using existing venv: $VENV_NAME"
 fi
