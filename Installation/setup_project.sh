@@ -117,15 +117,7 @@ set -e
 # ==============================================================================
 echo -e "\n${BLUE}[2/6] Checking Julia Environment...${NC}"
 
-INSTALL_JULIA=false
-
-if command -v julia &> /dev/null; then
-    echo -e "${GREEN}  [OK] System Julia found: $(julia -v)${NC}"
-else
-    echo -e "${YELLOW}  [!] Julia not found on system.${NC}"
-    echo -e "  > Initiating automatic local installation..."
-    INSTALL_JULIA=true
-fi
+echo -e "  > Using Julia ${JULIA_VER_FULL}, ignoring any system installation."
 
 # ==============================================================================
 # 3. PYTHON VENV & PROJECT INSTALL
@@ -142,29 +134,23 @@ fi
 # Activate
 source "$VENV_NAME/bin/activate"
 
-# SMART JULIA INSTALLATION LOGIC
-if [ "$INSTALL_JULIA" = true ]; then
-    JULIA_INSTALL_DIR="$HOME/.local/julia-${JULIA_VER_FULL}"
+JULIA_INSTALL_DIR="$HOME/.local/julia-${JULIA_VER_FULL}"
 
-    if [ -d "$JULIA_INSTALL_DIR" ]; then
-        echo -e "  (Found existing local install at $JULIA_INSTALL_DIR)"
-    else
-        echo -e "  Downloading Julia ${JULIA_VER_FULL}..."
-        JULIA_URL="https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VER_MAJOR}/julia-${JULIA_VER_FULL}-linux-x86_64.tar.gz"
-        wget -q --show-progress -O julia_tmp.tar.gz "$JULIA_URL"
-
-        echo -e "  Extracting..."
-        mkdir -p "$JULIA_INSTALL_DIR"
-        tar -xzf julia_tmp.tar.gz -C "$JULIA_INSTALL_DIR" --strip-components=1
-        rm julia_tmp.tar.gz
-    fi
-
-    echo -e "  Linking local Julia to Virtual Environment..."
-    ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$VENV_NAME/bin/julia"
+if [ -d "$JULIA_INSTALL_DIR" ]; then
+    echo -e "  (Found existing local install at $JULIA_INSTALL_DIR)"
 else
-    echo -e "  Linking system Julia to Virtual Environment..."
-    ln -sf "$(command -v julia)" "$VENV_NAME/bin/julia"
+    echo -e "  Downloading Julia ${JULIA_VER_FULL}..."
+    JULIA_URL="https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_VER_MAJOR}/julia-${JULIA_VER_FULL}-linux-x86_64.tar.gz"
+    wget -q --show-progress -O julia_tmp.tar.gz "$JULIA_URL"
+
+    echo -e "  Extracting..."
+    mkdir -p "$JULIA_INSTALL_DIR"
+    tar -xzf julia_tmp.tar.gz -C "$JULIA_INSTALL_DIR" --strip-components=1
+    rm julia_tmp.tar.gz
 fi
+
+echo -e "  Linking Julia ${JULIA_VER_FULL} to Virtual Environment..."
+ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$VENV_NAME/bin/julia"
 
 echo -e "${GREEN}  [OK] Julia linked into venv.${NC}"
 
