@@ -267,7 +267,11 @@ class PowsyblConverter:
         if "genpv" in gid.lower() and sn == 100.0:
             sn = 6.0
 
-        p_mw = info.get("p") or (info.get("p_pu", 0.0) * sn)
+        modelica_type = info.get("modelica_type", "").lower()
+
+        power_base = 100.0 if "inertialgrid" in modelica_type else sn
+
+        p_mw = info.get("p") or (info.get("p_pu", 0.0) * power_base)
 
         is_slack = False
         valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
@@ -279,8 +283,7 @@ class PowsyblConverter:
         if is_slack and p_mw == 0.0:
             p_mw = slack_warm_start_mw
 
-        modelica_type = info.get("modelica_type", "").lower()
-        is_pq = "pq" in modelica_type
+        is_pq = "pq" in modelica_type or "inertialgrid" in modelica_type
 
         is_regulator_on = True
         if is_pq and not is_slack:
