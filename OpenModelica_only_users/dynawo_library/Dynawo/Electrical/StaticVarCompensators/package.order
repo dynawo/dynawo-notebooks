@@ -1,0 +1,14 @@
+BaseClasses
+BaseControls
+SVarCPV_INIT
+SVarCPV
+SVarCPVNoLimits
+SVarCPVModeHandling
+SVarCPVRemote
+SVarCPVRemoteModeHandling
+SVarCPVProp
+SVarCPVPropModeHandling
+SVarCPVPropRemote
+SVarCPVPropRemoteModeHandling
+SVarCStandard
+SVarCStandard_INIT
