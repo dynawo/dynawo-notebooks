@@ -10,38 +10,24 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
 - [`ParametricStudies/`](ParametricStudies/): runs parameter sweeps for single-file and package models, with optional reinitialization.
 - [`StabilityAnalysis/`](StabilityAnalysis/): retrieves linearized OpenModelica models and performs small-signal stability analysis, using its own model variants without events and in ODE mode.
 - [`scripts/`](scripts/): shared helper library (dictionaries, workflow helpers, and sweep/initialization helpers) reused across the notebooks.
+- [`dynawo_library/`](dynawo_library/): the Dynawo Modelica library the notebooks use, version 1.8.0.
 - [`docs/`](docs/): rendered HTML exports of the notebooks, with their outputs, to view the results without running them.
 - `Older notebooks/`: previous examples and workflows kept for reference.
 
 ## Prerequisites
 
-Before running the notebooks, install:
+OpenModelica 1.27 has to be installed beforehand, with the `omc` compiler available on
+the PATH. Everything else is set up by `Installation/install_julia.sh`: Julia and its
+packages, JupyterLab, the `Julia (clean) 1.10` kernel these notebooks declare, and the
+Modelica Standard Library 3.2.3.
 
-- Julia
-- OpenModelica
-- Jupyter Notebook or JupyterLab
-- a Dynawo installation (its Modelica Standard Library is used by the notebooks)
-- the OpenModelica packages `Complex` and `ModelicaServices`
+Dynawo itself is not needed. Its Modelica library, version 1.8.0 from a nightly build,
+is in [`dynawo_library/`](dynawo_library/), and the notebooks read it from there.
 
-Then install the Julia packages used by the notebooks:
+## Configuration
 
-```julia
-using Pkg
-Pkg.add(["IJulia", "OMJulia", "Plots", "PlotlyJS", "DataFrames", "CSV"])
-```
-
-You can install the OpenModelica packages `Complex` and `ModelicaServices` with:
-
-```bash
-cat > /tmp/openmodelica_setup.mos <<'EOF'
-updatePackageIndex();
-installPackage(Complex, "4.1.0+maint.om", exactMatch=true);
-installPackage(ModelicaServices, "4.1.0+maint.om", exactMatch=true);
-EOF
-
-omc /tmp/openmodelica_setup.mos
-```
-
-The Dynawo Modelica library comes from your Dynawo installation, under `ddb/Dynawo/`; `DYNAWO_PKG_PATH` is derived from `DYNAWO_DIR`.
-
-The Modelica Standard Library comes from your Dynawo installation. Set `DYNAWO_DIR` in the notebook configuration cells to your Dynawo install path; `MODELICA_PKG_PATH` is derived from it.
+Each notebook starts with a configuration cell. It points at the Modelica Standard
+Library installed under `~/.openmodelica/libraries` and at the Dynawo library in
+[`dynawo_library/`](dynawo_library/), and either can be pointed somewhere else by
+editing that cell. The rest of it selects the model to work on and the options for that
+workflow.

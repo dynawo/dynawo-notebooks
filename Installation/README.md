@@ -1,105 +1,39 @@
-# Installation Guide: Hybrid Simulation Environment
+# Installation
 
-This document outlines the structure and functionality of the `setup_project.sh` script. This script automates the creation of a scientific development environment that bridges **Python (Powsybl)** and **Julia (OpenModelica)** with the **Dynawo** simulation engine.
+There is one installer per family of notebooks, and each one only sets up what its own
+notebooks need. Both live in this directory and both work within the user account,
+without administrator rights.
 
-## 1. Installation Flow Summary
+## What the installers do
 
-The script follows an "all-in-one" approach. The goal is that, after running it, the user only needs to activate a single virtual environment to access all tools.
+`install_python.sh` prepares the notebooks under `src/dynawo_notebooks/Notebooks/`:
 
-```text
-[START]
-   |
-   v
-[CHECKS] --> Verify Java (JRE), Python 3, OpenModelica, and Build Tools.
-   |
-   v
-[JULIA] ---> Check for System Julia.
-   |         IF MISSING: Download Official LTS -> Install locally.
-   |
-   v
-[VENV] ----> Create Python Virtual Env (venv_powsybl).
-   |         *MAGIC STEP*: Symlink Julia binary -> venv/bin/julia.
-   |         Install Python Libs: pypowsybl, pandas, lxml.
-   |
-   v
-[LINK] ----> Locate Dynawo Binary (C++ Engine).
-   |         Generate ~/.itools/config.yml.
-   |
-   v
-[PKGS] ----> Install Julia Libraries (OMJulia, DataFrames, Plots).
-   |
-[END]
-```
+- Checks that `omc`, `python3`, a Java runtime, `git`, `curl`, `wget`, `tar` and
+  `unzip` are available, and installs `uv` if it is missing.
+- Creates the `.venv` environment on Python 3.12, installs the pinned Python packages
+  from this repository's release, and installs the project itself in editable mode.
+- Downloads Dynawo 1.7.0 from its official release into `~/dynawo-1.7.0`.
+- Writes `~/.itools/config.yml` pointing at it, which is how PyPowSyBl finds Dynawo.
 
-## 2. The "Unified Environment" Strategy
+`install_julia.sh` prepares the notebooks under `OpenModelica_only_users/`:
 
-The key feature of this installer is how it handles **Julia**.
+- Checks that `omc`, `python3`, `git`, `curl`, `wget` and `tar` are available, and
+  installs `uv` if it is missing.
+- Creates the `.venv-julia` environment and installs JupyterLab in it.
+- Installs Julia 1.10.12 under `~/.local/julia-1.10.12` and links it into that
+  environment, so activating the environment gives you both Jupyter and Julia.
+- Installs the Modelica Standard Library 3.2.3 through the OpenModelica package
+  manager, which also brings Complex and ModelicaServices along with it.
+- Installs OMJulia, DataFrames, CSV, Plots and IJulia, and registers the
+  `Julia (clean) 1.10` Jupyter kernel that the notebooks declare.
 
-* **Smart Detection:** It checks if `julia` is already in your system PATH.
-* **Automatic Installation:** If Julia is missing, the script downloads the official Linux x64 binary (LTS version), extracts it to `~/.local/`, and installs it **without requiring root/sudo permissions**.
-* **Seamless Integration:** The script creates a **symbolic link** of the Julia executable inside the Python virtual environment (`venv_powsybl/bin/julia`).
-    * **Benefit:** When you run `source venv_powsybl/bin/activate`, your terminal automatically gains access to both the project-specific Python and the project-specific Julia. You do not need to mess with system PATH variables.
+Both scripts start by asking whether to use the files already in the current directory
+or to clone the repository.
 
-## 3. Step-by-Step Script Logic
+## Opening the models in OMEdit
 
-### Step 1: Pre-flight Checks (Defensive Programming)
-The script verifies the existence of external tools that it cannot install itself:
-* **Python 3.9+:** The base scripting language.
-* **Java (JRE):** Strictly required for the Powsybl backend (which runs on the JVM).
-* **OpenModelica (`omc`):** The compiler required for Julia to execute physical models (`.mo`). *See important note in Section 5.*
-* **Wget/Tar:** Tools needed to download Julia if it's missing.
-
-### Step 2: Python Virtual Environment (`venv_powsybl`)
-It creates an isolated environment and installs critical libraries:
-* `pypowsybl`: For power grid manipulation (Loadflow, IIDM parsing).
-* `lxml`: For XML generation (`.dyd`, `.par`) during the "Recollement" process.
-* `pandas` & `matplotlib`: For data analysis and plotting.
-
-### Step 3: The Dynawo-Python Bridge (`config.yml`)
-Pypowsybl needs to know where the C++ Dynawo engine resides.
-1.  The script searches for Dynawo in standard locations (`/opt/dynawo`, `/usr/local`).
-2.  If not found, it **asks the user** for the installation path.
-3.  It generates the `~/.itools/config.yml` file, which links the Python wrapper to the C++ solver.
-
-### Step 4: Julia Packages
-It uses the available Julia executable (system or auto-installed) to setup the scientific stack:
-* `OMJulia`: The interface to control OpenModelica.
-* `DataFrames`, `CSV`, `Plots`: For handling simulation results.
-
----
-
-## 4. Usage Instructions
-
-1.  **Grant execution permissions:**
-    ```bash
-    chmod +x setup_project.sh
-    ```
-
-2.  **Run the script:**
-    ```bash
-    ./setup_project.sh
-    ```
-
-3.  **Start working:**
-    Once finished, you only need one command to activate the entire ecosystem:
-    ```bash
-    source venv_powsybl/bin/activate
-    ```
-    *Now you can run `jupyter lab`, `python script.py`, or `julia script.jl` seamlessly.*
-
----
-
-## 5. Important: OpenModelica Configuration
-
-**Compatibility Warning:**
-Dynawo relies on the **Modelica Standard Library (MSL) version 3.2.3**. However, recent versions of OpenModelica (OMEdit) often default to MSL version 4.0.0, which causes compatibility issues.
-
-**Required Action:**
-Upon first launch of OMEdit (the OpenModelica GUI), you must manually configure the libraries:
-
-1.  Open **OMEdit**.
-2.  Navigate to **Tools -> Options -> Libraries**.
-3.  **Uncheck** the option *"Load latest Modelica version"* at the bottom.
-4.  In the list of libraries, find `Modelica` and `ModelicaServices`.
-5.  Change their versions to **3.2.3+maint.om** (and `Complex` if available).
-6.  Click OK and restart OMEdit if prompted.
+The notebooks tell OpenModelica which libraries to load, so nothing has to be set up for
+them. If you open the models in OMEdit instead, it loads the newest Modelica Standard
+Library it finds, and the Dynawo library needs 3.2.3. To change that, go to
+Tools -> Options -> Libraries, uncheck "Load latest Modelica version", and select
+`Modelica 3.2.3+maint.om`.
