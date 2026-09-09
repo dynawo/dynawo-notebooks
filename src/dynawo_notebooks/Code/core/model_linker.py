@@ -61,9 +61,6 @@ def link_models(
             "generators",
         ),
         ("Shunts", "Shunt", network.get_shunt_compensators, mapping.add_shunt, "shunts"),
-        # --- MODIFICACIÓN ---
-        # Comentamos la siguiente línea para evitar que las cargas sean objetos dinámicos.
-        # El simulador las tratará como admitancias constantes estáticas.
         # ("Loads", "Load", network.get_loads, mapping.add_base_load, "loads"),
     ]
 
