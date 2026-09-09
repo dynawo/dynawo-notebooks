@@ -152,7 +152,12 @@ class ModelicaParser:
                 topo["buses"][comp_name] = params
             elif "line" in type_lower:
                 topo["lines"][comp_name] = params
-            elif "generator" in type_lower or "infinitebus" in type_lower or "pv" in type_lower:
+            elif (
+                "generator" in type_lower
+                or "infinitebus" in type_lower
+                or "pv" in type_lower
+                or "inertialgrid" in type_lower
+            ):
                 topo["generators"][comp_name] = params
             elif "load" in type_lower:
                 topo["loads"][comp_name] = params
@@ -356,6 +361,7 @@ class ModelicaParser:
 
         clean = val_str.split('"')[0].split("//")[0].split("/*")[0].strip()
         clean = clean.replace("'", "")
+        clean = clean.replace("Dynawo.Electrical.SystemBase.SnRef", "100.0")
         clean = clean.replace("SystemBase.SnRef", "100.0")
         clean = clean.replace("^", "**")
         clean = re.sub(r"XBase_(\d+)", r"((\1**2)/100.0)", clean)
@@ -374,6 +380,16 @@ class ModelicaParser:
             var_val = self._source_assignments.get(var)
             if var_val is None:
                 var_val = self._flat_assignments.get(var)
+
+            if var_val is None and any(suffix in var for suffix in [".setPoint", ".step", ".y"]):
+                alt_var = (
+                    var.replace(".setPoint", ".Value0")
+                    .replace(".step", ".Value0")
+                    .replace(".y", ".k")
+                )
+                var_val = self._source_assignments.get(alt_var) or self._flat_assignments.get(
+                    alt_var
+                )
 
             if isinstance(var_val, (float, int)):
                 resolved_expr = re.sub(r"\b" + var + r"\b", str(var_val), resolved_expr)
@@ -518,6 +534,30 @@ class ModelicaParser:
                     if pj not in extracted:
                         extracted[pj] = final_val
                         extraction_priority[pj] = current_priority
+
+        if "p_pu" not in extracted:
+            for prefix in ["PrefPu_", "PRefPu_"]:
+                block_name = f"{prefix}{comp_name}"
+                match = re.search(
+                    rf"\b{block_name}\b\s*\([^)]*\bValue0\s*=\s*([^,)]+)", self.top_code
+                )
+                if match:
+                    val = self._resolve_val(match.group(1).strip(), "p_pu", comp_name)
+                    if val is not None:
+                        extracted["p_pu"] = abs(float(val))
+                        break
+
+        if "q_pu" not in extracted:
+            for prefix in ["QrefPu_", "QRefPu_"]:
+                block_name = f"{prefix}{comp_name}"
+                match = re.search(
+                    rf"\b{block_name}\b\s*\([^)]*\bValue0\s*=\s*([^,)]+)", self.top_code
+                )
+                if match:
+                    val = self._resolve_val(match.group(1).strip(), "q_pu", comp_name)
+                    if val is not None:
+                        extracted["q_pu"] = float(val)
+                        break
 
         for s_param in ["s0Pu", "s10Pu", "s20Pu"]:
             p_val = None

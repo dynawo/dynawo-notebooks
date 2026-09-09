@@ -77,16 +77,16 @@ equation
 // No variations in the ZIP Load
   load.deltaP = 0;
   load.deltaQ = 0;
-  load.PRefPu = PrefPu_load.setPoint;
-  load.QRefPu = QrefPu_load.setPoint;
+  load.PRefPu = PrefPu_load.setPoint.value;
+  load.QRefPu = QrefPu_load.setPoint.value;
 // Variation in P in loadPQ (5% in base SNom for inertialGrid1)
   loadPQ.deltaQ = 0;
   when time > 10 then
     loadPQ.deltaP = deltaPPu*SNom/Dynawo.Electrical.SystemBase.SnRef;
   end when;
 // LoadPQ Setpoint
-  loadPQ.PRefPu = PrefPu_loadPQ.step;
-  loadPQ.QRefPu = QrefPu_loadPQ.setPoint;
+  loadPQ.PRefPu = PrefPu_loadPQ.step.value;
+  loadPQ.QRefPu = QrefPu_loadPQ.setPoint.value;
   connect(busIG1.terminal, loadPQ.terminal) annotation(
     Line(points = {{-2, 40}, {-20, 40}, {-20, 18}}, color = {0, 0, 255}));
   connect(inertialGrid1.terminal, busIG1.terminal) annotation(
