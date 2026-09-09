@@ -15,8 +15,7 @@ logger = logging.getLogger("DynamicModelLinker")
 
 
 def link_models(
-    network: pp.network.Network,
-    parsed_data: Dict[str, Any]
+    network: pp.network.Network, parsed_data: Dict[str, Any]
 ) -> Tuple[pp.dynamic.ModelMapping, Dict[str, pd.DataFrame]]:
     """
     Links static network elements with their dynamic Modelica counterparts.
@@ -31,18 +30,18 @@ def link_models(
         df = network.get_generators()
         if df.empty:
             return df
-        
+
         # Ensure compatibility regardless of how the DataFrame is indexed
-        ids = df.index if df.index.name == 'id' else df['id']
+        ids = df.index if df.index.name == "id" else df["id"]
         mask = []
-        
+
         for i in ids:
             mod_type = parsed_data.get("generators", {}).get(str(i), {}).get("modelica_type", "")
             if is_inertial:
                 mask.append("InertialGrid" in mod_type)
             else:
                 mask.append("InertialGrid" not in mod_type)
-                
+
         return df[mask]
 
     # Tuples: Display Name, PyPowSyBl Category, Getter, Map Method, JSON Key
@@ -52,14 +51,14 @@ def link_models(
             "SynchronousGenerator",
             lambda: get_filtered_generators(is_inertial=False),
             mapping.add_synchronous_generator,
-            "generators"
+            "generators",
         ),
         (
             "Inertial Grids",
             "InertialGrid",
             lambda: get_filtered_generators(is_inertial=True),
             mapping.add_inertial_grid,
-            "generators"
+            "generators",
         ),
         ("Shunts", "Shunt", network.get_shunt_compensators, mapping.add_shunt, "shunts"),
         ("Loads", "Load", network.get_loads, mapping.add_base_load, "loads"),
@@ -80,24 +79,26 @@ def link_models(
                 supported_models = mapping.get_supported_models(pp_category)
         except Exception as e:
             logger.debug(f"Could not retrieve supported models for {pp_category}: {e}")
-            
+
         supported_models_str = ", ".join(supported_models) if supported_models else ""
 
         payload = []
         for _, row in elements_df.iterrows():
             static_id = str(row["id"])
-            
+
             # Extract the original type from the parsed Modelica code
             comp_info = parsed_data.get(json_key, {}).get(static_id, {})
             full_modelica_type = comp_info.get("modelica_type", "")
-            
+
             # Extract the base class name (e.g., "InertialGrid" from "x.y.z.InertialGrid")
-            model_name = full_modelica_type.split('.')[-1] if full_modelica_type else ""
-            
+            model_name = full_modelica_type.split(".")[-1] if full_modelica_type else ""
+
             # Validation and Fallback logic
             if not model_name and supported_models:
                 model_name = supported_models[0]
-                logger.warning(f"No Modelica type found for {static_id}. Using fallback: {model_name}")
+                logger.warning(
+                    f"No Modelica type found for {static_id}. Using fallback: {model_name}"
+                )
             elif model_name and supported_models and model_name not in supported_models:
                 logger.warning(
                     f"Model '{model_name}' mapped to '{static_id}' is not in the supported models list "
@@ -110,7 +111,7 @@ def link_models(
                     "parameter_set_id": static_id,
                     "model_name": model_name,
                     "supported_models": supported_models_str,
-                    "original_type": full_modelica_type
+                    "original_type": full_modelica_type,
                 }
             )
 
@@ -124,9 +125,7 @@ def link_models(
 
                 # Store the fully enriched DataFrame for the Jupyter Notebook audit
                 linked_dataframes[display_name] = df_map
-                logger.info(
-                    f"Successfully linked {len(payload)} elements in {display_name}."
-                )
+                logger.info(f"Successfully linked {len(payload)} elements in {display_name}.")
             except Exception as e:
                 logger.error(f"Failed to execute {map_method.__name__}: {e}")
 

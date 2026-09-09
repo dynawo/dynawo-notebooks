@@ -2,106 +2,188 @@
 Dynamic Parameter Generator Module.
 
 This module parses Dynawo DDB (desc.xml) files and populates the simulation
-parameters using the extracted data from Modelica files.
+parameters using the extracted data from Modelica files. It incorporates direct
+text parsing and OpenModelica queries to resolve dynamic parameters safely.
 """
 
 import os
+import re
 import xml.etree.ElementTree as ET
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import pandas as pd
 
+# Import OMCConnector strictly for static typing purposes.
+from dynawo_notebooks.Code.core.connector import OMCConnector
+
 logger = logging.getLogger("ParameterGenerator")
+
 
 class DynamicParameterGenerator:
     """
     Handles the creation of Dynawo .par files by merging DDB descriptions
-    with Modelica parsed data.
+    with Modelica parsed data, raw code text parsing, and OMC queries.
     """
+
+    @staticmethod
+    def _resolve_numeric_value(
+        val_str: str, connector: Optional[OMCConnector], root_model_name: str, model_code: str = ""
+    ) -> str:
+        """
+        Attempts to cast a string to float. If it fails (e.g., it's a variable like 'SNom'),
+        it asks OpenModelica for the resolved numerical value or parses the code directly.
+        """
+        if not val_str:
+            return val_str
+
+        val_str = val_str.strip()
+        try:
+            float(val_str)
+            return val_str  # It is already a valid number
+        except ValueError:
+            # It's a variable reference. Let's resolve it using OMC.
+            if connector and root_model_name:
+                omc_val = connector.get_parameter_value(root_model_name, val_str)
+                if omc_val:
+                    return str(omc_val).strip('"').strip()
+
+            # Parameterized Text Fallback: Search for the variable declaration in the model code
+            if model_code:
+                var_pattern = re.compile(
+                    rf"\bparameter\b.*?\b{re.escape(val_str)}\s*=\s*([\d\.]+)"
+                )
+                match = var_pattern.search(model_code)
+                if match:
+                    return match.group(1).strip()
+
+        return val_str
 
     @staticmethod
     def generate_parameters(
         parsed_data: Dict[str, Any],
         linked_registry: Dict[str, pd.DataFrame],
         dynawo_path: str,
-        target_dir: str
+        target_dir: str,
+        connector: Optional[OMCConnector] = None,
+        root_model_name: str = "",
+        model_code: str = "",
+        base_case_file: str = "Base_Case.par",
+        network_file: str = "Network.par",
     ) -> None:
         """
-        Generates Base_Case.par and Network.par based on the parsed topology.
+        Generates parameterized .par files based on the parsed topology
+        and live OpenModelica parameters.
         """
         os.makedirs(target_dir, exist_ok=True)
         basecase_sets = []
 
-        # Mapa para conectar el nombre del registro con las claves del parsed_data
+        # Map to connect the registry name with the keys from parsed_data
         category_mapping = {
             "Synchronous Generators": "generators",
             "Inertial Grids": "generators",
             "Shunts": "shunts",
-            "Loads": "loads"
+            "Loads": "loads",
         }
 
-        # 1. Iterar sobre el registro de modelos vinculados (creado en la celda 7)
+        # 1. Iterate over the linked models registry
         for registry_name, df in linked_registry.items():
             json_key = category_mapping.get(registry_name)
             if not json_key or df.empty:
                 continue
-            
+
             for _, row in df.iterrows():
                 static_id = row["static_id"]
                 model_name = row["model_name"]
-                
-                # Obtener la información de Modelica para este componente
+
                 comp_data = parsed_data.get(json_key, {}).get(static_id, {})
-                
-                # Analizar el archivo DDB
                 ddb_path = os.path.join(dynawo_path, "ddb", f"{model_name}.desc.xml")
                 xml_lines = []
-                
+
                 if os.path.exists(ddb_path):
                     tree = ET.parse(ddb_path)
                     ns = {"dyn": "http://www.rte-france.com/dynawo"}
-                    
+
                     for param in tree.getroot().findall(".//dyn:parameter", ns):
                         if param.get("readOnly") == "false":
                             p_name = param.get("name")
                             p_type = param.get("valueType")
-                            default_val = param.get("defaultValue", "0.0" if p_type == "DOUBLE" else "0")
-                            
-                            # Intentar emparejar el parámetro (ej: 'generator_H' -> 'H')
+                            default_val = param.get(
+                                "defaultValue", "0.0" if p_type == "DOUBLE" else "0"
+                            )
                             clean_name = p_name.split("_")[-1]
-                            
-                            # Priorizar coincidencia exacta, luego coincidencia limpia, luego valor por defecto
-                            val = comp_data.get(p_name, comp_data.get(clean_name, default_val))
-                            
-                            xml_lines.append(f'        <par type="{p_type}" name="{p_name}" value="{val}"/>')
+
+                            val = None
+
+                            # Step A: Attempt to match the parameter from parsed_data
+                            val = comp_data.get(p_name, comp_data.get(clean_name))
+
+                            # Step B: Direct Text Parsing (Bulletproof fallback)
+                            if val is None and model_code:
+                                # Look for the component declaration and its modifiers
+                                comp_pattern = re.compile(rf"\b{static_id}\s*\((.*?)\)", re.DOTALL)
+                                match = comp_pattern.search(model_code)
+                                if match:
+                                    modifiers = match.group(1)
+                                    # Search for the specific parameter inside the parentheses
+                                    param_pattern = re.compile(rf"\b{clean_name}\s*=\s*([^,)]+)")
+                                    p_match = param_pattern.search(modifiers)
+                                    if p_match:
+                                        val = p_match.group(1).strip()
+
+                            # Step C: Query OpenModelica (Secondary fallback)
+                            if val is None and connector and root_model_name:
+                                omc_val = connector.get_parameter_value(
+                                    root_model_name, f"{static_id}.{clean_name}"
+                                )
+                                if omc_val is not None:
+                                    val = omc_val
+
+                            # Step D: Fallback to the default value
+                            if val is None:
+                                val = default_val
+
+                            # Step E: Format and resolve the final value
+                            if p_type == "DOUBLE":
+                                val = DynamicParameterGenerator._resolve_numeric_value(
+                                    str(val), connector, root_model_name, model_code
+                                )
+                            elif p_type == "BOOL":
+                                val = "true" if str(val).lower() in ["true", "1"] else "false"
+
+                            xml_lines.append(
+                                f'        <par type="{p_type}" name="{p_name}" value="{val}"/>'
+                            )
                 else:
-                    logger.warning(f"No se encontró el archivo DDB: {ddb_path}")
-                
-                # Construir el bloque XML para este componente
+                    logger.warning(f"DDB file not found at path: {ddb_path}")
+
+                # Build the XML block
                 set_xml = f'    <set id="{static_id}">\n'
                 set_xml += "\n".join(xml_lines) + "\n"
-                
-                # Añadir referencias estáticas IIDM si es un generador
+
+                # Add static IIDM references
                 if json_key == "generators":
                     prefix = "generator"
                     set_xml += f'        <reference type="DOUBLE" name="{prefix}_P0Pu" origData="IIDM" origName="p_pu"/>\n'
                     set_xml += f'        <reference type="DOUBLE" name="{prefix}_Q0Pu" origData="IIDM" origName="q_pu"/>\n'
                     set_xml += f'        <reference type="DOUBLE" name="{prefix}_U0Pu" origData="IIDM" origName="v_pu"/>\n'
                     set_xml += f'        <reference type="DOUBLE" name="{prefix}_UPhase0" origData="IIDM" origName="angle"/>\n'
-                
-                set_xml += '    </set>'
+
+                set_xml += "    </set>"
                 basecase_sets.append(set_xml)
 
-        # 2. Ensamblar y guardar Base_Case.par
+        # 2. Assemble and save Base Case parameters
         basecase_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
         basecase_content += '<parametersSet xmlns="http://www.rte-france.com/dynawo">\n'
         basecase_content += "\n".join(basecase_sets)
-        basecase_content += '\n</parametersSet>\n'
+        basecase_content += "\n</parametersSet>\n"
 
-        with open(os.path.join(target_dir, "Base_Case.par"), "w", encoding="utf-8") as f:
+        basecase_path = os.path.join(target_dir, base_case_file)
+        with open(basecase_path, "w", encoding="utf-8") as f:
             f.write(basecase_content)
 
-        # 3. Ensamblar y guardar Network.par (Constantes macroscópicas)
+        logger.info(f"Dynamic parameters successfully generated at {basecase_path}")
+
+        # 3. Assemble and save Network parameters
         network_content = """<?xml version="1.0" encoding="UTF-8"?>
 <parametersSet xmlns="http://www.rte-france.com/dynawo">
     <set id="Network">
@@ -110,8 +192,10 @@ class DynamicParameterGenerator:
         <par type="DOUBLE" name="load_beta" value="2.0"/>
         <par type="DOUBLE" name="transformer_tolV" value="0.01"/>
         <par type="BOOL" name="VirtualBus_2_hasShortCircuitCapabilities" value="true"/>
+        <par type="BOOL" name="busL_hasShortCircuitCapabilities" value="true"/>
     </set>
 </parametersSet>
 """
-        with open(os.path.join(target_dir, "Network.par"), "w", encoding="utf-8") as f:
+        network_path = os.path.join(target_dir, network_file)
+        with open(network_path, "w", encoding="utf-8") as f:
             f.write(network_content)
