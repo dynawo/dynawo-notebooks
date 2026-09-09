@@ -26,13 +26,39 @@ def link_models(
     mapping = pp.dynamic.ModelMapping()
     linked_dataframes = {}
 
+    # Filtering function to separate Synchronous Generators from Inertial Grids
+    def get_filtered_generators(is_inertial: bool) -> pd.DataFrame:
+        df = network.get_generators()
+        if df.empty:
+            return df
+        
+        # Ensure compatibility regardless of how the DataFrame is indexed
+        ids = df.index if df.index.name == 'id' else df['id']
+        mask = []
+        
+        for i in ids:
+            mod_type = parsed_data.get("generators", {}).get(str(i), {}).get("modelica_type", "")
+            if is_inertial:
+                mask.append("InertialGrid" in mod_type)
+            else:
+                mask.append("InertialGrid" not in mod_type)
+                
+        return df[mask]
+
     # Tuples: Display Name, PyPowSyBl Category, Getter, Map Method, JSON Key
     equipment_categories = [
         (
             "Synchronous Generators",
             "SynchronousGenerator",
-            network.get_generators,
+            lambda: get_filtered_generators(is_inertial=False),
             mapping.add_synchronous_generator,
+            "generators"
+        ),
+        (
+            "Inertial Grids",
+            "InertialGrid",
+            lambda: get_filtered_generators(is_inertial=True),
+            mapping.add_inertial_grid,
             "generators"
         ),
         ("Shunts", "Shunt", network.get_shunt_compensators, mapping.add_shunt, "shunts"),
@@ -47,7 +73,14 @@ def link_models(
         if elements_df.index.name == "id":
             elements_df = elements_df.reset_index()
 
-        supported_models = mapping.get_supported_models(pp_category)
+        # Prevent failures if the category does not natively support get_supported_models
+        supported_models = []
+        try:
+            if hasattr(mapping, "get_supported_models"):
+                supported_models = mapping.get_supported_models(pp_category)
+        except Exception as e:
+            logger.debug(f"Could not retrieve supported models for {pp_category}: {e}")
+            
         supported_models_str = ", ".join(supported_models) if supported_models else ""
 
         payload = []
