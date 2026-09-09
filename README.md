@@ -23,7 +23,7 @@ point, and retrieving the linearized model for small-signal stability analysis.
 
 ## Initialization using only OpenModelica, through Julia
 
-[`OpenModelica_only_users/`](OpenModelica_only_users/)
+[`src/julia_openmodelica/`](src/julia_openmodelica/)
 
 Everything happens inside OpenModelica, driven from Julia through OMJulia. Dynawo does
 not have to be installed at all: the Dynawo Modelica library comes with this repository,
@@ -34,12 +34,12 @@ Initialization works by building a static auxiliary version of the dynamic model
 simulating that version until it settles, reading the resulting values, and writing
 them back into the original model.
 
-[`OpenModelica_only_users/README.md`](OpenModelica_only_users/README.md) describes each
+[`src/julia_openmodelica/README.md`](src/julia_openmodelica/README.md) describes each
 of these workflows and the configuration they expect.
 
 ## Initialization using PyPowSyBl-Dynawo, through Python
 
-[`src/dynawo_notebooks/Notebooks/`](src/dynawo_notebooks/Notebooks/)
+[`src/python_pypowsybl/Notebooks/`](src/python_pypowsybl/Notebooks/)
 
 These notebooks use PyPowSyBl with Dynawo underneath, which means the DYD and PAR files
 Dynawo normally expects never have to be written by hand.
@@ -99,9 +99,9 @@ JupyterLab is included in the environment, and any editor that supports notebook
 be used instead. The Julia notebooks require the `Julia (clean) 1.10` kernel, which the
 installer registers.
 
-`OpenModelica_only_users/BuildAux/BuildAux_single.ipynb` is a suitable entry point for
+`src/julia_openmodelica/BuildAux/BuildAux_single.ipynb` is a suitable entry point for
 the Julia family, and
-`src/dynawo_notebooks/Notebooks/PyPowSyBl_Dynawo_Getting_Started_I.ipynb` for the Python
+`src/python_pypowsybl/Notebooks/PyPowSyBl_Dynawo_Getting_Started_I.ipynb` for the Python
 one.
 
 ## Support

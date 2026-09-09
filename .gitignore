@@ -7,6 +7,6 @@
 *compare_parameters*
 *examples*
 omc-build/
-OpenModelica_only_users/StabilityAnalysis/outputs/
-/src/dynawo_notebooks/Notebooks/dynawo
+src/julia_openmodelica/StabilityAnalysis/outputs/
+/src/python_pypowsybl/Notebooks/dynawo
 .ipynb_checkpoints/

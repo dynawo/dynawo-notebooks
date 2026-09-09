@@ -3,7 +3,7 @@
 # ==============================================================================
 # OPENMODELICA + JULIA NOTEBOOKS SETUP
 # ==============================================================================
-# Description: Setup script for the Julia notebooks under OpenModelica_only_users.
+# Description: Setup script for the Julia notebooks under src/julia_openmodelica.
 # ==============================================================================
 
 # Exit immediately if a command exits with a non-zero status

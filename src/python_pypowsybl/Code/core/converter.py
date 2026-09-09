@@ -13,7 +13,7 @@ from typing import Dict, Set, Any
 
 import pandas as pd
 import pypowsybl as pp
-from dynawo_notebooks.Code.core.powerflow import PowerFlowRunner
+from python_pypowsybl.Code.core.powerflow import PowerFlowRunner
 
 logger = logging.getLogger(__name__)
 

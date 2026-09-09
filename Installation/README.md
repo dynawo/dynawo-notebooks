@@ -6,7 +6,7 @@ without administrator rights.
 
 ## What the installers do
 
-`install_python.sh` prepares the notebooks under `src/dynawo_notebooks/Notebooks/`:
+`install_python.sh` prepares the notebooks under `src/python_pypowsybl/Notebooks/`:
 
 - Checks that `omc`, `python3`, a Java runtime, `git`, `curl`, `wget`, `tar` and
   `unzip` are available, and installs `uv` if it is missing.
@@ -15,7 +15,7 @@ without administrator rights.
 - Downloads Dynawo 1.7.0 from its official release into `~/dynawo-1.7.0`.
 - Writes `~/.itools/config.yml` pointing at it, which is how PyPowSyBl finds Dynawo.
 
-`install_julia.sh` prepares the notebooks under `OpenModelica_only_users/`:
+`install_julia.sh` prepares the notebooks under `src/julia_openmodelica/`:
 
 - Checks that `omc`, `python3`, `git`, `curl`, `wget` and `tar` are available, and
   installs `uv` if it is missing.
