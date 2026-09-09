@@ -9,4 +9,4 @@
 omc-build/
 OpenModelica_only_users/StabilityAnalysis/outputs/
 /src/dynawo_notebooks/Notebooks/dynawo
-OpenModelica_only_users/MWE*/
+.ipynb_checkpoints/
