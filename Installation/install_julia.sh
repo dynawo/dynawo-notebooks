@@ -7,7 +7,7 @@
 set -e
 
 # --- Configuration ---
-VERSION_TAG="v0.2"
+VERSION_TAG="v0.3"
 JULIA_VER_MAJOR="1.10"
 JULIA_VER_FULL="1.10.0"
 
