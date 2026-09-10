@@ -1,20 +1,17 @@
 #!/bin/bash
 
 # ==============================================================================
-# HYBRID SIMULATION ENVIRONMENT SETUP
+# PYTHON & DYNAWO ENVIRONMENT SETUP
 # ==============================================================================
-# Description: Industrialized setup script for Python + Dynawo using 'uv'.
+# Description: Setup script for Python (uv) and full Dynawo package.
 # ==============================================================================
 
-# Exit immediately if a command exits with a non-zero status
 set -e
 
 # --- Configuration ---
 VERSION_TAG="v0.1"
 VENV_NAME=".venv"
-PYTHON_VER="3.12"
-DYNAWO_VER="1.7.0"
-DYNAWO_HOME="$HOME/dynawo-${DYNAWO_VER}"
+DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
 
 # Colors
 BOLD='\033[1m'
@@ -22,207 +19,136 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-echo -e "${BLUE}${BOLD}>>> Starting Hybrid Simulation Project Setup...${NC}"
+echo -e "${BLUE}${BOLD}>>> Starting Python & Dynawo Setup...${NC}"
 
 # ==============================================================================
 # 0. INSTALLATION MODE SELECTION
 # ==============================================================================
 echo -e "\n${BLUE}[0/4] Installation Mode Selection...${NC}"
-read -p "Do you want to use existing local files in '.' (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
+read -p "Use existing local files (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
 
 if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
     cd "$(dirname "$0")"
-    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into current directory..."
-    # Clone into a temporary directory to avoid conflicts with existing non-empty directories
+    echo -e "  > Cloning remote repository (tag ${VERSION_TAG})..."
     git clone --branch "$VERSION_TAG" --depth 1 https://github.com/dynawo/dynawo-notebooks.git _tmp_clone
-    
-    # Move all files (including hidden ones like .gitignore, pyproject.toml, uv.lock) to current directory
     cp -r _tmp_clone/* . 2>/dev/null || true
     cp -r _tmp_clone/.[!.]* . 2>/dev/null || true
     rm -rf _tmp_clone
-    
-    echo -e "${GREEN}  [OK] Repository successfully cloned and extracted.${NC}"
+    echo -e "${GREEN}  [OK] Repository extracted.${NC}"
 else
     echo -e "  > Proceeding with existing local files."
-
 fi
 
 # ==============================================================================
 # 1. PRE-FLIGHT CHECKS
 # ==============================================================================
-echo -e "\n${BLUE}[1/4] Validating Core System Dependencies...${NC}"
+echo -e "\n${BLUE}[1/4] Validating Dependencies...${NC}"
 
 check_tool() {
     local cmd=$1
     local name=$2
-
     if ! command -v "$cmd" &> /dev/null; then
         echo -e "${RED}  [X] $name is MISSING.${NC}"
         return 1
     else
-        local ver=""
-        if [ "$cmd" == "java" ]; then
-             ver=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
-        elif [ "$cmd" == "python3" ]; then
-             ver=$(python3 --version | awk '{print $2}')
-        elif [ "$cmd" == "omc" ]; then
-             ver=$(omc --version | head -n 1)
-        elif [ "$cmd" == "uv" ]; then
-             ver=$(uv --version | awk '{print $2}')
-        else
-             ver="Detected"
-        fi
+        local ver="Detected"
+        if [ "$cmd" == "java" ]; then ver=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}'); fi
+        if [ "$cmd" == "python3" ]; then ver=$(python3 --version | awk '{print $2}'); fi
+        if [ "$cmd" == "uv" ]; then ver=$(uv --version | awk '{print $2}'); fi
         echo -e "${GREEN}  [OK] $name found ($ver)${NC}"
         return 0
     fi
 }
 
-# Auto-install uv if missing
+# Auto-install uv
 if ! command -v uv &> /dev/null; then
-    echo -e "${YELLOW}  [!] 'uv' not found. Installing automatically...${NC}"
+    echo -e "${YELLOW}  [!] 'uv' not found. Installing...${NC}"
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    if [ -f "$HOME/.cargo/env" ]; then
-        source "$HOME/.cargo/env"
-    elif [ -f "$HOME/.local/bin/env" ]; then
-        source "$HOME/.local/bin/env"
-    fi
+    source "$HOME/.cargo/env" 2>/dev/null || source "$HOME/.local/bin/env" 2>/dev/null || true
 fi
 
-# Temporarily disable 'set -e' so missing tools don't crash the script immediately
 set +e
 EXIT_FLAG=0
-
 check_tool "python3" "Python 3" || EXIT_FLAG=1
 check_tool "java" "Java Runtime (Required for Powsybl)" || EXIT_FLAG=1
-check_tool "omc" "OpenModelica Compiler" || EXIT_FLAG=1
-check_tool "wget" "Wget (Downloader)" || EXIT_FLAG=1
-check_tool "tar" "Tar (Extractor)" || EXIT_FLAG=1
-check_tool "curl" "Curl (API requests/Downloader)" || EXIT_FLAG=1
-check_tool "unzip" "Unzip (Extractor for Dynawo)" || EXIT_FLAG=1
 check_tool "uv" "uv (Package Manager)" || EXIT_FLAG=1
-check_tool "git" "Git (Version Control)" || EXIT_FLAG=1
+check_tool "git" "Git" || EXIT_FLAG=1
+check_tool "wget" "Wget" || EXIT_FLAG=1
+check_tool "curl" "Curl" || EXIT_FLAG=1
+check_tool "tar" "Tar" || EXIT_FLAG=1
+check_tool "xz" "XZ Utils (for .tar.xz extraction)" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
-    echo -e "\n${RED}[CRITICAL] Missing core dependencies. Please install them (apt/yum) and retry.${NC}"
+    echo -e "\n${RED}[CRITICAL] Missing dependencies. Install them and retry.${NC}"
     exit 1
 fi
-# Re-enable 'set -e'
 set -e
 
 # ==============================================================================
 # 2. PYTHON VENV & PROJECT INSTALL
 # ==============================================================================
-echo -e "\n${BLUE}[2/4] Setting up Python Virtual Environment with uv...${NC}"
+echo -e "\n${BLUE}[2/4] Setting up Python Environment...${NC}"
 
 if [ ! -d "$VENV_NAME" ]; then
     echo -e "  Creating venv: $VENV_NAME..."
-    uv venv "$VENV_NAME" --seed --python "$PYTHON_VER"
-else
-    echo -e "  Using existing venv: $VENV_NAME"
+    uv venv "$VENV_NAME" --seed
 fi
-
-# Activate
 source "$VENV_NAME/bin/activate"
 
-# Python Dependencies
-echo -e "  Syncing base project dependencies from local files..."
 if [ ! -f "uv.lock" ] || [ ! -f "pyproject.toml" ]; then
-    echo -e "${RED}  [ERROR] Required configuration files (uv.lock, pyproject.toml) not found in current directory.${NC}"
+    echo -e "${RED}  [ERROR] uv.lock or pyproject.toml not found.${NC}"
     exit 1
 fi
 
 uv sync --all-extras
+echo -e "  Fetching requirements..."
+REQ_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/requirements.txt"
 
-# Download and install requirements (with fallback)
-echo -e "  Fetching and installing Python requirements..."
-REQUIREMENTS_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/requirements.txt"
-
-set +e
-curl -f -s -L "$REQUIREMENTS_URL" -o requirements_frozen.txt
-REQ_DOWNLOAD_STATUS=$?
-set -e
-
-if [ $REQ_DOWNLOAD_STATUS -eq 0 ]; then
-    echo -e "  > Primary requirements file downloaded successfully."
-    echo -e "  > Fixing editable remote dependencies for 'uv' compatibility..."
-    sed -i 's/-e git+/git+/g' requirements_frozen.txt
-
-    set +e
-    uv pip install -r requirements_frozen.txt --quiet
-    REQ_INSTALL_STATUS=$?
-    set -e
-    rm -f requirements_frozen.txt
-
-    if [ $REQ_INSTALL_STATUS -ne 0 ]; then
-        echo -e "${YELLOW}  [!] The pinned versions cannot be installed with Python $(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])').${NC}"
-        REQ_DOWNLOAD_STATUS=1
-    fi
-fi
-
-if [ $REQ_DOWNLOAD_STATUS -ne 0 ]; then
-    echo -e "${YELLOW}  [!] Falling back to the latest versions available for this Python...${NC}"
-    uv pip install \
-        pypowsybl \
-        pyyaml \
-        jupyter \
-        jupyterlab \
-        scipy \
-        ipywidgets \
-        OMPython \
-        --quiet
-fi
-
-echo -e "  Installing project package from local directory in editable mode..."
-uv pip install --upgrade -e .
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}  [OK] Project installed successfully in editable mode.${NC}"
+if curl -f -s -L "$REQ_URL" -o req_frozen.txt; then
+    sed -i 's/-e git+/git+/g' req_frozen.txt
+    uv pip install -r req_frozen.txt --quiet
+    rm req_frozen.txt
 else
-    echo -e "${RED}  [ERROR] Failed to install local project.${NC}"
-    exit 1
+    echo -e "${YELLOW}  [!] Falling back to latest packages...${NC}"
+    uv pip install pypowsybl pyyaml jupyter jupyterlab scipy ipywidgets OMPython --quiet
 fi
+
+uv pip install --upgrade -e . --quiet
+echo -e "${GREEN}  [OK] Python project installed.${NC}"
 
 # ==============================================================================
-# 3. DYNAWO DOWNLOAD
+# 3. DYNAWO DETECTION OR DOWNLOAD
 # ==============================================================================
-echo -e "\n${BLUE}[3/4] Checking and Installing Dynawo ${DYNAWO_VER}...${NC}"
+echo -e "\n${BLUE}[3/4] Installing Full Dynawo Package...${NC}"
 
-if [ -f "$DYNAWO_HOME/dynawo.sh" ]; then
-    echo -e "${GREEN}  [OK] Local Dynawo found at $DYNAWO_HOME${NC}"
-else
-    echo -e "${YELLOW}  [!] Dynawo ${DYNAWO_VER} not found at $DYNAWO_HOME.${NC}"
-    echo -e "  > Downloading it from the official Dynawo release..."
-
-    DYNAWO_URL="https://github.com/dynawo/dynawo/releases/download/v${DYNAWO_VER}/Dynawo_Linux_v${DYNAWO_VER}.zip"
-
-    # Temporarily disable set -e to handle download failure gracefully
-    set +e
-    curl -f -s -L "$DYNAWO_URL" -o Dynawo_Linux.zip
-    CURL_STATUS=$?
-    set -e
-
-    if [ $CURL_STATUS -eq 0 ]; then
-        echo -e "  > Download successful."
-    else
-        echo -e "${RED}  [ERROR] Could not retrieve Dynawo from: $DYNAWO_URL${NC}"
-        exit 1
+DYNAWO_HOME=""
+for path in "${DEFAULT_DYNAWO_PATHS[@]}"; do
+    if [ -f "$path/bin/dynawo.sh" ] || [ -f "$path/dynawo.sh" ]; then
+        DYNAWO_HOME="$path"
+        echo -e "${GREEN}  [OK] Local Dynawo found at $DYNAWO_HOME${NC}"
+        break
     fi
+done
 
-    # The archive holds a single 'dynawo' directory, so extract it aside and move it
-    echo -e "  > Unzipping Dynawo..."
-    TMP_DIR=$(mktemp -d)
-    unzip -q Dynawo_Linux.zip -d "$TMP_DIR"
-    mv "$TMP_DIR/dynawo" "$DYNAWO_HOME"
-    rm -rf Dynawo_Linux.zip "$TMP_DIR"
-
-    # Execution tests to confirm the download
-    if [ -f "$DYNAWO_HOME/dynawo.sh" ]; then
-        echo -e "  > Testing Dynawo execution..."
-        "$DYNAWO_HOME/dynawo.sh" help > /dev/null 2>&1
-        echo -e "${GREEN}  [OK] Dynawo has been successfully installed and executed at $DYNAWO_HOME${NC}"
+if [ -z "$DYNAWO_HOME" ]; then
+    DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/Dynawo_Linux_1_7.tar.xz"
+    echo -e "  > Downloading Dynawo from: $DYNAWO_URL"
+    
+    curl -f -s -L -o Dynawo_Linux.tar.xz "$DYNAWO_URL" || { echo -e "${RED}  [ERROR] Download failed.${NC}"; exit 1; }
+    
+    echo -e "  > Extracting Dynawo..."
+    tar -xf Dynawo_Linux.tar.xz -C "$HOME"
+    rm Dynawo_Linux.tar.xz
+    
+    # Adjust depending on exactly how the tarball root folder is named
+    DYNAWO_HOME="$HOME/dynawo" 
+    
+    if [ -f "$DYNAWO_HOME/dynawo.sh" ] || [ -f "$DYNAWO_HOME/bin/dynawo.sh" ]; then
+        echo -e "${GREEN}  [OK] Dynawo installed at $DYNAWO_HOME${NC}"
     else
-        echo -e "${YELLOW}  [!] Dynawo was downloaded, but 'dynawo.sh' was not found to test its execution.${NC}"
+        echo -e "${YELLOW}  [!] Extracted, but dynawo.sh not found where expected.${NC}"
     fi
 fi
 
@@ -230,8 +156,6 @@ fi
 # 4. CONFIGURE DYNAWO LINK
 # ==============================================================================
 echo -e "\n${BLUE}[4/4] Configuring Dynawo-Powsybl Link...${NC}"
-
-# Write Configuration
 mkdir -p "$HOME/.itools"
 cat <<EOF > "$HOME/.itools/config.yml"
 dynawo:
@@ -241,12 +165,9 @@ EOF
 echo -e "${GREEN}  [OK] Link established in ~/.itools/config.yml${NC}"
 
 # ==============================================================================
-# FINISH & IMPORTANT WARNINGS
+# FINISH
 # ==============================================================================
-echo -e "\n${GREEN}${BOLD}======================================================${NC}"
-echo -e "${GREEN}${BOLD}        SETUP COMPLETED SUCCESSFULLY                  ${NC}"
-echo -e "${GREEN}${BOLD}======================================================${NC}"
+echo -e "\n${GREEN}${BOLD}=== PYTHON SETUP COMPLETED SUCCESSFULLY ===${NC}"
 echo -e "Next steps:"
 echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
 echo -e "2. Run Jupyter Lab:       ${YELLOW}jupyter lab${NC}"
-
