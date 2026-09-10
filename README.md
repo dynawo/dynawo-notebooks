@@ -26,9 +26,9 @@ point, and retrieving the linearized model for small-signal stability analysis.
 [`src/julia_openmodelica/`](src/julia_openmodelica/)
 
 Everything happens inside OpenModelica, driven from Julia through OMJulia. Dynawo does
-not have to be installed at all: the Dynawo Modelica library comes with this repository,
-and the Modelica Standard Library these models need, version 3.2.3, comes from
-OpenModelica.
+not have to be installed at all: the Dynawo Modelica library is downloaded by the
+installer, and the Modelica Standard Library these models need, version 3.2.3, comes
+from OpenModelica.
 
 Initialization works by building a static auxiliary version of the dynamic model,
 simulating that version until it settles, reading the resulting values, and writing
@@ -69,7 +69,7 @@ The Python notebooks run on:
 - Python 3.12, in a `.venv` environment.
 - PyPowSyBl, OMPython, JupyterLab and the other Python packages, pinned to the versions
   in this repository's release.
-- Dynawo 1.7.0, from its official release.
+- Dynawo 1.7.0, downloaded from this repository's release.
 
 The Julia notebooks run on:
 
@@ -77,7 +77,7 @@ The Julia notebooks run on:
 - OMJulia, DataFrames, CSV, Plots and IJulia.
 - The `Julia (clean) 1.10` Jupyter kernel.
 - The Modelica Standard Library 3.2.3, from the OpenModelica package manager.
-- The Dynawo Modelica library 1.8.0, which comes with this repository.
+- The Dynawo Modelica library 1.8.0, downloaded from this repository's release.
 
 ## Installation
 
@@ -87,8 +87,10 @@ cd dynawo-notebooks
 ```
 
 Then run the installer for the family you want, `./Installation/install_julia.sh` or
-`./Installation/install_python.sh`. Each one creates its own environment, `.venv-julia`
-and `.venv` respectively. Activate it and start JupyterLab:
+`./Installation/install_python.sh`. It first asks whether to use the files already in the
+current directory or to clone the repository; answer `L`, since it has just been cloned.
+Each one creates its own environment, `.venv-julia` and `.venv` respectively. Activate it
+and start JupyterLab:
 
 ```bash
 source .venv-julia/bin/activate
