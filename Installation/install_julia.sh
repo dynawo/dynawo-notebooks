@@ -219,8 +219,4 @@ echo -e "\n${GREEN}${BOLD}=== JULIA SETUP COMPLETED SUCCESSFULLY ===${NC}"
 echo -e "\n${RED}${BOLD}[IMPORTANT] OpenModelica Configuration Required:${NC}"
 echo -e "${YELLOW}Dynawo requires Modelica Standard Library (MSL) version 3.2.3.${NC}"
 echo -e "Please ensure MSL 3.2.3 and ModelicaServices 3.2.3 are loaded in OMEdit."
-
-echo -e "\nNext steps:"
-echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
-echo -e "2. Run Jupyter Lab:       ${YELLOW}jupyter lab${NC}"
 echo -e ""

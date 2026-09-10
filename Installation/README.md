@@ -21,15 +21,29 @@ or to clone the remote repository.
 
 `install_julia.sh` prepares the notebooks under `src/julia_openmodelica/`:
 
-- Checks that `omc` (OpenModelica Compiler), `wget`, `curl`, `tar`, `xz`, and `git` 
-  are available.
-- Installs Julia 1.10.0 under `~/.local/julia-1.10.0` (if not found on the system) 
-  and links it into `~/.local/bin/julia`.
+- Checks that `python3`, `omc` (OpenModelica Compiler), `wget`, `curl`, `tar`, `xz`, and 
+  `git` are available, and installs the `uv` package manager if it is missing.
+- Creates the `.venv-julia` Python environment using `uv` and installs JupyterLab in it.
+- Installs Julia 1.10.12 under `~/.local/julia-1.10.12` (if not found on the system) and 
+  links it into `~/.local/bin/julia` and into the environment.
 - Downloads the standalone Dynawo Library (`dynawo_library_1_8.tar.xz`) and extracts 
   it directly into `src/julia_openmodelica/dynawo_library`, so it is exactly where the 
   notebooks expect it to be.
+- Installs the Modelica Standard Library 3.2.3 with the OpenModelica package manager.
 - Uses Julia's package manager to install `OMJulia`, `DataFrames`, `CSV`, `Plots`, and 
-  `IJulia` (which registers the Julia kernel for Jupyter).
+  `IJulia`, and registers the `Julia (clean)` Jupyter kernel.
+
+## Running the notebooks
+
+Open them with whichever viewer you prefer. The Julia notebooks use the `Julia (clean)` 
+kernel and the Python ones the `.venv` interpreter.
+
+For JupyterLab, activate the environment first.
+
+```bash
+source .venv-julia/bin/activate    # .venv for the Python notebooks
+jupyter lab
+```
 
 ## Opening the models in OMEdit
 
