@@ -6,34 +6,40 @@ without administrator rights.
 
 ## What the installers do
 
+Both scripts start by asking whether to use the files already in the current directory
+or to clone the remote repository.
+
 `install_python.sh` prepares the notebooks under `src/python_pypowsybl/Notebooks/`:
 
-- Checks that `omc`, `python3`, a Java runtime, `git`, `curl`, `wget`, `tar` and
-  `unzip` are available, and installs `uv` if it is missing.
-- Creates the `.venv` environment on Python 3.12, installs the pinned Python packages
+- Checks that `python3`, a Java runtime, `git`, `wget`, `curl`, `tar`, and `xz` are 
+  available, and installs the `uv` package manager if it is missing.
+- Creates the `.venv` Python environment using `uv`, installs the pinned Python packages
   from this repository's release, and installs the project itself in editable mode.
-- Downloads Dynawo 1.7.0 from its official release into `~/dynawo-1.7.0`.
-- Writes `~/.itools/config.yml` pointing at it, which is how PyPowSyBl finds Dynawo.
+- Downloads the full Dynawo package (`Dynawo_Linux_1_7.tar.xz`) into `~/dynawo`.
+- Writes `~/.itools/config.yml` pointing at it, which is how PyPowSyBl finds the 
+  Dynawo simulator.
 
 `install_julia.sh` prepares the notebooks under `src/julia_openmodelica/`:
 
-- Checks that `omc`, `python3`, `git`, `curl`, `wget` and `tar` are available, and
-  installs `uv` if it is missing.
-- Creates the `.venv-julia` environment and installs JupyterLab in it.
-- Installs Julia 1.10.12 under `~/.local/julia-1.10.12` and links it into that
-  environment, so activating the environment gives you both Jupyter and Julia.
-- Installs the Modelica Standard Library 3.2.3 through the OpenModelica package
-  manager, which also brings Complex and ModelicaServices along with it.
-- Installs OMJulia, DataFrames, CSV, Plots and IJulia, and registers the
-  `Julia (clean) 1.10` Jupyter kernel that the notebooks declare.
-
-Both scripts start by asking whether to use the files already in the current directory
-or to clone the repository.
+- Checks that `omc` (OpenModelica Compiler), `wget`, `curl`, `tar`, `xz`, and `git` 
+  are available.
+- Installs Julia 1.10.0 under `~/.local/julia-1.10.0` (if not found on the system) 
+  and links it into `~/.local/bin/julia`.
+- Downloads the standalone Dynawo Library (`dynawo_library_1_8.tar.xz`) and extracts 
+  it directly into `src/julia_openmodelica/dynawo_library`, so it is exactly where the 
+  notebooks expect it to be.
+- Uses Julia's package manager to install `OMJulia`, `DataFrames`, `CSV`, `Plots`, and 
+  `IJulia` (which registers the Julia kernel for Jupyter).
 
 ## Opening the models in OMEdit
 
-The notebooks tell OpenModelica which libraries to load, so nothing has to be set up for
-them. If you open the models in OMEdit instead, it loads the newest Modelica Standard
-Library it finds, and the Dynawo library needs 3.2.3. To change that, go to
-Tools -> Options -> Libraries, uncheck "Load latest Modelica version", and select
-`Modelica 3.2.3+maint.om`.
+The notebooks tell OpenModelica which libraries to load dynamically, so nothing has to 
+be set up for them to run in the browser. 
+
+However, if you open the models in the OMEdit graphical interface instead, it loads the 
+newest Modelica Standard Library it finds by default, and the Dynawo library strictly 
+requires version **3.2.3**. 
+
+To fix this and avoid compilation errors, go to:
+**Tools -> Options -> Libraries**, uncheck "Load latest Modelica version", and ensure 
+you add/select both `Modelica` and `ModelicaServices` version `3.2.3+maint.om`.

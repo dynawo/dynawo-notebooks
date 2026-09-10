@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional
 import pandas as pd
 
 # Import OMCConnector strictly for static typing purposes.
-from dynawo_notebooks.Code.core.connector import OMCConnector
+from python_pypowsybl.Code.core.connector import OMCConnector
 
 logger = logging.getLogger("ParameterGenerator")
 

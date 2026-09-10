@@ -3,8 +3,6 @@
 # ==============================================================================
 # PYTHON & DYNAWO ENVIRONMENT SETUP
 # ==============================================================================
-# Description: Setup script for Python (uv) and full Dynawo package.
-# ==============================================================================
 
 set -e
 
@@ -12,6 +10,10 @@ set -e
 VERSION_TAG="v0.1"
 VENV_NAME=".venv"
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
+
+# Resolve project root (assumes script is inside dynawo-notebooks/Installation/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Colors
 BOLD='\033[1m'
@@ -23,6 +25,9 @@ NC='\033[0m'
 
 echo -e "${BLUE}${BOLD}>>> Starting Python & Dynawo Setup...${NC}"
 
+# Ensure we are in the project root
+cd "$PROJECT_ROOT"
+
 # ==============================================================================
 # 0. INSTALLATION MODE SELECTION
 # ==============================================================================
@@ -30,8 +35,7 @@ echo -e "\n${BLUE}[0/4] Installation Mode Selection...${NC}"
 read -p "Use existing local files (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
 
 if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
-    cd "$(dirname "$0")"
-    echo -e "  > Cloning remote repository (tag ${VERSION_TAG})..."
+    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into project root..."
     git clone --branch "$VERSION_TAG" --depth 1 https://github.com/dynawo/dynawo-notebooks.git _tmp_clone
     cp -r _tmp_clone/* . 2>/dev/null || true
     cp -r _tmp_clone/.[!.]* . 2>/dev/null || true
@@ -72,13 +76,13 @@ fi
 set +e
 EXIT_FLAG=0
 check_tool "python3" "Python 3" || EXIT_FLAG=1
-check_tool "java" "Java Runtime (Required for Powsybl)" || EXIT_FLAG=1
-check_tool "uv" "uv (Package Manager)" || EXIT_FLAG=1
+check_tool "java" "Java Runtime" || EXIT_FLAG=1
+check_tool "uv" "uv" || EXIT_FLAG=1
 check_tool "git" "Git" || EXIT_FLAG=1
 check_tool "wget" "Wget" || EXIT_FLAG=1
 check_tool "curl" "Curl" || EXIT_FLAG=1
 check_tool "tar" "Tar" || EXIT_FLAG=1
-check_tool "xz" "XZ Utils (for .tar.xz extraction)" || EXIT_FLAG=1
+check_tool "xz" "XZ Utils" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
     echo -e "\n${RED}[CRITICAL] Missing dependencies. Install them and retry.${NC}"
@@ -98,7 +102,7 @@ fi
 source "$VENV_NAME/bin/activate"
 
 if [ ! -f "uv.lock" ] || [ ! -f "pyproject.toml" ]; then
-    echo -e "${RED}  [ERROR] uv.lock or pyproject.toml not found.${NC}"
+    echo -e "${RED}  [ERROR] uv.lock or pyproject.toml not found in $PROJECT_ROOT.${NC}"
     exit 1
 fi
 
@@ -115,7 +119,8 @@ else
     uv pip install pypowsybl pyyaml jupyter jupyterlab scipy ipywidgets OMPython --quiet
 fi
 
-uv pip install --upgrade -e . --quiet
+echo -e "  Installing local project in editable mode..."
+uv pip install --upgrade -e . 
 echo -e "${GREEN}  [OK] Python project installed.${NC}"
 
 # ==============================================================================
@@ -134,16 +139,15 @@ done
 
 if [ -z "$DYNAWO_HOME" ]; then
     DYNAWO_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/Dynawo_Linux_1_7.tar.xz"
-    echo -e "  > Downloading Dynawo from: $DYNAWO_URL"
+    DYNAWO_HOME="$HOME/dynawo"
     
+    echo -e "  > Downloading Dynawo from: $DYNAWO_URL"
     curl -f -s -L -o Dynawo_Linux.tar.xz "$DYNAWO_URL" || { echo -e "${RED}  [ERROR] Download failed.${NC}"; exit 1; }
     
-    echo -e "  > Extracting Dynawo..."
-    tar -xf Dynawo_Linux.tar.xz -C "$HOME"
+    echo -e "  > Extracting Dynawo to $DYNAWO_HOME..."
+    mkdir -p "$DYNAWO_HOME"
+    tar -xf Dynawo_Linux.tar.xz -C "$DYNAWO_HOME" --strip-components=1 2>/dev/null || tar -xf Dynawo_Linux.tar.xz -C "$DYNAWO_HOME"
     rm Dynawo_Linux.tar.xz
-    
-    # Adjust depending on exactly how the tarball root folder is named
-    DYNAWO_HOME="$HOME/dynawo" 
     
     if [ -f "$DYNAWO_HOME/dynawo.sh" ] || [ -f "$DYNAWO_HOME/bin/dynawo.sh" ]; then
         echo -e "${GREEN}  [OK] Dynawo installed at $DYNAWO_HOME${NC}"
@@ -168,6 +172,3 @@ echo -e "${GREEN}  [OK] Link established in ~/.itools/config.yml${NC}"
 # FINISH
 # ==============================================================================
 echo -e "\n${GREEN}${BOLD}=== PYTHON SETUP COMPLETED SUCCESSFULLY ===${NC}"
-echo -e "Next steps:"
-echo -e "1. Activate environment:  ${YELLOW}source $VENV_NAME/bin/activate${NC}"
-echo -e "2. Run Jupyter Lab:       ${YELLOW}jupyter lab${NC}"
