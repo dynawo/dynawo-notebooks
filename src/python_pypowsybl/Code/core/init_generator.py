@@ -38,7 +38,7 @@ class ModelicaInitGenerator:
         )
         network_dump = os.path.join(init_dir, "dumpInitValues-NETWORK.txt")
         original_mo = os.path.join(source_dir, f"{model_name}.mo")
-        target_mo = os.path.join(source_dir, f"{model_name}_initialized.mo")
+        target_mo = os.path.join(init_dir, f"{model_name}_initialized.mo")
 
         if not os.path.exists(original_mo):
             logger.error(f"CRITICAL ERROR: Original Modelica file not found at {original_mo}")
