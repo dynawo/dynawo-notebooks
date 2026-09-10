@@ -7,7 +7,7 @@
 set -e
 
 # --- Configuration ---
-VERSION_TAG="v0.2"
+VERSION_TAG="v0.3"
 VENV_NAME=".venv"
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
 
@@ -63,7 +63,15 @@ check_tool() {
     else
         local ver="Detected"
         if [ "$cmd" == "java" ]; then ver=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}'); fi
-        if [ "$cmd" == "python3" ]; then ver=$(python3 --version | awk '{print $2}'); fi
+        if [ "$cmd" == "python3" ]; then 
+            ver=$(python3 --version | awk '{print $2}')
+            local major=$(echo "$ver" | cut -d. -f1)
+            local minor=$(echo "$ver" | cut -d. -f2)
+            if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 12 ]; }; then
+                echo -e "${RED}  [X] Python version $ver found, but version >= 3.12 is required.${NC}"
+                return 1
+            fi
+        fi
         if [ "$cmd" == "uv" ]; then ver=$(uv --version | awk '{print $2}'); fi
         echo -e "${GREEN}  [OK] $name found ($ver)${NC}"
         return 0
