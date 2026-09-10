@@ -3,8 +3,6 @@
 # ==============================================================================
 # JULIA & DYNAWO LIBRARY SETUP
 # ==============================================================================
-# Description: Setup script for Julia and the standalone Dynawo Library.
-# ==============================================================================
 
 set -e
 
@@ -12,10 +10,6 @@ set -e
 VERSION_TAG="v0.1"
 JULIA_VER_MAJOR="1.10"
 JULIA_VER_FULL="1.10.0"
-
-# Resolve project root (assumes script is inside dynawo-notebooks/Installation/)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Colors
 BOLD='\033[1m'
@@ -27,24 +21,32 @@ NC='\033[0m'
 
 echo -e "${BLUE}${BOLD}>>> Starting Julia & Dynawo Library Setup...${NC}"
 
-# Move to project root to ensure consistent relative paths
-cd "$PROJECT_ROOT"
-
 # ==============================================================================
-# 0. INSTALLATION MODE SELECTION
+# 0. INSTALLATION MODE & ROOT RESOLUTION
 # ==============================================================================
 echo -e "\n${BLUE}[0/4] Installation Mode Selection...${NC}"
 read -p "Use existing local files (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
 
 if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
-    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into project root..."
+    PROJECT_ROOT="$(pwd)"
+    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into current directory..."
     git clone --branch "$VERSION_TAG" --depth 1 https://github.com/dynawo/dynawo-notebooks.git _tmp_clone
     cp -r _tmp_clone/* . 2>/dev/null || true
     cp -r _tmp_clone/.[!.]* . 2>/dev/null || true
     rm -rf _tmp_clone
-    echo -e "${GREEN}  [OK] Repository extracted.${NC}"
+    echo -e "${GREEN}  [OK] Repository extracted into $PROJECT_ROOT.${NC}"
 else
-    echo -e "  > Proceeding with existing local files in project root."
+    # Auto-detect root based on pyproject.toml
+    if [ -f "pyproject.toml" ]; then
+        PROJECT_ROOT="$(pwd)"
+    elif [ -f "../pyproject.toml" ]; then
+        PROJECT_ROOT="$(cd .. && pwd)"
+    else
+        echo -e "${RED}  [ERROR] pyproject.toml not found. Run this inside the project folder.${NC}"
+        exit 1
+    fi
+    cd "$PROJECT_ROOT"
+    echo -e "  > Proceeding with existing local files in $PROJECT_ROOT."
 fi
 
 # ==============================================================================
@@ -72,7 +74,7 @@ check_tool "omc" "OpenModelica Compiler" || EXIT_FLAG=1
 check_tool "wget" "Wget" || EXIT_FLAG=1
 check_tool "curl" "Curl" || EXIT_FLAG=1
 check_tool "tar" "Tar" || EXIT_FLAG=1
-check_tool "xz" "XZ Utils (for .tar.xz extraction)" || EXIT_FLAG=1
+check_tool "xz" "XZ Utils" || EXIT_FLAG=1
 check_tool "git" "Git" || EXIT_FLAG=1
 
 if [ $EXIT_FLAG -eq 1 ]; then
@@ -124,7 +126,6 @@ curl -f -s -L -o dynawo_lib.tar.xz "$DYNAWO_LIB_URL" || { echo -e "${RED}  [ERRO
 echo -e "  > Extracting Library to: src/julia_openmodelica/dynawo_library"
 mkdir -p "$LIB_DEST"
 
-# Strip the first directory component of the tarball to dump files directly into our folder
 tar -xf dynawo_lib.tar.xz -C "$LIB_DEST" --strip-components=1 2>/dev/null || tar -xf dynawo_lib.tar.xz -C "$LIB_DEST"
 rm dynawo_lib.tar.xz
 
@@ -159,11 +160,5 @@ echo -e "\n${GREEN}${BOLD}=== JULIA SETUP COMPLETED SUCCESSFULLY ===${NC}"
 
 echo -e "\n${RED}${BOLD}[IMPORTANT] OpenModelica Configuration Required:${NC}"
 echo -e "${YELLOW}Dynawo requires Modelica Standard Library (MSL) version 3.2.3.${NC}"
-echo -e "Recent OpenModelica versions default to MSL 4.0.0."
-echo -e "Please do the following manually if you use OMEdit:"
-echo -e "  1. Open OMEdit."
-echo -e "  2. Go to ${BOLD}Tools -> Options -> Libraries${NC}."
-echo -e "  3. Uncheck 'Load latest Modelica version'."
-echo -e "  4. Add/Select 'Modelica' version ${BOLD}3.2.3+maint.om${NC}."
-echo -e "  5. Add/Select 'ModelicaServices' version ${BOLD}3.2.3+maint.om${NC}."
+echo -e "Please ensure MSL 3.2.3 and ModelicaServices 3.2.3 are loaded in OMEdit."
 echo -e ""

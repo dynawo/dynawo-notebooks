@@ -11,10 +11,6 @@ VERSION_TAG="v0.1"
 VENV_NAME=".venv"
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
 
-# Resolve project root (assumes script is inside dynawo-notebooks/Installation/)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
 # Colors
 BOLD='\033[1m'
 GREEN='\033[0;32m'
@@ -25,24 +21,32 @@ NC='\033[0m'
 
 echo -e "${BLUE}${BOLD}>>> Starting Python & Dynawo Setup...${NC}"
 
-# Ensure we are in the project root
-cd "$PROJECT_ROOT"
-
 # ==============================================================================
-# 0. INSTALLATION MODE SELECTION
+# 0. INSTALLATION MODE & ROOT RESOLUTION
 # ==============================================================================
 echo -e "\n${BLUE}[0/4] Installation Mode Selection...${NC}"
 read -p "Use existing local files (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
 
 if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
-    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into project root..."
+    PROJECT_ROOT="$(pwd)"
+    echo -e "  > Cloning remote repository (tag ${VERSION_TAG}) into current directory..."
     git clone --branch "$VERSION_TAG" --depth 1 https://github.com/dynawo/dynawo-notebooks.git _tmp_clone
     cp -r _tmp_clone/* . 2>/dev/null || true
     cp -r _tmp_clone/.[!.]* . 2>/dev/null || true
     rm -rf _tmp_clone
-    echo -e "${GREEN}  [OK] Repository extracted.${NC}"
+    echo -e "${GREEN}  [OK] Repository extracted into $PROJECT_ROOT.${NC}"
 else
-    echo -e "  > Proceeding with existing local files."
+    # Auto-detect root based on pyproject.toml
+    if [ -f "pyproject.toml" ]; then
+        PROJECT_ROOT="$(pwd)"
+    elif [ -f "../pyproject.toml" ]; then
+        PROJECT_ROOT="$(cd .. && pwd)"
+    else
+        echo -e "${RED}  [ERROR] pyproject.toml not found. Run this inside the project folder.${NC}"
+        exit 1
+    fi
+    cd "$PROJECT_ROOT"
+    echo -e "  > Proceeding with existing local files in $PROJECT_ROOT."
 fi
 
 # ==============================================================================
