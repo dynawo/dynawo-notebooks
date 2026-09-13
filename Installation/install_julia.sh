@@ -8,8 +8,10 @@ set -e
 
 # --- Configuration ---
 VERSION_TAG="v0.3"
-JULIA_VER_MAJOR="1.10"
-JULIA_VER_FULL="1.10.0"
+VENV_NAME=".venv-julia"
+JULIA_VER_FULL="1.10.12"
+JULIA_VER_MAJOR="${JULIA_VER_FULL%.*}"
+MSL_VER="3.2.3"                           # The Modelica Standard Library the models use
 
 # Colors
 BOLD='\033[1m'
@@ -24,7 +26,7 @@ echo -e "${BLUE}${BOLD}>>> Starting Julia & Dynawo Library Setup...${NC}"
 # ==============================================================================
 # 0. INSTALLATION MODE & ROOT RESOLUTION
 # ==============================================================================
-echo -e "\n${BLUE}[0/4] Installation Mode Selection...${NC}"
+echo -e "\n${BLUE}[0/5] Installation Mode Selection...${NC}"
 read -p "Use existing local files (L) or clone the remote repository (R)? [L/R]: " INSTALL_CHOICE
 
 if [[ "$INSTALL_CHOICE" == "R" || "$INSTALL_CHOICE" == "r" ]]; then
@@ -52,7 +54,7 @@ fi
 # ==============================================================================
 # 1. PRE-FLIGHT CHECKS
 # ==============================================================================
-echo -e "\n${BLUE}[1/4] Validating Dependencies...${NC}"
+echo -e "\n${BLUE}[1/5] Validating Dependencies...${NC}"
 
 check_tool() {
     local cmd=$1
@@ -63,13 +65,24 @@ check_tool() {
     else
         local ver="Detected"
         if [ "$cmd" == "omc" ]; then ver=$(omc --version | head -n 1); fi
+        if [ "$cmd" == "python3" ]; then ver=$(python3 --version | awk '{print $2}'); fi
+        if [ "$cmd" == "uv" ]; then ver=$(uv --version | awk '{print $2}'); fi
         echo -e "${GREEN}  [OK] $name found ($ver)${NC}"
         return 0
     fi
 }
 
+# Auto-install uv
+if ! command -v uv &> /dev/null; then
+    echo -e "${YELLOW}  [!] 'uv' not found. Installing...${NC}"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source "$HOME/.cargo/env" 2>/dev/null || source "$HOME/.local/bin/env" 2>/dev/null || true
+fi
+
 set +e
 EXIT_FLAG=0
+check_tool "python3" "Python 3" || EXIT_FLAG=1
+check_tool "uv" "uv" || EXIT_FLAG=1
 check_tool "omc" "OpenModelica Compiler" || EXIT_FLAG=1
 check_tool "wget" "Wget" || EXIT_FLAG=1
 check_tool "curl" "Curl" || EXIT_FLAG=1
@@ -84,9 +97,18 @@ fi
 set -e
 
 # ==============================================================================
-# 2. JULIA DETECTION OR INSTALLATION
+# 2. JUPYTER ENVIRONMENT & JULIA
 # ==============================================================================
-echo -e "\n${BLUE}[2/4] Checking Julia Environment...${NC}"
+echo -e "\n${BLUE}[2/5] Setting up the Jupyter Environment and Julia...${NC}"
+
+if [ ! -d "$VENV_NAME" ]; then
+    echo -e "  Creating venv: $VENV_NAME..."
+    uv venv "$VENV_NAME" --seed
+fi
+source "$VENV_NAME/bin/activate"
+
+echo -e "  Installing JupyterLab..."
+uv pip install jupyterlab --quiet
 
 JULIA_CMD="julia"
 if command -v julia &> /dev/null; then
@@ -105,17 +127,18 @@ else
         rm julia_tmp.tar.gz
     fi
     
-    # Expose Julia to the user's local bin
+    # Expose Julia to the user's local bin and to the virtual environment
     mkdir -p "$HOME/.local/bin"
     ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$HOME/.local/bin/julia"
-    JULIA_CMD="$HOME/.local/bin/julia"
-    echo -e "${GREEN}  [OK] Julia installed. Ensure ~/.local/bin is in your PATH.${NC}"
+    ln -sf "$JULIA_INSTALL_DIR/bin/julia" "$VENV_NAME/bin/julia"
+    JULIA_CMD="$VENV_NAME/bin/julia"
+    echo -e "${GREEN}  [OK] Julia installed and linked into the venv.${NC}"
 fi
 
 # ==============================================================================
 # 3. DOWNLOAD & EXTRACT DYNAWO LIBRARY
 # ==============================================================================
-echo -e "\n${BLUE}[3/4] Fetching Dynawo Library...${NC}"
+echo -e "\n${BLUE}[3/5] Fetching Dynawo Library...${NC}"
 
 DYNAWO_LIB_URL="https://github.com/dynawo/dynawo-notebooks/releases/download/$VERSION_TAG/dynawo_library_1_8.tar.xz"
 LIB_DEST="$PROJECT_ROOT/src/julia_openmodelica/dynawo_library"
@@ -132,9 +155,41 @@ rm dynawo_lib.tar.xz
 echo -e "${GREEN}  [OK] Dynawo Library extracted successfully.${NC}"
 
 # ==============================================================================
-# 4. JULIA PACKAGES SETUP
+# 4. MODELICA STANDARD LIBRARY
 # ==============================================================================
-echo -e "\n${BLUE}[4/4] Setting up Julia Packages...${NC}"
+echo -e "\n${BLUE}[4/5] Installing the Modelica Standard Library ${MSL_VER}...${NC}"
+
+MSL_DIR="$HOME/.openmodelica/libraries/Modelica ${MSL_VER}+maint.om"
+
+if [ -d "$MSL_DIR" ]; then
+    echo -e "${GREEN}  [OK] Found existing install at $MSL_DIR${NC}"
+else
+    echo -e "  > Fetching it with the OpenModelica package manager..."
+    echo -e "  > Complex and ModelicaServices come along with it as dependencies."
+    MOS_FILE=$(mktemp --suffix=.mos)
+    cat > "$MOS_FILE" <<EOF
+updatePackageIndex();
+installPackage(Modelica, "${MSL_VER}", exactMatch=false);
+getErrorString();
+EOF
+    omc "$MOS_FILE" > /dev/null
+    rm -f "$MOS_FILE"
+
+    # installPackage reports success even when it installs nothing, so check the directory
+    if [ -d "$MSL_DIR" ]; then
+        echo -e "${GREEN}  [OK] Modelica ${MSL_VER} installed.${NC}"
+    else
+        echo -e "${RED}  [ERROR] Modelica ${MSL_VER} was not installed. The notebooks look for it${NC}"
+        echo -e "${RED}          at '$MSL_DIR'.${NC}"
+        exit 1
+    fi
+fi
+
+# ==============================================================================
+# 5. JULIA PACKAGES SETUP
+# ==============================================================================
+echo -e "\n${BLUE}[5/5] Setting up Julia Packages...${NC}"
+echo -e "  (Using: $JULIA_CMD)"
 
 $JULIA_CMD -e '
 using Pkg
@@ -146,11 +201,14 @@ try
         println("  > Checking/Adding package: ", pkg)
         Pkg.add(pkg)
     end
-    println("  > Julia setup successful.")
 catch e
     println("  > Error in Julia setup: ", e)
     exit(1)
 end
+using IJulia
+println("  > Registering Jupyter kernel: Julia (clean)")
+IJulia.installkernel("Julia (clean)", env=Dict("LD_LIBRARY_PATH" => ""))
+println("  > Julia setup successful.")
 '
 
 # ==============================================================================
