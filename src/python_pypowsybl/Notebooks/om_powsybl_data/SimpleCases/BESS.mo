@@ -139,11 +139,11 @@ model BESS "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on i
   Modelica.Blocks.Sources.Constant const(k = 0) "External PCC active/reactive power (unused when PPCLocal = true)";
   Modelica.ComplexBlocks.Sources.ComplexConstant complexConst(k = Complex(1, 0)) "External PCC voltage (unused when PPCLocal = true)";
 equation
-  line.switchOffSignal1 = false;
-  line.switchOffSignal2 = false;
-  BESS.injector.switchOffSignal1 = false;
-  BESS.injector.switchOffSignal2 = false;
-  BESS.injector.switchOffSignal3 = false;
+  line.switchOffSignal1.value = false;
+  line.switchOffSignal2.value = false;
+  BESS.injector.switchOffSignal1.value = false;
+  BESS.injector.switchOffSignal2.value = false;
+  BESS.injector.switchOffSignal3.value = false;
 
   connect(const.y, BESS.PPccPu);
   connect(const.y, BESS.QPccPu);
