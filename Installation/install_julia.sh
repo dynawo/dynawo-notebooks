@@ -7,7 +7,7 @@
 set -e
 
 # --- Configuration ---
-VERSION_TAG="v0.3"
+VERSION_TAG="v0.9"
 VENV_NAME=".venv-julia"
 JULIA_VER_FULL="1.10.12"
 JULIA_VER_MAJOR="${JULIA_VER_FULL%.*}"

@@ -11,7 +11,7 @@ or to clone the remote repository.
 
 `install_python.sh` prepares the notebooks under `src/python_pypowsybl/Notebooks/`:
 
-- Checks that `python3`, a Java runtime, `git`, `wget`, `curl`, `tar`, and `xz` are 
+- Checks that `python3` (version >= 3.12), a Java runtime, `git`, `wget`, `curl`, `tar`, and `xz` are 
   available, and installs the `uv` package manager if it is missing.
 - Creates the `.venv` Python environment using `uv`, installs the pinned Python packages
   from this repository's release, and installs the project itself in editable mode.
