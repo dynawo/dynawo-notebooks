@@ -6,7 +6,7 @@ import re
 
 from .auxiliary_cleanup import collect_cleanup_component_names
 from .auxiliary_patch import clean_aux_equations, rewrite_aux_extends
-from .openmodelica import get_all_components, omc_call
+from .openmodelica import get_all_components, omc_call, send_expression
 
 
 _STRING_ESCAPES = {"\\": "\\", '"': '"', "n": "\n", "t": "\t", "r": "\r", "'": "'"}
@@ -144,3 +144,33 @@ def save_auxiliary_package_classes(omc, chain, aux_name_map, aux_dir, patch_comp
             f.write(text)
             if not text.endswith("\n"):
                 f.write("\n")
+
+
+def simulation_flags_without_log_stats(omc, model):
+    """
+    Return the model's `__OpenModelica_simulationFlags` annotation as a runtime
+    `simflags` string, excluding `lv`.
+    """
+    flag_names = send_expression(
+        omc, f'getAnnotationNamedModifiers({model}, "__OpenModelica_simulationFlags")'
+    )
+
+    if flag_names is None:
+        return ""
+
+    simflag_parts = []
+    for flag_name in flag_names:
+        if flag_name == "lv":
+            continue
+
+        flag_value = send_expression(
+            omc,
+            f'getAnnotationModifierValue({model}, "__OpenModelica_simulationFlags", "{flag_name}")',
+        )
+
+        if flag_value == "()":
+            simflag_parts.append(f"-{flag_name}")
+        else:
+            simflag_parts.append(f"-{flag_name}={flag_value}")
+
+    return " ".join(simflag_parts)
