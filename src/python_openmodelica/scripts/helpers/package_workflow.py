@@ -6,6 +6,7 @@ import re
 
 from .auxiliary_cleanup import collect_cleanup_component_names
 from .auxiliary_patch import clean_aux_equations, rewrite_aux_extends
+from .initialized_model import rewrite_initialized_extends
 from .openmodelica import get_all_components, omc_call, send_expression
 
 
@@ -79,6 +80,10 @@ def auxiliary_name_map(chain, aux_package):
     return package_name_map(chain, aux_package, "_auxiliary")
 
 
+def initialized_name_map(chain, initialized_package):
+    return package_name_map(chain, initialized_package, "_initialized")
+
+
 def package_class_names(chain, name_map):
     return [name_map[model].split(".")[-1] for model in chain]
 
@@ -141,6 +146,27 @@ def save_auxiliary_package_classes(omc, chain, aux_name_map, aux_dir, patch_comp
         text = rewrite_aux_extends(text, aux_name_map)
 
         with open(aux_file, "w") as f:
+            f.write(text)
+            if not text.endswith("\n"):
+                f.write("\n")
+
+
+def save_initialized_package_classes(omc, chain, initialized_name_map, initialized_dir):
+    """
+    Save generated initialized classes and rewrite inherited parents to initialized
+    parents.
+    """
+    os.makedirs(initialized_dir, exist_ok=True)
+
+    for model in chain:
+        initialized_model = initialized_name_map[model]
+        initialized_name = initialized_model.split(".")[-1]
+        initialized_file = os.path.join(initialized_dir, initialized_name + ".mo")
+
+        text = _list_file_text(omc, initialized_model)
+        text = rewrite_initialized_extends(text, initialized_name_map)
+
+        with open(initialized_file, "w") as f:
             f.write(text)
             if not text.endswith("\n"):
                 f.write("\n")

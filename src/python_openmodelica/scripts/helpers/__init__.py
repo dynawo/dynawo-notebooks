@@ -27,9 +27,11 @@ from .initialized_model import apply_initialization_modifiers
 from .package_workflow import (
     auxiliary_name_map,
     collect_package_component_contexts,
+    initialized_name_map,
     package_class_names,
     package_workflow_paths,
     save_auxiliary_package_classes,
+    save_initialized_package_classes,
     simulation_flags_without_log_stats,
     write_package_files,
 )
@@ -54,6 +56,8 @@ __all__ = [
     "write_package_files",
     "collect_package_component_contexts",
     "save_auxiliary_package_classes",
+    "initialized_name_map",
+    "save_initialized_package_classes",
     "simulation_flags_without_log_stats",
     "get_initializable_components",
     "extract_all_initialization_values",
