@@ -19,6 +19,14 @@ from .user_configuration import (
     check_user_configuration_package,
     check_user_configuration_single,
 )
+from .package_workflow import (
+    auxiliary_name_map,
+    collect_package_component_contexts,
+    package_class_names,
+    package_workflow_paths,
+    save_auxiliary_package_classes,
+    write_package_files,
+)
 
 __all__ = [
     "omc_call",
@@ -34,4 +42,10 @@ __all__ = [
     "clean_aux_equations",
     "check_user_configuration_single",
     "check_user_configuration_package",
+    "package_workflow_paths",
+    "auxiliary_name_map",
+    "package_class_names",
+    "write_package_files",
+    "collect_package_component_contexts",
+    "save_auxiliary_package_classes",
 ]
