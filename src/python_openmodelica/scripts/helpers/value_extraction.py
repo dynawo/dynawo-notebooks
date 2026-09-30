@@ -4,6 +4,7 @@
 import math
 
 from ..dictionaries import INIT_PARAMS
+from .openmodelica import send_expression
 
 INERTIAL_GRID_CLASS = "Dynawo.Electrical.Sources.InertialGrid.InertialGrid"
 
@@ -58,22 +59,21 @@ def get_initializable_components(components, init_model_by_component=None):
     return initializable
 
 
-def _read_result_value(aux_system, full_name):
+def _read_result_value(session, result_file, stop_time, full_name):
     """
-    Read the final simulated value of `full_name` from the auxiliary result file.
+    Read the value of `full_name` in `result_file` at `stop_time`.
     """
-    values = aux_system.getSolutions(full_name)
-    series = values[0]
-    if len(series) == 0:
-        raise RuntimeError(f"No values found in the auxiliary simulation result for {full_name}")
-    return float(series[-1])
+    raw = send_expression(session, f'val({full_name}, {stop_time!r}, "{result_file}")')
+    if raw is None or str(raw).strip() == "":
+        raise RuntimeError(f"No value found in the auxiliary simulation result for {full_name}")
+    return float(raw)
 
 
-def _extract_inertial_grid_values(aux_system, component):
-    vre = _read_result_value(aux_system, component + ".terminal.V.re")
-    vim = _read_result_value(aux_system, component + ".terminal.V.im")
-    ire = _read_result_value(aux_system, component + ".terminal.i.re")
-    iim = _read_result_value(aux_system, component + ".terminal.i.im")
+def _extract_inertial_grid_values(session, result_file, stop_time, component):
+    vre = _read_result_value(session, result_file, stop_time, component + ".terminal.V.re")
+    vim = _read_result_value(session, result_file, stop_time, component + ".terminal.V.im")
+    ire = _read_result_value(session, result_file, stop_time, component + ".terminal.i.re")
+    iim = _read_result_value(session, result_file, stop_time, component + ".terminal.i.im")
 
     return {
         "P0Pu": -(vre * ire + vim * iim),
@@ -81,21 +81,6 @@ def _extract_inertial_grid_values(aux_system, component):
         "U0Pu": math.sqrt(vre ** 2 + vim ** 2),
         "UPhase0": math.atan2(vim, vre),
     }
-
-
-def extract_component_initialization_values(aux_system, component, param_pairs):
-    """
-    Extract values for one dynamic component from its `<component>_INIT` block in
-    the auxiliary simulation results.
-    """
-    init_component = component + "_INIT"
-    values = {}
-
-    for init_var, dynamic_var in param_pairs:
-        full_name = init_component + "." + init_var
-        values[dynamic_var] = _read_result_value(aux_system, full_name)
-
-    return values
 
 
 def extract_all_initialization_values(aux_system, components, init_model_by_component=None):
@@ -106,18 +91,27 @@ def extract_all_initialization_values(aux_system, components, init_model_by_comp
     if init_model_by_component is None:
         init_model_by_component = {}
 
+    session = aux_system.get_session()
+    result_file = aux_system._result_file
+    stop_time = float(aux_system.getSimulationOptions()["stopTime"])
+
     values_by_component = {}
 
     for component, info in components.items():
         if info["class"] == INERTIAL_GRID_CLASS:
-            values_by_component[component] = _extract_inertial_grid_values(aux_system, component)
+            values_by_component[component] = _extract_inertial_grid_values(
+                session, result_file, stop_time, component
+            )
             continue
 
         param_pairs = _resolve_init_params(component, info["class"], init_model_by_component)
         if param_pairs is None:
             continue
-        values_by_component[component] = extract_component_initialization_values(
-            aux_system, component, param_pairs
-        )
+
+        values = {}
+        for init_var, dynamic_var in param_pairs:
+            full_name = component + "_INIT." + init_var
+            values[dynamic_var] = _read_result_value(session, result_file, stop_time, full_name)
+        values_by_component[component] = values
 
     return values_by_component
