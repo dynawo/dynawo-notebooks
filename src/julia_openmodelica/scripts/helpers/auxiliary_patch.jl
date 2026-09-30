@@ -119,18 +119,8 @@ end
 # Equation Readers
 # ------------------------------------------------------------
 
-function _equation_items(omc, aux_model::String)
-    items = String[]
-    n = sendExpression(omc, "getEquationItemsCount($aux_model)")
-    for i in 1:n
-        eq = String(sendExpression(omc, "getNthEquationItem($aux_model, $i)", parsed = false))
-        push!(items, String(strip(replace(eq, "\"" => ""))))
-    end
-    return items
-end
-
 function _all_equation_items(omc, aux_model::String)
-    items = _equation_items(omc, aux_model)
+    items = get_equation_items(omc, aux_model)
     n = sendExpression(omc, "getInitialEquationItemsCount($aux_model)")
     for i in 1:n
         eq = String(sendExpression(omc, "getNthInitialEquationItem($aux_model, $i)", parsed = false))
@@ -144,7 +134,7 @@ end
 # ------------------------------------------------------------
 
 function _patch_switch_off_signals!(omc, aux_model::String, slack_component::String)
-    for eq in _equation_items(omc, aux_model)
+    for eq in get_equation_items(omc, aux_model)
         m = match(r"^([A-Za-z_]\w*)\.(injector|injectorURI|wT4Injector)\.(switchOffSignal[123])\s*=\s*false\s*;?$", eq)
         m === nothing && continue
 
@@ -159,7 +149,7 @@ function _patch_switch_off_signals!(omc, aux_model::String, slack_component::Str
 end
 
 function _patch_time_switch_events!(omc, aux_model::String)
-    for eq in _equation_items(omc, aux_model)
+    for eq in get_equation_items(omc, aux_model)
         m = match(r"^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.(switchOffSignal[123])\s*=\s*[^;]*\btime\b[^;]*;?$", eq)
         m === nothing && continue
 
@@ -168,7 +158,7 @@ function _patch_time_switch_events!(omc, aux_model::String)
 end
 
 function _remove_when_blocks!(omc, aux_model::String)
-    for eq in _equation_items(omc, aux_model)
+    for eq in get_equation_items(omc, aux_model)
         occursin(r"^when\b", eq) || continue
 
         omc_call(omc, "deleteEquation($aux_model, \"$(replace(eq, "\n" => "\\n"))\")")
@@ -192,7 +182,7 @@ function _patch_step_setpoint!(omc, aux_model::String, components)
         push!(load_names, comp_name)
     end
 
-    eqs = _equation_items(omc, aux_model)
+    eqs = get_equation_items(omc, aux_model)
 
     # Detect Step-driven load reference equations.
     targets = Set{Tuple{String, String, String, String}}()
