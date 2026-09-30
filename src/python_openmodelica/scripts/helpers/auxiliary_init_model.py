@@ -221,7 +221,6 @@ def apply_LF_modifiers(omc, model, aux_model, components):
         base_class = component["class"]
         if base_class.startswith("Dynawo.Electrical.Loads."):
             apply_load_LF_modifiers(omc, model, aux_model, aux_components, base_comp, equations)
-            aux_components = get_all_components(omc, aux_model)
             continue
 
         if base_class not in INIT_MODELS:
