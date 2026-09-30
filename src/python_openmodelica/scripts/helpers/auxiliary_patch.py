@@ -4,7 +4,7 @@
 import re
 
 from ..dictionaries import AUX_ALLOWED_REFS, REPLACEMENTS
-from .openmodelica import omc_call
+from .openmodelica import get_equation_items, omc_call
 
 # ------------------------------------------------------------
 # Regex Helper
@@ -132,17 +132,8 @@ def _simple_local_refs(statement):
 # ------------------------------------------------------------
 
 
-def _equation_items(omc, aux_model):
-    items = []
-    n = omc_call(omc, f"getEquationItemsCount({aux_model})")
-    for i in range(1, n + 1):
-        eq = omc_call(omc, f"getNthEquationItem({aux_model}, {i})", parsed=False)
-        items.append(eq.replace('"', "").strip())
-    return items
-
-
 def _all_equation_items(omc, aux_model):
-    items = _equation_items(omc, aux_model)
+    items = get_equation_items(omc, aux_model)
     n = omc_call(omc, f"getInitialEquationItemsCount({aux_model})")
     for i in range(1, n + 1):
         eq = omc_call(omc, f"getNthInitialEquationItem({aux_model}, {i})", parsed=False)
@@ -156,7 +147,7 @@ def _all_equation_items(omc, aux_model):
 
 
 def _patch_switch_off_signals(omc, aux_model, slack_component):
-    for eq in _equation_items(omc, aux_model):
+    for eq in get_equation_items(omc, aux_model):
         m = re.match(
             r"^([A-Za-z_]\w*)\.(injector|injectorURI|wT4Injector)\.(switchOffSignal[123])\s*=\s*false\s*;?$",
             eq,
@@ -176,7 +167,7 @@ def _patch_switch_off_signals(omc, aux_model, slack_component):
 
 
 def _patch_time_switch_events(omc, aux_model):
-    for eq in _equation_items(omc, aux_model):
+    for eq in get_equation_items(omc, aux_model):
         m = re.match(
             r"^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\.(switchOffSignal[123])\s*=\s*[^;]*\btime\b[^;]*;?$",
             eq,
@@ -191,7 +182,7 @@ def _patch_time_switch_events(omc, aux_model):
 
 
 def _remove_when_blocks(omc, aux_model):
-    for eq in _equation_items(omc, aux_model):
+    for eq in get_equation_items(omc, aux_model):
         if not re.match(r"^when\b", eq):
             continue
 
@@ -217,7 +208,7 @@ def _patch_step_setpoint(omc, aux_model, components):
             continue
         load_names.add(comp_name)
 
-    eqs = _equation_items(omc, aux_model)
+    eqs = get_equation_items(omc, aux_model)
 
     # Detect Step-driven load reference equations.
     targets = set()

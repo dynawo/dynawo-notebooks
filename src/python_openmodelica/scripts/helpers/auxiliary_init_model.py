@@ -12,6 +12,7 @@ from .auxiliary_replacements import (
 from .openmodelica import (
     get_all_components,
     get_comp_param_value,
+    get_equation_items,
     omc_call,
     resolve_load_ref_value,
 )
@@ -49,7 +50,7 @@ def _resolve_init_spec(base_comp, base_class, init_model_by_component):
     return class_spec
 
 
-def _load_init_mode(omc, model, components, comp_name, base_class):
+def _load_init_mode(omc, model, components, comp_name, base_class, equations):
     """
     For load components, decide whether to use P/Q reference initialization or
     already-present complex initial values. Non-load components return `"not_load"`.
@@ -65,8 +66,8 @@ def _load_init_mode(omc, model, components, comp_name, base_class):
         and "i0Pu" in raw_mods
     )
 
-    p_ref = resolve_load_ref_value(omc, model, comp_name, "PRefPu").strip()
-    q_ref = resolve_load_ref_value(omc, model, comp_name, "QRefPu").strip()
+    p_ref = resolve_load_ref_value(omc, model, comp_name, "PRefPu", equations).strip()
+    q_ref = resolve_load_ref_value(omc, model, comp_name, "QRefPu", equations).strip()
     has_pq_init = bool(p_ref) and bool(q_ref)
 
     if has_pq_init:
@@ -113,13 +114,13 @@ def _apply_component_modifiers(omc, aux_model, aux_components, base_comp, replac
     )
 
 
-def apply_load_LF_modifiers(omc, model, aux_model, aux_components, base_comp):
+def apply_load_LF_modifiers(omc, model, aux_model, aux_components, base_comp, equations):
     """
     Set free complex load initialization variables using the P/Q references of a
     load component.
     """
-    p_ref = resolve_load_ref_value(omc, model, base_comp, "PRefPu").strip()
-    q_ref = resolve_load_ref_value(omc, model, base_comp, "QRefPu").strip()
+    p_ref = resolve_load_ref_value(omc, model, base_comp, "PRefPu", equations).strip()
+    q_ref = resolve_load_ref_value(omc, model, base_comp, "QRefPu", equations).strip()
 
     if not p_ref:
         raise RuntimeError(f"Could not resolve PRefPu for load {model}.{base_comp}")
@@ -146,13 +147,15 @@ def add_init_models(omc, model, aux_model, components, init_model_by_component, 
     """
     Add the INIT companion components required to simulate `aux_model`.
     """
+    equations = get_equation_items(omc, model)
+
     for base_comp, component in components.items():
         base_class = component["class"]
         spec = _resolve_init_spec(base_comp, base_class, init_model_by_component)
         if spec is None:
             continue
 
-        load_mode = _load_init_mode(omc, model, components, base_comp, base_class)
+        load_mode = _load_init_mode(omc, model, components, base_comp, base_class, equations)
         if load_mode == "direct_complex":
             continue
 
@@ -175,7 +178,7 @@ def add_init_models(omc, model, aux_model, components, init_model_by_component, 
                 continue
 
             if load_mode == "pq_init" and (base_param == "PRefPu" or base_param == "QRefPu"):
-                value = resolve_load_ref_value(omc, model, base_comp, base_param)
+                value = resolve_load_ref_value(omc, model, base_comp, base_param, equations)
             else:
                 value = str(get_comp_param_value(omc, model, components, base_comp, base_param))
 
@@ -211,12 +214,13 @@ def apply_LF_modifiers(omc, model, aux_model, components):
     Apply optional load-flow modifiers to components in the auxiliary model,
     preserving changes already made during replacement.
     """
+    equations = get_equation_items(omc, model)
     aux_components = get_all_components(omc, aux_model)
 
     for base_comp, component in components.items():
         base_class = component["class"]
         if base_class.startswith("Dynawo.Electrical.Loads."):
-            apply_load_LF_modifiers(omc, model, aux_model, aux_components, base_comp)
+            apply_load_LF_modifiers(omc, model, aux_model, aux_components, base_comp, equations)
             aux_components = get_all_components(omc, aux_model)
             continue
 
@@ -226,7 +230,7 @@ def apply_LF_modifiers(omc, model, aux_model, components):
         if "LF_modifiers_raw" not in spec:
             continue
 
-        load_mode = _load_init_mode(omc, model, components, base_comp, base_class)
+        load_mode = _load_init_mode(omc, model, components, base_comp, base_class, equations)
         if load_mode == "direct_complex":
             continue
 
@@ -247,6 +251,7 @@ def add_init_equations(omc, model, aux_model, components, init_model_by_componen
     Build and inject the initial equations that connect each INIT companion
     component to its dynamic component.
     """
+    equations = get_equation_items(omc, model)
     eqs = []
 
     for base_name, component in components.items():
@@ -255,7 +260,7 @@ def add_init_equations(omc, model, aux_model, components, init_model_by_componen
         if spec is None:
             continue
 
-        load_mode = _load_init_mode(omc, model, components, base_name, base_class)
+        load_mode = _load_init_mode(omc, model, components, base_name, base_class, equations)
         if load_mode == "direct_complex":
             continue
 

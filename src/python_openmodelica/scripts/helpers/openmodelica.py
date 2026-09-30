@@ -51,7 +51,19 @@ def omc_call(omc, expression, parsed=True):
 # ------------------------------------------------------------
 
 
-def resolve_load_ref_value(omc, model, comp, field):
+def get_equation_items(omc, model):
+    """
+    Return the equations of `model`.
+    """
+    items = []
+    n = omc_call(omc, f"getEquationItemsCount({model})")
+    for i in range(1, n + 1):
+        eq = omc_call(omc, f"getNthEquationItem({model}, {i})", parsed=False)
+        items.append(eq.replace('"', "").strip())
+    return items
+
+
+def resolve_load_ref_value(omc, model, comp, field, equations):
     """
     For loads: get numeric value assigned via plain equations like
     loadPQ1.PRefPu = PrefPu_load_01.setPoint;
@@ -62,11 +74,7 @@ def resolve_load_ref_value(omc, model, comp, field):
     Returns `""` when no matching equation is found.
     """
     target = f"{comp}.{field}"
-    neq = omc_call(omc, f"getEquationItemsCount({model})")
-    for i in range(1, neq + 1):
-        eqi = omc_call(omc, f"getNthEquationItem({model}, {i})", parsed=False)
-        eqi = eqi.replace('"', "").strip()
-
+    for eqi in equations:
         if eqi.startswith("when "):
             continue
         if "der(" in eqi:
