@@ -59,20 +59,17 @@ end
 
 Read the final simulated value of `full_name` from the auxiliary result file.
 """
-function _read_result_value(aux_session, full_name::AbstractString)
-    isempty(aux_session.resultfile) &&
-        error("Auxiliary session has no result file. Run simulate(...) before extracting initialization values.")
-    values = getSolutions(aux_session, String(full_name))
-    series = values[1]
-    isempty(series) && error("No values found in $(aux_session.resultfile) for $(full_name)")
-    return Float64(series[end])
+function _read_result_value(session, result_file, stop_time, full_name::AbstractString)
+    value = sendExpression(session, "val($full_name, $stop_time, \"$result_file\")")
+    value isa Real || error("No value found in $(result_file) for $(full_name)")
+    return Float64(value)
 end
 
-function _extract_inertial_grid_values(aux_session, component::AbstractString)
-    vre = _read_result_value(aux_session, component * ".terminal.V.re")
-    vim = _read_result_value(aux_session, component * ".terminal.V.im")
-    ire = _read_result_value(aux_session, component * ".terminal.i.re")
-    iim = _read_result_value(aux_session, component * ".terminal.i.im")
+function _extract_inertial_grid_values(session, result_file, stop_time, component::AbstractString)
+    vre = _read_result_value(session, result_file, stop_time, component * ".terminal.V.re")
+    vim = _read_result_value(session, result_file, stop_time, component * ".terminal.V.im")
+    ire = _read_result_value(session, result_file, stop_time, component * ".terminal.i.re")
+    iim = _read_result_value(session, result_file, stop_time, component * ".terminal.i.im")
 
     return Dict{String, Float64}(
         "P0Pu" => -(vre * ire + vim * iim),
@@ -83,41 +80,36 @@ function _extract_inertial_grid_values(aux_session, component::AbstractString)
 end
 
 """
-    extract_component_initialization_values(aux_session, component, param_pairs) -> Dict{String, Float64}
-
-Extract values for one dynamic component from its `<component>_INIT` block in
-the auxiliary simulation results.
-"""
-function extract_component_initialization_values(aux_session, component, param_pairs)
-    init_component = component * "_INIT"
-    values = Dict{String, Float64}()
-
-    for (init_var, dynamic_var) in param_pairs
-        full_name = init_component * "." * init_var
-        values[dynamic_var] = _read_result_value(aux_session, full_name)
-    end
-
-    return values
-end
-
-"""
     extract_all_initialization_values(aux_session, components, init_model_by_component = Dict{String, String}())
 
 Extract initialization values for every component that has an initialization
 mapping.
 """
 function extract_all_initialization_values(aux_session, components, init_model_by_component = Dict{String, String}())
+    result_file = aux_session.resultfile
+    isempty(result_file) &&
+        error("Auxiliary session has no result file. Run simulate(...) before extracting initialization values.")
+    stop_time = parse(Float64, string(aux_session.simulateOptions["stopTime"]))
+
     values_by_component = Dict{String, Dict{String, Float64}}()
 
     for (component, info) in components
         info["class"] == INERTIAL_GRID_CLASS && begin
-            values_by_component[component] = _extract_inertial_grid_values(aux_session, component)
+            values_by_component[component] = _extract_inertial_grid_values(
+                aux_session, result_file, stop_time, component
+            )
             continue
         end
 
         param_pairs = _resolve_init_params(component, info["class"], init_model_by_component)
         isnothing(param_pairs) && continue
-        values_by_component[component] = extract_component_initialization_values(aux_session, component, param_pairs)
+
+        values = Dict{String, Float64}()
+        for (init_var, dynamic_var) in param_pairs
+            full_name = component * "_INIT." * init_var
+            values[dynamic_var] = _read_result_value(aux_session, result_file, stop_time, full_name)
+        end
+        values_by_component[component] = values
     end
 
     return values_by_component
