@@ -251,7 +251,6 @@ function apply_LF_modifiers!(
         base_class = component["class"]::String
         if startswith(base_class, "Dynawo.Electrical.Loads.")
             apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp, equations)
-            aux_components = get_all_components(omc, aux_model)
             continue
         end
 
