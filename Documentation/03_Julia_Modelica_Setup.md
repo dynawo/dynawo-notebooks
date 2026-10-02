@@ -1,37 +1,35 @@
 # 3. Julia & OpenModelica Setup
 
-This setup supports the "Notebooks facilitating Dynawo" aspect of the proposal, enabling agile interaction with `.mo` physical models.
+This setup supports Route A, enabling agile interaction with `.mo` physical models directly through OpenModelica.
 
-## Step 1: Base Installation
-1.  **Julia:** Download the Long-Term Support (LTS) version from [julialang.org](https://julialang.org/downloads/).
-2.  **OpenModelica:** Install the OpenModelica Compiler (`omc`). This is the engine that Julia will control.
+## Prerequisites
+1.  **OpenModelica Compiler (omc) 1.27:** Must be available on your system `PATH`.
     * *Linux:* Follow instructions at [openmodelica.org](https://openmodelica.org/).
 
-## Step 2: Julia Package Management
-Open the Julia REPL (type `julia` in terminal) and enter Pkg mode by pressing `]`.
+## Step 1: Automated Installation
+Use the provided Bash script to automatically download Julia and set up the Jupyter kernel.
 
-```julia
-# Core interface
-add OMJulia
-
-# Data analysis & plotting
-add DataFrames
-add CSV
-add Plots
-
-# For advanced mathematical validation (optional but recommended)
-add DifferentialEquations
+```bash
+./Installation/install_julia.sh
 ```
 
+This script will:
+* Create a `.venv-julia` Python environment and install JupyterLab.
+* Download and install Julia 1.10.12 locally if not found.
+* Download the Dynawo standalone library (v1.8.0) directly into the workspace.
+* Install the required Modelica Standard Library (MSL 3.2.3).
+* Install `OMJulia`, `DataFrames`, `Plots`, and register the `Julia (clean) 1.10` kernel.
+
+## Step 2: OMEdit Configuration
+If you open models in the OMEdit graphical interface:
+1. Go to **Tools -> Options -> Libraries**.
+2. Uncheck **"Load latest Modelica version"**.
+3. Ensure you select `Modelica` and `ModelicaServices` version `3.2.3+maint.om`.
+
 ## Step 3: Verifying the Connection
-Use the provided `TripleInertialGrid.mo` to test the setup.
+Launch JupyterLab and open the `OMJulia_Dynawo_Getting_Started.ipynb` notebook to test the connection.
 
-```julia
-using OMJulia
-# This attempts to start the OMC server in the background
-omc = OMJulia.OMCSession()
-println("Connection to OpenModelica successful.")
-
-# Load your model
-omc.sendExpression("loadFile(\"TripleInertialGrid.mo\")")
+```bash
+source .venv-julia/bin/activate
+jupyter lab
 ```

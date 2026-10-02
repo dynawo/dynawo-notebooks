@@ -1,45 +1,29 @@
 # 2. Python Environment Setup for Powsybl & Dynawo
 
-*Based on meeting notes: Ensure compatibility with RTE's infrastructure versions if deploying in their environment (pypowsybl-rte packages).*
+*Ensure compatibility with RTE's infrastructure versions if deploying in their environment.*
 
 ## Prerequisites
-1.  **Java (JDK 17+):** The backend of Powsybl is Java-based.
-    ```bash
-    sudo apt install openjdk-17-jdk
-    ```
-2.  **Dynawo Binaries:** You must have Dynawo installed locally (version >= 1.6.0 recommended for full features).
+1.  **Python 3.12+:** Required by the updated ecosystem.
+2.  **Java (JDK 17+):** The backend of PyPowSyBl is Java-based.
+3.  **Standard Utilities:** `git`, `curl`, `wget`, `tar`, `xz`.
 
-## Step 1: Virtual Environment
-Create an isolated environment to manage dependencies and avoid system conflicts.
+## Step 1: Automated Environment Setup
+Instead of manually creating environments and installing packages, use the provided automated script. This script utilizes `uv` for lightning-fast installations.
 
 ```bash
-python3 -m venv venv_powsybl
-source venv_powsybl/bin/activate
+./Installation/install_python.sh
 ```
 
-## Step 2: Install Python Libraries
-Standard installation based on the project proposal:
+This script will:
+* Check for Python 3.12+ and Java.
+* Install `uv` if missing.
+* Create a `.venv` environment and install all pinned dependencies (including `pypowsybl`, `scipy`, `OMPython`).
+* Automatically download Dynawo (v1.7) into `~/dynawo` and configure `~/.itools/config.yml`.
+
+## Step 2: Activation and Validation
+Activate the environment and launch JupyterLab to start working with the PyPowSyBl notebooks.
 
 ```bash
-pip install pypowsybl pandas lxml pyyaml matplotlib jupyter jupyterlab
-```
-
-*Note: If you have access to the internal RTE repository, prioritize `pypowsybl-rte` and `pypowsybl-jupyter-rte` as indicated in the `README.md`.*
-
-## Step 3: Configure the Link to Dynawo
-You need to tell PyPowsybl where the C++ engine lives. Create or edit `~/.itools/config.yml`:
-
-```yaml
-dynawo:
-  # Update this path to your actual dynawo installation
-  homeDir: /opt/dynawo
-  debug: true
-```
-
-## Step 4: Validation
-Run a quick Python script to check if Powsybl can see the Dynawo solver.
-
-```python
-import pypowsybl.dynawo as dynawo
-print("Dynawo module loaded successfully.")
+source .venv/bin/activate
+jupyter lab
 ```
