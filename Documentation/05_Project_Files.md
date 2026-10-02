@@ -1,20 +1,15 @@
 # 5. Analysis of Project Files
 
-## A. Infrastructure & Topology
-* **`SMIB_nodeBreaker.py` & `SMIB2.py`:**
-    * These generate the "Single Machine Infinite Bus" test case.
-    * **Key difference:** `SMIB_nodeBreaker` models the detailed substation topology (switches, busbars), allowing for complex fault scenarios inside the substation, whereas `SMIB2` uses a simplified bus-branch model.
-* **`fiche.py` series:**
-    * Incremental complexity tests. `fiche3.py` introduces parallel lines and complex disconnections, testing the robustness of the Loadflow solver.
+## A. Initialization Helpers (Julia)
+* **`dictionaries.jl` & `helpers.jl`:** These contain the core logic for Route A. They define `REPLACEMENTS` (how to swap dynamic models for static equivalents) and `INIT_MODELS` (which companion model to inject).
+* **`package_model_initialization.jl`:** Handles the complex logic of initializing entire inheritance chains in OpenModelica packages.
 
-## B. Control Logic & Automation
-* **`recollement.py`:** The core mapping script. It automates the translation of IIDM static data into Dynawo dynamic models, implementing the logic defined in the CPES24 paper. It handles specific fixes, like correcting the `voltageRegulatorOn` flag.
-* **`gridforming.py`:** Addresses the integration of renewables. It detects generators labeled "GFM", "EOL", or "PV" and assigns them power electronics models (`GridFormingConverter...`), essential for low-inertia studies.
-
-## C. Physics & Stability Studies
-* **`TripleInertialGrid` (.mo & .ipynb):**
-    * A custom Modelica model of a 3-node system.
-    * **Purpose:** To study fundamental frequency dynamics and ROCOF (Rate of Change of Frequency) in a clean environment, decoupled from the noise of a large grid. This is likely run via Julia.
-* **`Nordic32.ipynb`:**
-    * A long-term voltage stability study.
-    * **Feature:** Implements a `TapChangerBlocking` (TCB) automaton. This demonstrates how to model emergency control logic that freezes transformer taps to prevent voltage collapse.
+## B. Physics, Stability Studies & Examples
+* **`OMJulia_Dynawo_Getting_Started.ipynb` (DoubleInertialGrid):**
+    * A fundamental example of a 2-grid system joined by lines. 
+    * **Purpose:** Demonstrates how changing a parameter (like line length) without proper re-initialization leads to pre-fault numerical transients.
+* **`StabilityAnalysis_BESS.ipynb`:**
+    * Parametric sweep for a Battery Energy Storage System (Demo_BESS).
+    * **Feature:** Sweeps the parameter `Kpg` from 1.0 to 10.0, linearizes the system to obtain A, B, C, D matrices, and tracks eigenvalue roots to identify when modes cross into instability (Right Half-Plane).
+* **`StabilityAnalysis_Nordic.ipynb`:**
+    * A large-scale stability sweep running on a packaged Demo_Nordic model (Nordic-32 test system with 20 detailed synchronous machines). Demonstrates that the initialization and linearization architecture scales to grid-level complexity.
