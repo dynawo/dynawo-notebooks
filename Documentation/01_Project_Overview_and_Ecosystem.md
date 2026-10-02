@@ -1,6 +1,6 @@
 # 1. Project Overview: Hybrid Dynamic Simulation Environment
 
-This documentation outlines the simulation environment developed for automating dynamic security assessment and steady-state initialization. It is designed to facilitate the use of **Dynawo** dynamic models through Python and Julia notebooks, bridging the gap between static network planning and complex time-domain dynamic simulation.
+This documentation outlines the simulation environment developed for helping with dynamic simulation assessment and steady-state initialization. It is designed to facilitate the use of **Dynawo** dynamic models through Python and Julia notebooks, bridging the gap between static network planning and complex time-domain dynamic simulation.
 
 ## The Core Problem: Initialization & Stability
 As discussed in the kickoff and subsequent meetings, the central challenge is not just running a simulation, but **guaranteeing a valid initialization**.

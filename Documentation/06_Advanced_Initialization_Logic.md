@@ -18,7 +18,7 @@ Dynawo uses dedicated auxiliary models (e.g., `GeneratorSynchronousExt3W_INIT`) 
 4.  **Handshake:** This $x_{init}$ vector is written back into the main Dynamic Model as parameter modifiers (e.g., `s0Pu(re=..., im=...)`).
 
 ### Practical Implementation in the Notebooks
-When you run the Julia initialization notebooks (`BuildAux_single.ipynb`), the code automates this entire process:
+When you run the Julia initialization notebooks, the code automates this entire process:
 1. It creates an `_auxiliary.mo` file.
 2. It strips out dynamic events (`when` blocks, controls).
 3. It injects the specific `_INIT` companion model.

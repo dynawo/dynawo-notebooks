@@ -13,7 +13,7 @@ This workflow integrates the "Route B" (PyPowSyBl) process.
 The Python notebooks automate the translation of IIDM static data into Dynawo dynamic models.
 
 * **Selection Logic:** Assign Dynawo models based on component types.
-* **Initialization Extraction:** The script runs Dynawo in debug mode (`--dumpInitOn`), extracting the complex internal states and generating a fully initialized `.mo` file.
+* **Initialization Extraction:** The script runs Dynawo in debug mode, extracting the complex internal states and generating a fully initialized `.mo` file.
 
 ## Phase 3: Simulation & Analysis
 1.  **Define Events:** Create perturbations (e.g., short circuits, trips) via `dyn.EventMapping()`.
