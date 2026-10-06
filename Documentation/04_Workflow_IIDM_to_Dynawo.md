@@ -18,4 +18,4 @@ The Python notebooks automate the translation of IIDM static data into Dynawo dy
 ## Phase 3: Simulation & Analysis
 1.  **Define Events:** Create perturbations (e.g., short circuits, trips) via `dyn.EventMapping()`.
 2.  **Run:** Execute `dyn.Simulation().run(...)`.
-3.  **Visualize:** Use `matplotlib` or `Plots` to visualize the returned curves (Time vs Variable).
+3.  **Visualize:** Use `matplotlib` to visualize the returned curves (Time vs Variable).

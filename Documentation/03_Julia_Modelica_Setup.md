@@ -18,7 +18,7 @@ This script will:
 * Download and install Julia 1.10.12 locally if not found.
 * Download the Dynawo standalone library (v1.8.0) directly into the workspace.
 * Install the required Modelica Standard Library (MSL 3.2.3).
-* Install `OMJulia`, `DataFrames`, `Plots`, and register the `Julia (clean) 1.10` kernel.
+* Install `OMJulia`, `DataFrames`, `CSV`, `Plots` and `IJulia`, and register the `Julia (clean) 1.10` kernel.
 
 ## Step 2: OMEdit Configuration
 If you open models in the OMEdit graphical interface:

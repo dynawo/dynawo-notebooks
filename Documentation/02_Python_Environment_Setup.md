@@ -1,6 +1,4 @@
-# 2. Python Environment Setup for Powsybl & Dynawo
-
-*Ensure compatibility with RTE's infrastructure versions if deploying in their environment.*
+# 2. Python Environment Setup for PowSyBl & Dynawo
 
 ## Prerequisites
 1.  **Python 3.12+:** Required by the updated ecosystem.

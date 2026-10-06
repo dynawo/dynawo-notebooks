@@ -1,4 +1,4 @@
-# 6. Advanced Initialization Logic (Init Models)
+# 5. Advanced Initialization Logic (Init Models)
 
 This section addresses the "Init Model" logic highlighted in Dynawo. It solves the "Black Box" initialization problem.
 
