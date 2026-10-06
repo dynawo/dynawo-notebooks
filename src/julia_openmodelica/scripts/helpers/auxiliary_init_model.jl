@@ -36,7 +36,7 @@ function _resolve_init_spec(
 end
 
 """
-    _load_init_mode(omc, model, components, comp_name, base_class) -> Symbol
+    _load_init_mode(omc, model, components, comp_name, base_class, equations) -> Symbol
 
 For load components, decide whether to use P/Q reference initialization or
 already-present complex initial values. Non-load components return `:not_load`.
@@ -47,6 +47,7 @@ function _load_init_mode(
     components::Dict{String, Dict{String, Any}},
     comp_name::String,
     base_class::String,
+    equations,
 )
     startswith(base_class, "Dynawo.Electrical.Loads.") || return :not_load
 
@@ -57,8 +58,8 @@ function _load_init_mode(
         haskey(raw_mods, "u0Pu") &&
         haskey(raw_mods, "i0Pu")
 
-    p_ref = strip(resolve_load_ref_value(omc, model, comp_name, "PRefPu"))
-    q_ref = strip(resolve_load_ref_value(omc, model, comp_name, "QRefPu"))
+    p_ref = strip(resolve_load_ref_value(omc, model, comp_name, "PRefPu", equations))
+    q_ref = strip(resolve_load_ref_value(omc, model, comp_name, "QRefPu", equations))
     has_pq_init = !isempty(p_ref) && !isempty(q_ref)
 
     if has_pq_init
@@ -111,7 +112,7 @@ function _apply_component_modifiers!(
 end
 
 """
-    apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp)
+    apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp, equations)
 
 Set free complex load initialization variables using the P/Q references of a
 load component.
@@ -122,9 +123,10 @@ function apply_load_LF_modifiers!(
     aux_model::String,
     aux_components::Dict{String, Dict{String, Any}},
     base_comp::String,
+    equations,
 )
-    p_ref = strip(resolve_load_ref_value(omc, model, base_comp, "PRefPu"))
-    q_ref = strip(resolve_load_ref_value(omc, model, base_comp, "QRefPu"))
+    p_ref = strip(resolve_load_ref_value(omc, model, base_comp, "PRefPu", equations))
+    q_ref = strip(resolve_load_ref_value(omc, model, base_comp, "QRefPu", equations))
 
     isempty(p_ref) && error("Could not resolve PRefPu for load $model.$base_comp")
     isempty(q_ref) && error("Could not resolve QRefPu for load $model.$base_comp")
@@ -158,13 +160,15 @@ function add_init_models!(
     init_model_by_component::Dict{String, String},
     slack_component::String,
 )
+    equations = get_equation_items(omc, model)
+
     for (base_comp, component) in components
         base_class = component["class"]::String
         spec = _resolve_init_spec(base_comp, base_class, init_model_by_component)
         isnothing(spec) && continue
         spec = spec::Dict{String, Any}
 
-        load_mode = _load_init_mode(omc, model, components, base_comp, base_class)
+        load_mode = _load_init_mode(omc, model, components, base_comp, base_class, equations)
         load_mode == :direct_complex && continue
 
         suffix = spec["init_component_suffix"]::String
@@ -188,7 +192,7 @@ function add_init_models!(
             end
 
             value = if load_mode == :pq_init && (base_param == "PRefPu" || base_param == "QRefPu")
-                resolve_load_ref_value(omc, model, base_comp, base_param)
+                resolve_load_ref_value(omc, model, base_comp, base_param, equations)
             else
                 string(get_comp_param_value(omc, model, components, base_comp, base_param))
             end
@@ -240,13 +244,13 @@ function apply_LF_modifiers!(
     aux_model::String,
     components::Dict{String, Dict{String, Any}},
 )
+    equations = get_equation_items(omc, model)
     aux_components = get_all_components(omc, aux_model)
 
     for (base_comp, component) in components
         base_class = component["class"]::String
         if startswith(base_class, "Dynawo.Electrical.Loads.")
-            apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp)
-            aux_components = get_all_components(omc, aux_model)
+            apply_load_LF_modifiers!(omc, model, aux_model, aux_components, base_comp, equations)
             continue
         end
 
@@ -254,7 +258,7 @@ function apply_LF_modifiers!(
         spec = INIT_MODELS[base_class]
         haskey(spec, "LF_modifiers_raw") || continue
 
-        load_mode = _load_init_mode(omc, model, components, base_comp, base_class)
+        load_mode = _load_init_mode(omc, model, components, base_comp, base_class, equations)
         load_mode == :direct_complex && continue
 
         extra_raw = spec["LF_modifiers_raw"]::Vector{String}
@@ -284,6 +288,7 @@ function add_init_equations!(
     init_model_by_component::Dict{String, String},
     slack_component::String,
 )
+    equations = get_equation_items(omc, model)
     eqs = String[]
 
     for (base_name, component) in components
@@ -292,7 +297,7 @@ function add_init_equations!(
         isnothing(spec) && continue
         spec = spec::Dict{String, Any}
 
-        load_mode = _load_init_mode(omc, model, components, base_name, base_class)
+        load_mode = _load_init_mode(omc, model, components, base_name, base_class, equations)
         load_mode == :direct_complex && continue
 
         suffix = spec["init_component_suffix"]::String

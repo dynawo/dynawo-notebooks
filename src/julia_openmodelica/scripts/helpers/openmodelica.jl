@@ -44,6 +44,21 @@ end
 # ------------------------------------------------------------
 
 """
+    get_equation_items(omc, model::String) -> Vector{String}
+
+Return the equations of `model`.
+"""
+function get_equation_items(omc, model::String)
+    items = String[]
+    n = sendExpression(omc, "getEquationItemsCount($model)")
+    for i in 1:n
+        eq = String(sendExpression(omc, "getNthEquationItem($model, $i)", parsed = false))
+        push!(items, String(strip(replace(eq, "\"" => ""))))
+    end
+    return items
+end
+
+"""
     resolve_load_ref_value(omc, model::String, comp::String, field::String) -> String
 
 For loads: get numeric value assigned via plain equations like
@@ -54,13 +69,9 @@ If the right-hand side is `X.setPoint` or `X.step`, this returns `X.Value0`.
 Derivative and `when` equations are ignored.
 Returns `""` when no matching equation is found.
 """
-function resolve_load_ref_value(omc, model::String, comp::String, field::String)
+function resolve_load_ref_value(omc, model::String, comp::String, field::String, equations)
     target = "$comp.$field"
-    neq = sendExpression(omc, "getEquationItemsCount($model)")
-    for i in 1:neq
-        eqi = String(sendExpression(omc, "getNthEquationItem($model, $i)", parsed = false))
-        eqi = strip(replace(eqi, "\"" => ""))
-
+    for eqi in equations
         startswith(eqi, "when ") && continue
         occursin("der(", eqi) && continue
 
