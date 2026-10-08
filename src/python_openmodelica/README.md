@@ -26,12 +26,11 @@ the `.venv-python-om` environment with Python 3.12, OMPython and the other packa
 notebooks use, JupyterLab, and the Modelica Standard Library 3.2.3.
 
 Dynawo itself is not needed. Its Modelica library, version 1.8.0 from a nightly build,
-is in [`dynawo_library/`](dynawo_library/), and the notebooks read it from there.
+is in `dynawo_library/`, and the notebooks read it from there.
 
 ## Configuration
 
 Each notebook starts with a configuration cell. It points at the Modelica Standard
 Library installed under `~/.openmodelica/libraries` and at the Dynawo library in
-[`dynawo_library/`](dynawo_library/), and either can be pointed somewhere else by
-editing that cell. The rest of it selects the model to work on and the options for that
-workflow.
+`dynawo_library/`, and either can be pointed somewhere else by editing that cell. The
+rest of it selects the model to work on and the options for that workflow.
