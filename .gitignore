@@ -1,12 +1,40 @@
+# ==========================================
+# VIRTUAL ENVIRONMENTS
+# ==========================================
 *venv*/
+.venv/
+env/
+
+# ==========================================
+# SYSTEM FILES
+# ==========================================
 *:Zone.Identifier
-*_outputs/
-*__pycache__/
-*grid_export*.*
+
+# ==========================================
+# PYTHON AND JUPYTER GENERATED FILES
+# ==========================================
+__pycache__/
+.ipynb_checkpoints/
+
+# ==========================================
+# LOGS AND GENERIC OUTPUTS
+# ==========================================
 *.log
+*_outputs/
 *compare_parameters*
+
+# ==========================================
+# REQUESTED DIRECTORIES (At any level)
+# ==========================================
+# Ignore any directory containing "grid_export" in its name
+*grid_export*/
+
+# Ignore any directory named exactly "dynawo"
+dynawo/
+
+# ==========================================
+# OTHER PROJECT SPECIFIC DIRECTORIES & FILES
+# ==========================================
 *examples*
 omc-build/
 src/julia_openmodelica/StabilityAnalysis/outputs/
-/src/python_pypowsybl/Notebooks/dynawo
-.ipynb_checkpoints/
