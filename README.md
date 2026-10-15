@@ -2,9 +2,15 @@
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-> Notebook tools for facilitating the usage of Dynawo's library of dynamic models.
+- Repository: <https://github.com/dynawo/dynawo-notebooks>
+- Documentation: in this repository, under [Documentation/](Documentation/)
 
-## Table of Contents
+
+Notebook-based tools for facilitating the usage of Dynawo's library of dynamic models.
+
+---
+
+## Contents
 - [1. About The Project](#1-about-the-project)
 - [2. The Core Problem: Initialization](#2-the-core-problem-initialization)
 - [3. Architecture & Workflows (The Two Routes)](#3-architecture--workflows-the-two-routes)
@@ -14,6 +20,7 @@
 - [7. Usage (Entry Points & Workflows)](#7-usage-entry-points--workflows)
 - [8. Contributing](#8-contributing)
 - [9. License](#9-license)
+- [10. Contact](#10-contact)
 
 ---
 
@@ -45,7 +52,7 @@ Dynawo addresses this by implementing **"Init Models"** (e.g., `_INIT` companion
 * Each `_INIT` model is solved independently, using the load flow values at its terminal.
 * Its results become parameters of the dynamic model, *not additional equations*, allowing Dynawo to solve the whole connected system at t=0.
 
-This of course works transparently *for Dynawo users*. However, how do you do all this if you want to use Dynawo models from a pure Modelica environment?  (Remember, Dynawo's model library is all Modelica.)  The tools in this repository address exactly this problem.  In addition, they also address the conversion of Modelica network cases into Dynawo cases (using PowSyBl), which is another route to solve the same problem.
+This of course works transparently *for Dynawo users*. However, how do you do all this if you want to use *Dynawo models* from a pure Modelica environment?  (Remember, Dynawo's model library is all Modelica.)  The tools in this repository address exactly this problem.  In addition, they also address the conversion of Modelica network cases into Dynawo cases (using PowSyBl), which is another route to solve the same problem.
 
 
 ---
@@ -55,26 +62,27 @@ This of course works transparently *for Dynawo users*. However, how do you do al
 The project provides two distinct routes to achieve steady-state initialization, depending on your preferred language and tools.
 
 ### ROUTE A: Julia & OpenModelica
-Driven from Julia through `OMJulia`, this route performs initialization using only OpenModelica.
+Using Julia and `OMJulia`, this route performs initialization using only OpenModelica:
 * **1. Rewrite:** The code automatically builds a static auxiliary twin of your dynamic model, stripping out events and controls.
 * **2. Stand-ins:** It applies replacements from `dictionaries.jl` (e.g., swapping `BESSCurrentSource` for `GeneratorPVFixed`) and adds the `_INIT` companions.
 * **3. Solve & Read:** It simulates the auxiliary model to settle the network, extracting the values of each initialization variable.
 * **4. Write:** It copies the original model and writes the extracted values back as pinned modifiers, generating a fully `_initialized.mo` case.
 
 ### ROUTE B: Python, PyPowSyBl & Dynawo
-Driven from Python, this route abstracts the complexity of the simulation.
-* **1. Network Generation:** PyPowSyBl parses raw data, defines the topology, and runs the AC loadflow (`pp.loadflow.run_ac`). If the loadflow diverges, dynamics cannot start.
-* **2. Dynamic Mapping:** The software automates the translation of IIDM static data into dynamic models based on energy sources (e.g., `HYDRO` to `GeneratorSynchronousThreeWindings`).
-* **3. Writeout:** It runs the simulation in Dynawo to dump internal initialization values, producing a fully initialized OpenModelica case.
+Using Python, this route performs initialization by converting to PyPowSyBl+Dynawo under the hood, and then leveraging Dynawo's own initialization mechanism:
+* **1. Case conversion from Modelica to PyPowSyBl:** The user case is first converted to a PyPowSyBl network having the same characteristics, as far as static power flow goes.
+* **2. PyPowSyBl load flow:** Using also the operating condition values coming from the previous conversion, PyPowSyBl runs the AC load flow (`pp.loadflow.run_ac`).
+* **3. Dynamic Model Mapping:** The software automates the enrichment of the PowSyBl case with Dynawo dynamic models, using the information about the dynamic models present in the original Modelica input case.
+* **4. Simulation and init values extraction:** Finally, the case is simulated with Dynawo, using an option that makes Dynawo dump the results of its internal initialization. The code recovers all these initialization values and writes them back to the user's Modelica case.
 
-This route currently works with models that are already available in Dynawo's model database (ddb).
+This route B ended up being considerably more involved than route A, but we wanted to explore how far we could go in exploiting PowSyBl+Dynawo for this purpose.  Note that route B currently works only with Dynawo models that are available under Dynawo's internal folder (ddb) -- the ones that are precompiled and ready to use from Dynawo. Note that Dynawo's model library contains many more Modelica models in a sort of "raw" form, which need compiling (also referred to as "pre-assembling") for Dynawo to use them.
 
 ---
 
 ## 4. Repository Layout
 
 * **`src/julia_openmodelica/`** — Route A. The `OMJulia_Dynawo_Getting_Started` notebook is the entry point. From there, `BuildAux` and `Initialization` cover the two halves of the initialization, `FullWorkflow` runs them end to end, and `ParametricStudies` and `StabilityAnalysis` build on top of it with parameter sweeps and small-signal analysis. Every folder has a single-file and a package version.
-* **`src/python_pypowsybl/Notebooks/`** — Route B. The three `PyPowSyBl_Dynawo_Getting_Started` notebooks are the entry point, building up from a two-bus network to a meshed twelve-bus one. The `PyPowSyBl_approach_*` notebooks then apply the workflow to four existing cases: BESS, DIGrid, IEEE57 and Nordic.
+* **`src/python_pypowsybl/Notebooks/`** — Route B. The three `PyPowSyBl_Dynawo_Getting_Started` notebooks are only an entry point, showing how to build up small cases from scracth, not from a given Modelica network case. The `PyPowSyBl_approach_*` notebooks contain the full workflow described as Route B above, i.e., starting from a given network case written in modelica. We show four examples: BESS, DIGrid, IEEE57 and Nordic.
 * **`Installation/`** — the setup script for each route, `install_julia.sh` and `install_python.sh`.
 * **`Documentation/`** — background on the environment and the initialization logic.
 
@@ -162,3 +170,12 @@ For contributing guidelines, please refer to the [contributing documentation](ht
 ## 9. License
 
 Dynawo Notebooks is licensed under the Mozilla Public License, v. 2.0, the same license as Dynawo. If a copy of the MPL was not distributed with this file, you can obtain one at http://mozilla.org/MPL/2.0. The full text is available in [LICENSE](LICENSE).
+
+---
+
+## Contact
+
+For questions, support, or contributions, please refer to the project repository or contact the maintainers.
+
+* Bug reports and feature requests: [GitHub Issues](https://github.com/dynawo/dynawo-notebooks/issues)
+* Maintainers (AIA): <omsg@aia.es>, <fernandezc@aia.es>.
