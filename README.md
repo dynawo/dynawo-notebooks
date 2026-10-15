@@ -3,23 +3,21 @@
 > Notebook tools for facilitating the usage of Dynawo's library of dynamic models.
 
 ## Table of Contents
-- [Dynawo Notebooks](#dynawo-notebooks)
-  - [Table of Contents](#table-of-contents)
-  - [1. About The Project](#1-about-the-project)
-  - [2. The Core Problem: Initialization](#2-the-core-problem-initialization)
-  - [3. Architecture & Workflows (The Two Routes)](#3-architecture--workflows-the-two-routes)
-  - [4. Repository Layout](#4-repository-layout)
-  - [5. Prerequisites](#5-prerequisites)
-  - [6. Installation](#6-installation)
-  - [7. Usage (Entry Points & Workflows)](#7-usage-entry-points--workflows)
-  - [8. Contributing](#8-contributing)
-  - [9. License](#9-license)
+- [1. About The Project](#1-about-the-project)
+- [2. The Core Problem: Initialization](#2-the-core-problem-initialization)
+- [3. Architecture & Workflows (The Two Routes)](#3-architecture--workflows-the-two-routes)
+- [4. Repository Layout](#4-repository-layout)
+- [5. Prerequisites](#5-prerequisites)
+- [6. Installation](#6-installation)
+- [7. Usage (Entry Points & Workflows)](#7-usage-entry-points--workflows)
+- [8. Contributing](#8-contributing)
+- [9. License](#9-license)
 
 ---
 
 ## 1. About The Project
 
-This project contains worked examples and notebook workflows for running dynamic simulations with models from the Dynawo Modelica library. It is aimed at users who build small or medium network cases in OpenModelica and want to use Dynawo's dynamic models, solving the critical problem of **steady-state initialization**.
+This project contains notebook workflows and fully worked out examples for running dynamic simulations with models from the Dynawo Modelica library. It is aimed at users who build small or medium-size network cases in **OpenModelica** and want to use Dynawo's dynamic models, solving the critical problem of **model initialization**. It offers tools for both Python and Julia users.
 
 **Built With:**
 * [Julia](https://julialang.org/) (v1.10.12) / [OMJulia](https://github.com/OpenModelica/OMJulia.jl)
@@ -32,18 +30,21 @@ This project contains worked examples and notebook workflows for running dynamic
 
 ## 2. The Core Problem: Initialization
 
-The central challenge in dynamic simulation assessment is guaranteeing a valid initialization.
+One central challenge in dynamic simulation is guaranteeing a valid initialization:
 * A dynamic model (e.g., a generator) is defined by differential equations dx/dt = f(x, y).
 * To start a simulation at steady state (t=0), we must find x0 such that dx/dt = 0.
-* A standard Loadflow provides only the boundary network variables y (P, Q, V, theta) at t=0.
-* Complex dynamic models have internal state variables (fluxes, rotor currents) that are not explicitly defined by the Loadflow.
+* A standard Loadflow provides only the "boundary" network variables y (P, Q, V, Theta) at t=0.
+* But complex dynamic models have many other internal state variables (fluxes, rotor currents) that are not explicitly defined by the Loadflow.
 * Inverting the complex function f(x, y) to find x0 is often numerically unstable.
 
-### The Solution: "Init Models"
-Dynawo addresses this by implementing **"Init Models"** (e.g., `_INIT` companions in the library).
-* The Init Model receives the static values and physical parameters, using a simplified, invertible set of algebraic equations to calculate the internal state vector x_init.
-* Each `_INIT` model is solved independently from the load flow values at its terminal.
-* Its results become parameters of the dynamic model, not additional equations, allowing Dynawo to solve the whole connected system at t=0.
+### Dynawo's initialization strategy: "Init Models"
+Dynawo addresses this by implementing **"Init Models"** (e.g., `_INIT` companions in the library).  This is how it works inside Dynawo, simplified:
+* Dynawo first performs a load flow calculation, and then each model's `_INIT` companion receives the static values and the model's physical parameters, using a simplified, invertible set of algebraic equations to calculate the internal state vector x_init.
+* Each `_INIT` model is solved independently, using the load flow values at its terminal.
+* Its results become parameters of the dynamic model, *not additional equations*, allowing Dynawo to solve the whole connected system at t=0.
+
+This of course works transparently *for Dynawo users*. However, how do you do all this if you want to use Dynawo models from a pure Modelica environment?  (Remember, Dynawo's model library is all Modelica.)  The tools in this repository address exactly this problem.  In addition, they also address the conversion of Modelica network cases into Dynawo cases (using PowSyBl), which is another route to solve the same problem.
+
 
 ---
 
