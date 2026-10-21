@@ -8,7 +8,7 @@ using the default OpenLoadFlow engine.
 import json
 import logging
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import pypowsybl as pp
 
@@ -45,10 +45,51 @@ class PowerFlowRunner:
             return ["infinite", "slack", "gen1", "g20"]
 
     @staticmethod
+    def find_slack_bus(network: pp.network.Network) -> Optional[str]:
+        """
+        Finds the bus of the slack generator: the one designated by the slackTerminal
+        extension written by the converter, or else the first generator whose identifier
+        matches slack_bus_mapping.json.
+
+        :param network: The PyPowSyBl network.
+        :return: The identifier of the slack bus (bus view), or None.
+        """
+        gens_df = network.get_generators()
+        try:
+            slack_terminals = network.get_extensions("slackTerminal")
+            for element_id in slack_terminals.get("element_id", []):
+                if element_id in gens_df.index:
+                    return gens_df.at[element_id, "bus_id"]
+        except Exception as e:
+            logger.debug(f"No slackTerminal extension available: {e}")
+
+        identifiers = PowerFlowRunner.load_slack_mapping()
+        for gid, row in gens_df.iterrows():
+            if any(identifier in str(gid).lower() for identifier in identifiers):
+                return row["bus_id"]
+        return None
+
+    @staticmethod
+    def has_participation_factors(network: pp.network.Network) -> bool:
+        """Tells whether some generators share the balancing through participation factors."""
+        try:
+            control = network.get_extensions("activePowerControl")
+            return bool(not control.empty and control["participate"].any())
+        except Exception:
+            return False
+
+    @staticmethod
     def run_ac_loadflow(network: pp.network.Network, export_path: str = ".") -> bool:
         """
         Executes the AC Load Flow on the provided PyPowSyBl network.
         The network object is updated in-place with the mathematical results.
+
+        The active power balance is distributed in proportion to the participation
+        factors written by the converter: those of the model when it shares the balance
+        (frequency regulation through SignalN), or else a single participation of the
+        slack generator, as with the infinite buses and slack sources of the Modelica
+        models. Distributing the balance, rather than leaving it at the slack bus, writes
+        it back to the active power of the generators.
 
         :param network: The PyPowSyBl network object to be analyzed.
         :param export_path: Target directory to save the divergence log if the load flow fails.
@@ -56,28 +97,18 @@ class PowerFlowRunner:
         """
         logger.info("Starting AC Load Flow calculation (OpenLoadFlow)...")
 
-        valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
-
         try:
-            slack_bus_id = None
-            try:
-                gens_df = network.get_generators()
-                for gid, row in gens_df.iterrows():
-                    gid_str = str(gid).lower()
-                    if any(identifier in gid_str for identifier in valid_slack_identifiers):
-                        slack_bus_id = row["bus_id"]
-                        logger.info(
-                            f"Auto-detected Slack Bus: {slack_bus_id} (from generator {gid})"
-                        )
-                        break
-            except Exception as e:
-                logger.warning(f"Could not read generators for slack detection: {e}")
+            slack_bus_id = PowerFlowRunner.find_slack_bus(network)
+            if slack_bus_id:
+                logger.info(f"Slack Bus: {slack_bus_id}")
 
             provider_params = {
                 "maxNewtonRaphsonIterations": "100",
                 "lowImpedanceThreshold": "1e-8",
+                # The generators built from the Modelica models have unbounded active power
+                # limits: they must not be excluded from the balance as implausible
+                "plausibleActivePowerLimit": "1e9",
             }
-
             if slack_bus_id:
                 provider_params.update(
                     {
@@ -86,9 +117,17 @@ class PowerFlowRunner:
                     }
                 )
 
+            distributed = PowerFlowRunner.has_participation_factors(network)
+            if not distributed:
+                logger.warning(
+                    "No generator participates in the balance: it stays at the slack bus."
+                )
             lf_params = pp.loadflow.Parameters(
                 provider_parameters=provider_params,
                 voltage_init_mode=pp.loadflow.VoltageInitMode.UNIFORM_VALUES,
+                distributed_slack=distributed,
+                balance_type=pp.loadflow.BalanceType.PROPORTIONAL_TO_GENERATION_PARTICIPATION_FACTOR,
+                use_reactive_limits=True,
             )
 
             results = pp.loadflow.run_ac(network, parameters=lf_params)
@@ -108,9 +147,7 @@ class PowerFlowRunner:
                 logger.warning(f"WARNING: Load flow DID NOT CONVERGE. Status: {status}")
 
                 status_text = (
-                    main_result.status_text
-                    if getattr(main_result, "status_text", None)
-                    else "None"
+                    main_result.status_text if getattr(main_result, "status_text", None) else "None"
                 )
                 iterations = getattr(main_result, "iteration_count", "Unknown")
                 ref_bus = getattr(main_result, "reference_bus_id", "None")

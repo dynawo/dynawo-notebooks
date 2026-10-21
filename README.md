@@ -51,6 +51,9 @@ result is a fully initialized OpenModelica case.
 
 This family currently works with models that are already available in Dynawo's model
 database. Support for models outside it is still in progress.
+[`src/python_pypowsybl/README.md`](src/python_pypowsybl/README.md) describes the
+pipeline, the supported models and how the cases written against the Dynawo library 1.8
+are run with Dynawo 1.7.
 
 ## Prerequisites
 

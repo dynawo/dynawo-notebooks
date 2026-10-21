@@ -1,237 +1,463 @@
 """
 Dynamic Parameter Generator Module.
 
-This module parses Dynawo DDB (desc.xml) files and populates the simulation
-parameters using the extracted data from Modelica files. It incorporates direct
-text parsing and OpenModelica queries to resolve dynamic parameters safely.
+This module writes the Dynawo parameter files of a case from the Dynawo model
+database descriptions (ddb/*.desc.xml), the Modelica parameters of each component and
+the solved load flow:
+
+- models.par: one parameter set per dynamic model. Each parameter of the Dynawo model
+  takes, in order of preference, its initial value from the load flow (registry
+  "initial_values"), a value computed from the Modelica parameters (registry
+  "parameters"), the Modelica parameter with the same name, or the database default.
+- network.par: the parameters of the default Dynawo network model.
+- solvers.par: the solver parameters, from a template with a bounded time step so that
+  short events (faults) are not stepped over.
+- additional_models.json: the Dynawo models that PyPowSyBl does not ship.
+
+All the files are written to the export directory of the case, so that several cases
+never overwrite each other's parameters.
 """
 
+import cmath
+import json
+import logging
+import math
 import os
 import re
 import xml.etree.ElementTree as ET
-import logging
-from typing import Dict, Any, Optional
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, Any, List, Optional, Tuple
+
 import pandas as pd
 
-# Import OMCConnector strictly for static typing purposes.
-from python_pypowsybl.Code.core.connector import OMCConnector
+from python_pypowsybl.Code.core.flat_model import FlatModel
+from python_pypowsybl.Code.core.model_linker import DynamicLink, DynamicModelSetup
 
 logger = logging.getLogger("ParameterGenerator")
+
+DYNAWO_NAMESPACE = "http://www.rte-france.com/dynawo"
+S_REF_MVA = 100.0
+
+# Default solver template shipped with the notebooks
+DEFAULT_SOLVER_TEMPLATE = (
+    Path(__file__).resolve().parents[2] / "Notebooks" / "om_powsybl_data" / "Solver.par"
+)
+
+# Parameters of the default Dynawo network model (loads without dynamic model, limits...)
+NETWORK_PARAMETERS: List[Tuple[str, str, str]] = [
+    ("DOUBLE", "capacitor_no_reclosing_delay", "300.0"),
+    ("DOUBLE", "dangling_line_currentLimit_maxTimeOperation", "90.0"),
+    ("DOUBLE", "line_currentLimit_maxTimeOperation", "90.0"),
+    ("DOUBLE", "load_Tp", "90.0"),
+    ("DOUBLE", "load_Tq", "90.0"),
+    ("DOUBLE", "load_alpha", "1.0"),
+    ("DOUBLE", "load_alphaLong", "0.0"),
+    ("DOUBLE", "load_beta", "2.0"),
+    ("DOUBLE", "load_betaLong", "0.0"),
+    ("BOOL", "load_isControllable", "false"),
+    ("BOOL", "load_isRestorative", "false"),
+    ("DOUBLE", "load_zPMax", "100.0"),
+    ("DOUBLE", "load_zQMax", "100.0"),
+    ("DOUBLE", "reactance_no_reclosing_delay", "0.0"),
+    ("DOUBLE", "transformer_currentLimit_maxTimeOperation", "90.0"),
+    ("DOUBLE", "transformer_t1st_HT", "30.0"),
+    ("DOUBLE", "transformer_t1st_THT", "30.0"),
+    ("DOUBLE", "transformer_tNext_HT", "10.0"),
+    ("DOUBLE", "transformer_tNext_THT", "10.0"),
+    ("DOUBLE", "transformer_tolV", "0.015"),
+]
+
+
+# Parameters of the IDA solver (the maximum step is given by the caller). The absolute
+# tolerance resolves deviations of a few 1e-5 pu (e.g. frequency deviations), while the
+# relative one is kept moderate for the discontinuities of the control models (WECC).
+IDA_PARAMETERS: List[Tuple[str, str, str]] = [
+    ("INT", "order", "2"),
+    ("DOUBLE", "initStep", "1e-6"),
+    ("DOUBLE", "minStep", "1e-6"),
+    ("DOUBLE", "absAccuracy", "1e-6"),
+    ("DOUBLE", "relAccuracy", "1e-4"),
+]
+
+# Parameter set of each solver in solvers.par
+SOLVER_SETS = {"SIM": "Solver", "IDA": "IDA"}
+
+
+@dataclass
+class DynawoParameterFiles:
+    """Paths of the parameter files of a case and their use by PyPowSyBl."""
+
+    models: str
+    network: str
+    solver: str
+    solver_id: str = "Solver"
+    solver_type: str = "SIM"
+    additional_models: Optional[str] = None
+    network_id: str = "Network"
+
+    def provider_parameters(self) -> Dict[str, str]:
+        """Returns the PyPowSyBl Dynawo provider parameters pointing to these files."""
+        parameters = {
+            "parametersFile": self.models,
+            "network.parametersFile": self.network,
+            "network.parametersId": self.network_id,
+            "solver.parametersFile": self.solver,
+            "solver.parametersId": self.solver_id,
+            "solver.type": self.solver_type,
+        }
+        if self.additional_models:
+            parameters["additionalModelsFile"] = self.additional_models
+        return parameters
+
+
+@dataclass(frozen=True)
+class DdbParameter:
+    """A writable parameter of a model of the Dynawo model database."""
+
+    name: str
+    value_type: str
+    default: Optional[str]
 
 
 class DynamicParameterGenerator:
     """
     Handles the creation of Dynawo .par files by merging DDB descriptions
-    with Modelica parsed data, raw code text parsing, and OMC queries.
+    with the Modelica parameters of the components and the load flow results.
     """
 
+    # ------------------------------------------------------------------ #
+    # Model database
+    # ------------------------------------------------------------------ #
+
     @staticmethod
-    def _resolve_numeric_value(
-        val_str: str, connector: Optional[OMCConnector], root_model_name: str, model_code: str = ""
-    ) -> str:
+    def read_ddb_parameters(dynawo_path: str, lib: str) -> Tuple[List[DdbParameter], List[str]]:
         """
-        Attempts to cast a string to float. If it fails (e.g., it's a variable like 'SNom'),
-        it asks OpenModelica for the resolved numerical value or parses the code directly.
+        Reads the parameters of a model of the Dynawo model database.
+
+        :param dynawo_path: Root of the Dynawo installation.
+        :param lib: Name of the model.
+        :return: The writable parameters and the names of the read-only ones.
         """
-        if not val_str:
-            return val_str
+        ddb_path = os.path.join(dynawo_path, "ddb", f"{lib}.desc.xml")
+        if not os.path.exists(ddb_path):
+            raise FileNotFoundError(
+                f"Model {lib} not found in the Dynawo model database: {ddb_path}"
+            )
 
-        val_str = val_str.strip()
-        try:
-            float(val_str)
-            return val_str  # It is already a valid numeric string
-        except ValueError:
-            # It's a variable reference. Let's resolve it using OMC.
-            if connector and root_model_name:
-                omc_val = connector.get_parameter_value(root_model_name, val_str)
-                if omc_val:
-                    return str(omc_val).strip('"').strip()
-
-            # Parameterized Text Fallback: Search for the variable declaration in the model code
-            if model_code:
-                var_pattern = re.compile(
-                    rf"\bparameter\b.*?\b{re.escape(val_str)}\s*=\s*([\d\.]+)"
+        writable, read_only = [], []
+        for param in ET.parse(ddb_path).getroot().iter(f"{{{DYNAWO_NAMESPACE}}}parameter"):
+            if param.get("readOnly") == "false":
+                writable.append(
+                    DdbParameter(
+                        param.get("name"), param.get("valueType"), param.get("defaultValue")
+                    )
                 )
-                match = var_pattern.search(model_code)
-                if match:
-                    return match.group(1).strip()
+            else:
+                read_only.append(param.get("name"))
+        return writable, read_only
 
-        return val_str
+    # ------------------------------------------------------------------ #
+    # Load flow quantities
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def load_flow_quantities(network, link: DynamicLink) -> Dict[str, float]:
+        """
+        Collects the solved load flow quantities of the static element of a link.
+
+        :param network: The simulated network, after the load flow.
+        :param link: The dynamic model link.
+        :return: The available quantities (see the registry documentation).
+        """
+        element = link.static_element
+        if element in ("line", "transformer"):
+            return {}
+
+        if element == "bus":
+            # Buses are identified in the bus/breaker view, as in the parsed topology
+            buses = network.get_bus_breaker_view_buses()
+            if link.static_id not in buses.index:
+                return {}
+            bus = buses.loc[link.static_id]
+            p_mw, q_mvar = 0.0, 0.0
+        else:
+            getters = {
+                "generator": network.get_generators,
+                "load": network.get_loads,
+                "shunt": network.get_shunt_compensators,
+            }
+            df = getters[element]()
+            if link.static_id not in df.index or not df.at[link.static_id, "bus_id"]:
+                return {}
+            row = df.loc[link.static_id]
+            # Injections are identified in the bus view
+            bus = network.get_buses().loc[row["bus_id"]]
+            p_mw = 0.0 if pd.isna(row.get("p")) else float(row["p"])
+            q_mvar = 0.0 if pd.isna(row.get("q")) else float(row["q"])
+
+        u_nom = float(network.get_voltage_levels().loc[bus["voltage_level_id"], "nominal_v"])
+        u_pu = float(bus["v_mag"]) / u_nom
+        angle_rad = math.radians(float(bus["v_angle"]))
+
+        u0 = cmath.rect(u_pu, angle_rad)
+        s0 = complex(p_mw, q_mvar) / S_REF_MVA
+        i0 = (s0 / u0).conjugate() if abs(u0) > 1e-9 else 0j
+        return {
+            "p_pu": s0.real,
+            "q_pu": s0.imag,
+            "p_gen_pu": -s0.real,
+            "q_gen_pu": -s0.imag,
+            "u_pu": u_pu,
+            "angle_rad": angle_rad,
+            "u_nom_kv": u_nom,
+            "u0.re": u0.real,
+            "u0.im": u0.imag,
+            "s0.re": s0.real,
+            "s0.im": s0.imag,
+            "i0.re": i0.real,
+            "i0.im": i0.imag,
+        }
+
+    # ------------------------------------------------------------------ #
+    # Parameter values
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _modelica_value(parameters: Dict[str, Any], name: str) -> Optional[Any]:
+        """
+        Returns the Modelica parameter matching a Dynawo parameter name (without prefix),
+        mapping the "_re"/"_im" suffixes of complex parameters to their fields.
+        """
+        if name in parameters:
+            return parameters[name]
+        match = re.fullmatch(r"(.+)_(re|im)", name)
+        if match:
+            return parameters.get(f"{match.group(1)}.{match.group(2)}")
+        return None
+
+    @staticmethod
+    def resolve_parameters(
+        link: DynamicLink,
+        component: Dict[str, Any],
+        quantities: Dict[str, float],
+        ddb_parameters: List[DdbParameter],
+    ) -> Tuple[List[Tuple[str, str, str]], List[str]]:
+        """
+        Computes the values of the writable parameters of a Dynawo model.
+
+        :param link: The dynamic model link.
+        :param component: The parsed data of the Modelica component.
+        :param quantities: The load flow quantities of its static element.
+        :param ddb_parameters: The writable parameters of the Dynawo model.
+        :return: The (type, name, value) triplets to write, and the names of the
+            mandatory parameters for which no value was found.
+        """
+        dynawo = link.spec.dynawo
+        modelica = component.get("parameters", {})
+        prefix = f"{dynawo.prefix}_"
+        expressions = FlatModel()
+        for name, value in modelica.items():
+            expressions.bindings[name] = (
+                repr(value) if not isinstance(value, bool) else str(value).lower()
+            )
+            expressions.kinds[name] = "parameter"
+
+        triplets, missing = [], []
+        for parameter in ddb_parameters:
+            if not parameter.name.startswith(prefix):
+                continue
+            name = parameter.name[len(prefix) :]
+
+            value: Optional[Any] = None
+            if name in dynawo.initial_values and dynawo.initial_values[name] in quantities:
+                value = quantities[dynawo.initial_values[name]]
+            elif name in dynawo.parameters:
+                value = expressions.evaluate(dynawo.parameters[name])
+            if value is None:
+                value = DynamicParameterGenerator._modelica_value(modelica, name)
+
+            if value is None:
+                if parameter.default is None and parameter.value_type in ("DOUBLE", "INT", "BOOL"):
+                    missing.append(parameter.name)
+                continue
+
+            if name in dynawo.minimum_magnitude and isinstance(value, float):
+                minimum = dynawo.minimum_magnitude[name]
+                if abs(value) < minimum:
+                    logger.warning(
+                        f"{link.component}: {parameter.name} = {value:g} raised to {minimum:g} "
+                        "to keep the Dynawo solver well conditioned."
+                    )
+                    value = math.copysign(minimum, value) if value else minimum
+
+            triplets.append(
+                (parameter.value_type, parameter.name, _format_value(value, parameter.value_type))
+            )
+        return triplets, missing
+
+    # ------------------------------------------------------------------ #
+    # File generation
+    # ------------------------------------------------------------------ #
 
     @staticmethod
     def generate_parameters(
+        setup: DynamicModelSetup,
         parsed_data: Dict[str, Any],
-        linked_registry: Dict[str, pd.DataFrame],
         dynawo_path: str,
         target_dir: str,
-        connector: Optional[OMCConnector] = None,
-        root_model_name: str = "",
-        model_code: str = "",
-        base_case_file: str = "Base_Case.par",
-        network_file: str = "Network.par",
-    ) -> None:
+        solver_template: Optional[str] = None,
+        max_time_step: float = 0.01,
+        solver: str = "IDA",
+    ) -> DynawoParameterFiles:
         """
-        Generates parameterized .par files based on the parsed topology
-        and live OpenModelica parameters. Includes exhaustive network parameters.
+        Generates the Dynawo parameter files of a case.
+
+        :param setup: The dynamic model setup returned by link_models.
+        :param parsed_data: The parsed topology of the Modelica case.
+        :param dynawo_path: Root of the Dynawo installation.
+        :param target_dir: Directory where the files are written.
+        :param solver_template: Solver parameter file used as template for the SIM solver
+            (defaults to the Solver.par of the notebook data).
+        :param max_time_step: Maximum time step of the solver in s.
+        :param solver: Dynawo solver used by the simulation, "IDA" or "SIM".
+        :return: The paths of the generated files.
         """
-        os.makedirs(target_dir, exist_ok=True)
-        basecase_sets = []
+        if solver not in SOLVER_SETS:
+            raise ValueError(
+                f"Unknown Dynawo solver {solver}: expected one of {sorted(SOLVER_SETS)}"
+            )
+        target = Path(target_dir).resolve()
+        target.mkdir(parents=True, exist_ok=True)
 
-        # Map to connect the registry name with the keys from parsed_data
-        category_mapping = {
-            "Synchronous Generators": "generators",
-            "Inertial Grids": "generators",
-            "Shunts": "shunts",
-            "Loads": "loads",
-        }
+        # 1. Dynamic models
+        sets: List[str] = []
+        ddb_cache: Dict[str, List[DdbParameter]] = {}
+        for link in setup.links:
+            lib = link.spec.dynawo.lib
+            if lib not in ddb_cache:
+                ddb_cache[lib] = DynamicParameterGenerator.read_ddb_parameters(dynawo_path, lib)[0]
+            component = parsed_data.get(link.category, {}).get(link.component, {})
+            quantities = DynamicParameterGenerator.load_flow_quantities(setup.network, link)
+            triplets, missing = DynamicParameterGenerator.resolve_parameters(
+                link, component, quantities, ddb_cache[lib]
+            )
+            if missing:
+                logger.warning(
+                    f"{link.component} ({lib}): no value found for {', '.join(missing)}. "
+                    "Dynawo will refuse the simulation until they are provided."
+                )
+            sets.append(_parameter_set(link.parameter_set_id, triplets))
 
-        # 1. Iterate over the linked models registry (Dynamic Models)
-        for registry_name, df in linked_registry.items():
-            json_key = category_mapping.get(registry_name)
-            if not json_key or df.empty:
-                continue
+        models_path = target / "models.par"
+        _write_parameter_file(models_path, sets)
+        logger.info(f"Dynamic parameters successfully generated at {models_path}")
 
-            for _, row in df.iterrows():
-                static_id = row["static_id"]
-                model_name = row["model_name"]
-
-                comp_data = parsed_data.get(json_key, {}).get(static_id, {})
-                ddb_path = os.path.join(dynawo_path, "ddb", f"{model_name}.desc.xml")
-                xml_lines = []
-
-                if os.path.exists(ddb_path):
-                    tree = ET.parse(ddb_path)
-                    ns = {"dyn": "http://www.rte-france.com/dynawo"}
-
-                    for param in tree.getroot().findall(".//dyn:parameter", ns):
-                        if param.get("readOnly") == "false":
-                            p_name = param.get("name")
-                            p_type = param.get("valueType")
-                            default_val = param.get(
-                                "defaultValue", "0.0" if p_type == "DOUBLE" else "0"
-                            )
-                            clean_name = p_name.split("_")[-1]
-
-                            val = None
-
-                            # Step A: Attempt to match the parameter from parsed_data
-                            val = comp_data.get(p_name, comp_data.get(clean_name))
-
-                            # Step B: Direct Text Parsing (Bulletproof fallback)
-                            if val is None and model_code:
-                                comp_pattern = re.compile(rf"\b{static_id}\s*\((.*?)\)", re.DOTALL)
-                                match = comp_pattern.search(model_code)
-                                if match:
-                                    modifiers = match.group(1)
-                                    param_pattern = re.compile(rf"\b{clean_name}\s*=\s*([^,)]+)")
-                                    p_match = param_pattern.search(modifiers)
-                                    if p_match:
-                                        val = p_match.group(1).strip()
-
-                            # Step C: Query OpenModelica (Secondary fallback)
-                            if val is None and connector and root_model_name:
-                                omc_val = connector.get_parameter_value(
-                                    root_model_name, f"{static_id}.{clean_name}"
-                                )
-                                if omc_val is not None:
-                                    val = omc_val
-
-                            # Step D: Fallback to the default value
-                            if val is None:
-                                val = default_val
-
-                            # Step E: Format and resolve the final value
-                            if p_type == "DOUBLE":
-                                val = DynamicParameterGenerator._resolve_numeric_value(
-                                    str(val), connector, root_model_name, model_code
-                                )
-                            elif p_type == "BOOL":
-                                val = "true" if str(val).lower() in ["true", "1"] else "false"
-
-                            xml_lines.append(
-                                f'        <par type="{p_type}" name="{p_name}" value="{val}"/>'
-                            )
-                else:
-                    logger.warning(f"DDB file not found at path: {ddb_path}")
-
-                # Build the XML block for the base case components
-                set_xml = f'    <set id="{static_id}">\n'
-                set_xml += "\n".join(xml_lines) + "\n"
-
-                # Add static IIDM references
-                if json_key == "generators":
-                    prefix = "generator"
-                    set_xml += f'        <reference type="DOUBLE" name="{prefix}_P0Pu" origData="IIDM" origName="p_pu"/>\n'
-                    set_xml += f'        <reference type="DOUBLE" name="{prefix}_Q0Pu" origData="IIDM" origName="q_pu"/>\n'
-                    set_xml += f'        <reference type="DOUBLE" name="{prefix}_U0Pu" origData="IIDM" origName="v_pu"/>\n'
-                    set_xml += f'        <reference type="DOUBLE" name="{prefix}_UPhase0" origData="IIDM" origName="angle"/>\n'
-
-                set_xml += "    </set>"
-                basecase_sets.append(set_xml)
-
-        # 2. Assemble and save Base Case parameters
-        basecase_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        basecase_content += '<parametersSet xmlns="http://www.rte-france.com/dynawo">\n'
-        basecase_content += "\n".join(basecase_sets)
-        basecase_content += "\n</parametersSet>\n"
-
-        basecase_path = os.path.join(target_dir, base_case_file)
-        with open(basecase_path, "w", encoding="utf-8") as f:
-            f.write(basecase_content)
-
-        logger.info(f"Dynamic parameters successfully generated at {basecase_path}")
-
-        # 3. Assemble and save Network parameters (Static Models)
-        network_sets = []
-
-        # Add the comprehensive Network configurations
-        network_sets.append("""    <set id="Network">
-        <par type="DOUBLE" name="capacitor_no_reclosing_delay" value="300.0"/>
-        <par type="DOUBLE" name="dangling_line_currentLimit_maxTimeOperation" value="90.0"/>
-        <par type="DOUBLE" name="line_currentLimit_maxTimeOperation" value="90.0"/>
-        <par type="DOUBLE" name="load_Tp" value="90.0"/>
-        <par type="DOUBLE" name="load_Tq" value="90.0"/>
-        <par type="DOUBLE" name="load_alpha" value="1.0"/>
-        <par type="DOUBLE" name="load_alphaLong" value="0.0"/>
-        <par type="DOUBLE" name="load_beta" value="2.0"/>
-        <par type="DOUBLE" name="load_betaLong" value="0.0"/>
-        <par type="BOOL" name="load_isControllable" value="false"/>
-        <par type="BOOL" name="load_isRestorative" value="false"/>
-        <par type="DOUBLE" name="load_zPMax" value="100.0"/>
-        <par type="DOUBLE" name="load_zQMax" value="100.0"/>
-        <par type="DOUBLE" name="reactance_no_reclosing_delay" value="0.0"/>
-        <par type="DOUBLE" name="transformer_currentLimit_maxTimeOperation" value="90.0"/>
-        <par type="DOUBLE" name="transformer_t1st_HT" value="30.0"/>
-        <par type="DOUBLE" name="transformer_t1st_THT" value="30.0"/>
-        <par type="DOUBLE" name="transformer_tNext_HT" value="10.0"/>
-        <par type="DOUBLE" name="transformer_tNext_THT" value="10.0"/>
-        <par type="DOUBLE" name="transformer_tolV" value="0.015"/>
-        <par type="BOOL" name="VirtualBus_2_hasShortCircuitCapabilities" value="true"/>
-        <par type="BOOL" name="busL_hasShortCircuitCapabilities" value="true"/>
-    </set>""")
-
-        # Dynamically append comprehensive parameter sets for ALL loads in the topology
-        for load_id in parsed_data.get("loads", {}).keys():
-            network_sets.append(f"""    <set id="{load_id}">
-        <par type="DOUBLE" name="load_Tp" value="90.0"/>
-        <par type="DOUBLE" name="load_Tq" value="90.0"/>
-        <par type="DOUBLE" name="load_alpha" value="1.0"/>
-        <par type="DOUBLE" name="load_alphaLong" value="0.0"/>
-        <par type="DOUBLE" name="load_beta" value="2.0"/>
-        <par type="DOUBLE" name="load_betaLong" value="0.0"/>
-        <par type="BOOL" name="load_isControllable" value="false"/>
-        <par type="BOOL" name="load_isRestorative" value="false"/>
-        <par type="DOUBLE" name="load_zPMax" value="100.0"/>
-        <par type="DOUBLE" name="load_zQMax" value="100.0"/>
-    </set>""")
-
-        network_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        network_content += '<parametersSet xmlns="http://www.rte-france.com/dynawo">\n'
-        network_content += "\n".join(network_sets)
-        network_content += "\n</parametersSet>\n"
-
-        network_path = os.path.join(target_dir, network_file)
-        with open(network_path, "w", encoding="utf-8") as f:
-            f.write(network_content)
-
+        # 2. Default network model
+        network_path = target / "network.par"
+        _write_parameter_file(network_path, [_parameter_set("Network", NETWORK_PARAMETERS)])
         logger.info(f"Network parameters successfully generated at {network_path}")
+
+        # 3. Solver
+        solver_path = target / "solvers.par"
+        DynamicParameterGenerator._write_solver_parameters(
+            Path(solver_template) if solver_template else DEFAULT_SOLVER_TEMPLATE,
+            solver_path,
+            max_time_step,
+        )
+
+        # 4. Models that PyPowSyBl does not ship
+        additional_path = DynamicParameterGenerator._write_additional_models(setup, target)
+
+        return DynawoParameterFiles(
+            models=str(models_path),
+            network=str(network_path),
+            solver=str(solver_path),
+            solver_id=SOLVER_SETS[solver],
+            solver_type=solver,
+            additional_models=str(additional_path) if additional_path else None,
+        )
+
+    @staticmethod
+    def _write_solver_parameters(template: Path, target: Path, max_time_step: float) -> None:
+        """
+        Writes the parameters of both Dynawo solvers:
+
+        - "Solver" (SIM, fixed step): the template, with the time step bounded. The
+          minimal acceptable step must stay below the maximum step, or the solver would
+          consider every step as too small.
+        - "IDA" (variable step and order): tolerances tight enough for the small
+          deviations of electromechanical dynamics. The SIM template skips the Newton
+          iterations whenever the residual is below 1e-3, which freezes slow dynamics.
+        """
+        tree = ET.parse(template)
+        ET.register_namespace("", DYNAWO_NAMESPACE)
+        root = tree.getroot()
+        overrides = {"hMax": max_time_step, "minimalAcceptableStep": min(1e-6, max_time_step / 10)}
+        for par in root.iter(f"{{{DYNAWO_NAMESPACE}}}par"):
+            if par.get("name") in overrides:
+                par.set("value", repr(float(overrides[par.get("name")])))
+
+        ida_set = ET.SubElement(root, f"{{{DYNAWO_NAMESPACE}}}set", id="IDA")
+        for value_type, name, value in IDA_PARAMETERS + [
+            ("DOUBLE", "maxStep", repr(float(max_time_step)))
+        ]:
+            ET.SubElement(
+                ida_set, f"{{{DYNAWO_NAMESPACE}}}par", type=value_type, name=name, value=value
+            )
+
+        ET.indent(tree, space="    ")
+        tree.write(target, encoding="UTF-8", xml_declaration=True)
+        logger.info(f"Solver parameters (maximum step {max_time_step} s) generated at {target}")
+
+    @staticmethod
+    def _write_additional_models(setup: DynamicModelSetup, target: Path) -> Optional[Path]:
+        """Writes the additionalModelsFile registering the Dynawo models unknown to PyPowSyBl."""
+        content: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
+        registered = set()
+        for link in setup.links:
+            dynawo = link.spec.dynawo
+            if not dynawo.additional_model or dynawo.lib in registered:
+                continue
+            registered.add(dynawo.lib)
+            definition = dict(dynawo.additional_model)
+            category_key = definition.pop("category_key")
+            content.setdefault(category_key, {"libs": []})["libs"].append(
+                {"lib": dynawo.lib, **definition}
+            )
+        if not content:
+            return None
+        path = target / "additional_models.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(content, f, indent=4)
+        logger.info(f"Additional Dynawo models registered in {path}")
+        return path
+
+
+def _format_value(value: Any, value_type: str) -> str:
+    """Formats a parameter value for a Dynawo parameter file."""
+    if value_type == "BOOL":
+        return "true" if bool(value) else "false"
+    if value_type == "INT":
+        return str(int(round(float(value))))
+    if value_type == "DOUBLE":
+        return repr(float(value))
+    return str(value)
+
+
+def _parameter_set(set_id: str, triplets: List[Tuple[str, str, str]]) -> str:
+    """Renders a parameter set of a Dynawo parameter file."""
+    lines = [f'    <set id="{set_id}">']
+    lines += [f'        <par type="{t}" name="{n}" value="{v}"/>' for t, n, v in triplets]
+    lines.append("    </set>")
+    return "\n".join(lines)
+
+
+def _write_parameter_file(path: Path, sets: List[str]) -> None:
+    """Writes a Dynawo parameter file from rendered parameter sets."""
+    content = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    content += f'<parametersSet xmlns="{DYNAWO_NAMESPACE}">\n'
+    content += "\n".join(sets)
+    content += "\n</parametersSet>\n"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
