@@ -18,9 +18,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-logger = logging.getLogger("DynawoCLIRunner")
+logger = logging.getLogger(__name__)
 
 DYNAWO_NAMESPACE = "http://www.rte-france.com/dynawo"
+
+
+def _tag(name: str) -> str:
+    """Returns the qualified name of a tag of the Dynawo XML namespace."""
+    return f"{{{DYNAWO_NAMESPACE}}}{name}"
 
 
 @dataclass
@@ -130,7 +135,7 @@ class DynawoCLIRunner:
         outputs = root.find(".//dyn:outputs", ns)
         dump_tags = root.findall(".//dyn:dumpInitValues", ns)
         if not dump_tags and outputs is not None:
-            dump_tags = [ET.SubElement(outputs, f"{{{DYNAWO_NAMESPACE}}}dumpInitValues")]
+            dump_tags = [ET.SubElement(outputs, _tag("dumpInitValues"))]
         for dump_tag in dump_tags:
             dump_tag.set("local", "true")
             dump_tag.set("global", "true")
@@ -153,14 +158,12 @@ class DynawoCLIRunner:
             names: Set[str] = set()
             description = ddb / f"{lib}.desc.xml"
             if description.exists():
-                for variable in (
-                    ET.parse(description).getroot().iter(f"{{{DYNAWO_NAMESPACE}}}variable")
-                ):
+                for variable in ET.parse(description).getroot().iter(_tag("variable")):
                     names.add(variable.get("name"))
             external: Set[str] = set()
             extvar = ddb / f"{lib}.extvar"
             if extvar.exists():
-                for variable in ET.parse(extvar).getroot().iter(f"{{{DYNAWO_NAMESPACE}}}variable"):
+                for variable in ET.parse(extvar).getroot().iter(_tag("variable")):
                     connector = variable.get("id").replace(".", "_")
                     external.add(connector)
                     for suffix in ("_value", "_V_re", "_V_im", "_i_re", "_i_im"):
@@ -202,11 +205,10 @@ class DynawoCLIRunner:
         ET.register_namespace("dyn", DYNAWO_NAMESPACE)
         tree = ET.parse(dyd_file)
         root = tree.getroot()
-        tag = lambda name: f"{{{DYNAWO_NAMESPACE}}}{name}"  # noqa: E731
 
-        libs = {model.get("id"): model.get("lib") for model in root.iter(tag("blackBoxModel"))}
+        libs = {model.get("id"): model.get("lib") for model in root.iter(_tag("blackBoxModel"))}
         connector_libs: Dict[str, Tuple[Optional[str], Optional[str]]] = {}
-        for macro_connect in root.iter(tag("macroConnect")):
+        for macro_connect in root.iter(_tag("macroConnect")):
             connector_libs.setdefault(
                 macro_connect.get("connector"),
                 (libs.get(macro_connect.get("id1")), libs.get(macro_connect.get("id2"))),
@@ -226,11 +228,11 @@ class DynawoCLIRunner:
                     connect.set(attribute, fixed)
                     renamed.append(f"{variable} -> {fixed}")
 
-        for connector in root.iter(tag("macroConnector")):
+        for connector in root.iter(_tag("macroConnector")):
             lib1, lib2 = connector_libs.get(connector.get("id"), (None, None))
-            for connect in connector.iter(tag("connect")):
+            for connect in connector.iter(_tag("connect")):
                 fix(connect, lib1, lib2)
-        for connect in root.findall(tag("connect")):
+        for connect in root.findall(_tag("connect")):
             fix(connect, libs.get(connect.get("id1")), libs.get(connect.get("id2")))
 
         if renamed:

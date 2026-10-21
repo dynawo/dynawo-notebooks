@@ -213,8 +213,8 @@ class PowsyblConverter:
                         f"{members[0]}: {value} kV is used."
                     )
             else:
-                value = next((mapped_voltage(bus) for bus in members if mapped_voltage(bus)), None)
-                value = value if value is not None else default_v
+                mapped = (mapped_voltage(bus) for bus in members)
+                value = next((voltage for voltage in mapped if voltage), default_v)
             for bus in members:
                 nominal[bus] = value
         return nominal

@@ -34,7 +34,7 @@ import math
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Set, Tuple
 
 import pandas as pd
 
@@ -539,7 +539,7 @@ class ModelicaInitGenerator:
         try:
             with open(target, "w", encoding="utf-8") as f:
                 f.write(source)
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to write Modelica file: {e}")
             return None
 
@@ -627,9 +627,9 @@ class ModelicaInitGenerator:
         Returns, for each component declared in a base class, the base class of the root
         model (extends clause) through which it is inherited.
         """
-        closures: Dict[str, set] = {}
+        closures: Dict[str, Set[str]] = {}
 
-        def closure(class_name: str, visited: Optional[set] = None) -> set:
+        def closure(class_name: str, visited: Optional[Set[str]] = None) -> Set[str]:
             visited = visited if visited is not None else set()
             if class_name in visited:
                 return visited

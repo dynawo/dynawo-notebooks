@@ -100,6 +100,3 @@ class ModelRegistry:
     def get(self, modelica_class: str) -> Optional[ModelSpec]:
         """Returns the registry entry of a Modelica class, or None if it is not supported."""
         return self._models.get(modelica_class)
-
-    def __contains__(self, modelica_class: str) -> bool:
-        return modelica_class in self._models

@@ -28,13 +28,14 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+from xml.sax.saxutils import escape
 
 import pandas as pd
 
 from python_pypowsybl.Code.core.flat_model import FlatModel
 from python_pypowsybl.Code.core.model_linker import DynamicLink, DynamicModelSetup
 
-logger = logging.getLogger("ParameterGenerator")
+logger = logging.getLogger(__name__)
 
 DYNAWO_NAMESPACE = "http://www.rte-france.com/dynawo"
 S_REF_MVA = 100.0
@@ -445,10 +446,18 @@ def _format_value(value: Any, value_type: str) -> str:
     return str(value)
 
 
+def _xml_attribute(value: str) -> str:
+    """Escapes a value written between double quotes in an XML attribute."""
+    return escape(value, {'"': "&quot;"})
+
+
 def _parameter_set(set_id: str, triplets: List[Tuple[str, str, str]]) -> str:
     """Renders a parameter set of a Dynawo parameter file."""
-    lines = [f'    <set id="{set_id}">']
-    lines += [f'        <par type="{t}" name="{n}" value="{v}"/>' for t, n, v in triplets]
+    lines = [f'    <set id="{_xml_attribute(set_id)}">']
+    lines += [
+        f'        <par type="{t}" name="{_xml_attribute(n)}" value="{_xml_attribute(v)}"/>'
+        for t, n, v in triplets
+    ]
     lines.append("    </set>")
     return "\n".join(lines)
 

@@ -300,9 +300,7 @@ class FlatModel:
         """
         try:
             return self._eval(expression, scope)
-        except UnresolvedExpression:
-            return None
-        except (ArithmeticError, ValueError, TypeError):
+        except (UnresolvedExpression, ArithmeticError, ValueError, TypeError):
             return None
 
     # ------------------------------------------------------------------ #

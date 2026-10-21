@@ -7,7 +7,6 @@ and interaction with the OpenModelica Compiler (OMC) via the OMPython API.
 
 import logging
 import math
-import re
 import shutil
 from pathlib import Path
 from typing import Optional, List, Any, Dict, Tuple
@@ -42,7 +41,7 @@ class OMCConnector:
     def __init__(self) -> None:
         """
         Initializes the connection to the OpenModelica Compiler (OMC).
-        Sets up the ZeroMQ session and initializes cache dictionaries for performance.
+        Sets up the ZeroMQ session and the cache of class definitions.
         Raises an exception if the connection fails.
         """
         logger.info("Connecting to OpenModelica Compiler (OMC)...")
@@ -51,11 +50,10 @@ class OMCConnector:
             logger.info("OMC Session established successfully.")
         except Exception as e:
             logger.critical(f"Failed to connect to OMC: {e}")
-            raise e
+            raise
 
-        # Caching mechanisms to improve query performance
+        # Textual class definitions, cached to improve query performance
         self._list_cache: Dict[str, str] = {}
-        self._param_cache: Dict[str, Optional[str]] = {}
 
         self.compatibility: Optional[DynawoLibraryCompatibility] = None
         self.last_error: str = ""
@@ -165,7 +163,6 @@ class OMCConnector:
 
         # Classes may have been redefined: cached textual definitions are now stale
         self._list_cache.clear()
-        self._param_cache.clear()
 
     # ------------------------------------------------------------------ #
     # Model queries
@@ -200,19 +197,6 @@ class OMCConnector:
             return res, ""
         return None, self.last_error
 
-    def instantiate_model(self, model_name: str) -> Optional[str]:
-        """
-        Attempts to force OMC to compile and flatten the model safely.
-
-        :param model_name: Name of the Modelica model.
-        :return: Flattened model string if successful, None otherwise.
-        """
-        logger.info(f"Attempting to instantiate (flatten) model {model_name}...")
-        flat, _ = self.instantiate(model_name)
-        if flat is None:
-            logger.warning("OMC could not flatten the model. Falling back to AST parsing.")
-        return flat
-
     def get_source_file(self, class_name: str) -> Optional[str]:
         """
         Returns the file in which a class is defined.
@@ -231,8 +215,10 @@ class OMCConnector:
         :return: The source code, or an empty string if the class is unknown.
         """
         if class_name not in self._list_cache:
+            # OMC returns an empty string for an unknown class. The source code itself is not
+            # inspected, since its descriptions may legitimately contain the word "Error".
             res = self.send(f"list({class_name})")
-            self._list_cache[class_name] = str(res) if res and "Error" not in str(res) else ""
+            self._list_cache[class_name] = str(res) if res else ""
         return self._list_cache[class_name]
 
     def get_components(self, model_name: str) -> List[Any]:
@@ -274,83 +260,6 @@ class OMCConnector:
             except ValueError:
                 pass
         return connections
-
-    def get_parameter_value(self, model_name: str, parameter_path: str) -> Optional[str]:
-        """
-        Retrieves the static value assigned to a specific parameter using cache.
-
-        :param model_name: Name of the Modelica model.
-        :param parameter_path: Parameter path.
-        :return: Parameter value as string.
-        """
-        cache_key = f"{model_name}::{parameter_path}"
-        if cache_key in self._param_cache:
-            return self._param_cache[cache_key]
-
-        val = self.send(f'getParameterValue({model_name}, "{parameter_path}")')
-        res = None
-        if val and "Error" not in str(val):
-            res = str(val).strip().replace('"', "") or None
-
-        self._param_cache[cache_key] = res
-        return res
-
-    def get_modifier_value(
-        self, model_name: str, component_name: str, parameter_name: str
-    ) -> Optional[str]:
-        """
-        Fallback method: Parses the raw source code definition to extract a modifier's value.
-
-        :param model_name: Name of the Modelica model.
-        :param component_name: Component name.
-        :param parameter_name: Parameter name.
-        :return: Parameter value.
-        """
-        try:
-            definition_str = self.list_class(model_name)
-            if not definition_str:
-                return None
-
-            comp_pattern = re.compile(rf"\b{re.escape(component_name)}\s*\(")
-            comp_match = comp_pattern.search(definition_str)
-            if not comp_match:
-                return None
-
-            start_comp_idx = comp_match.end()
-            depth = 1
-            comp_modifiers_str = ""
-            for char in definition_str[start_comp_idx:]:
-                if char == "(":
-                    depth += 1
-                elif char == ")":
-                    depth -= 1
-                if depth == 0:
-                    break
-                comp_modifiers_str += char
-
-            param_pattern = re.compile(rf"\b{re.escape(parameter_name)}\s*=")
-            param_match = param_pattern.search(comp_modifiers_str)
-            if not param_match:
-                return None
-
-            value_str = ""
-            depth_param = 0
-            for char in comp_modifiers_str[param_match.end() :]:
-                if char == "(":
-                    depth_param += 1
-                elif char == ")":
-                    depth_param -= 1
-                if depth_param < 0:
-                    break
-                if depth_param == 0 and char == ",":
-                    break
-                value_str += char
-
-            val = value_str.strip()
-            val = val.split('"')[0].split("/*")[0].split("//")[0].strip()
-            return val if val else None
-        except Exception:
-            return None
 
     def get_extends(self, model_name: str) -> List[str]:
         """
@@ -410,13 +319,12 @@ class OMCConnector:
         """
         val = self.send(f"val({variable_name}, {time})")
         try:
-            if val is not None and "Error" not in str(val):
-                value = float(val)
-                # OMC returns NaN for the variables missing from the result file
-                return value if math.isfinite(value) else None
+            value = float(val)
         except (TypeError, ValueError):
-            pass
-        return None
+            # No result (None) or an OMC message instead of a number
+            return None
+        # OMC returns NaN for the variables missing from the result file
+        return value if math.isfinite(value) else None
 
     def get_working_directory(self) -> str:
         """Gets the current working directory of the OMC session."""

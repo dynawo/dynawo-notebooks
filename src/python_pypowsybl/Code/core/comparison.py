@@ -5,16 +5,16 @@ This module provides utilities to cross-validate AC Load Flow results
 between OpenModelica dynamic simulations and PyPowSyBl steady-state calculations.
 """
 
-import tempfile
-import logging
 import json
+import logging
 import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Sequence, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pypowsybl as pp
 
 from .connector import OMCConnector
@@ -215,54 +215,58 @@ class LoadFlowComparator:
                 except Exception as e:
                     logger.error(f"Error extracting data for bus '{bus_id}': {e}")
 
-                error_v = (
-                    abs(v_pu_om - v_pu_pps) if pd.notna(v_pu_om) and pd.notna(v_pu_pps) else np.nan
-                )
-                error_theta = (
-                    abs(theta_deg_om - theta_deg_pps)
-                    if pd.notna(theta_deg_om) and pd.notna(theta_deg_pps)
-                    else np.nan
-                )
-
-                if pd.notna(error_theta) and error_theta > 180:
-                    error_theta = 360 - error_theta
-
                 comparison_data.append(
                     {
                         "Bus": bus_id,
-                        "V_OM (pu)": round(v_pu_om, 5) if pd.notna(v_pu_om) else None,
-                        "V_PPS (pu)": round(v_pu_pps, 5) if pd.notna(v_pu_pps) else None,
-                        "Δ V (pu)": round(error_v, 6) if pd.notna(error_v) else None,
-                        "Theta_OM (deg)": round(theta_deg_om, 4)
-                        if pd.notna(theta_deg_om)
-                        else None,
-                        "Theta_PPS (deg)": round(theta_deg_pps, 4)
-                        if pd.notna(theta_deg_pps)
-                        else None,
-                        "Δ Theta (deg)": round(error_theta, 4) if pd.notna(error_theta) else None,
+                        "v_om": v_pu_om,
+                        "v_pps": v_pu_pps,
+                        "theta_om": theta_deg_om,
+                        "theta_pps": theta_deg_pps,
                     }
                 )
 
             connector.set_working_directory(original_dir)
 
-        # Slack Angle Alignment: both angle references are moved to the slack bus
+        # Slack Angle Alignment: both angle references are moved to the slack bus, the bus
+        # whose load flow angle is zero
         slack_bus_record = next(
-            (row for row in comparison_data if row["Theta_PPS (deg)"] == 0.0), None
+            (
+                row
+                for row in comparison_data
+                if pd.notna(row["theta_pps"]) and round(row["theta_pps"], 4) == 0.0
+            ),
+            None,
         )
-        if slack_bus_record and pd.notna(slack_bus_record["Theta_OM (deg)"]):
-            theta_shift = slack_bus_record["Theta_OM (deg)"]
-
+        if slack_bus_record and pd.notna(slack_bus_record["theta_om"]):
+            theta_shift = slack_bus_record["theta_om"]
             for row in comparison_data:
-                if pd.notna(row["Theta_OM (deg)"]):
-                    shifted = (row["Theta_OM (deg)"] - theta_shift + 180) % 360 - 180
-                    row["Theta_OM (deg)"] = round(shifted, 4)
+                if pd.notna(row["theta_om"]):
+                    row["theta_om"] = (row["theta_om"] - theta_shift + 180) % 360 - 180
 
-                    if pd.notna(row["Theta_PPS (deg)"]):
-                        diff = abs(shifted - row["Theta_PPS (deg)"])
-                        diff = diff if diff <= 180 else 360 - diff
-                        row["Δ Theta (deg)"] = round(diff, 4)
+        # The differences are computed at full precision, the values are only rounded for
+        # display
+        def rounded(value: float, digits: int) -> Optional[float]:
+            return round(value, digits) if pd.notna(value) else None
 
-        df = pd.DataFrame(comparison_data).set_index("Bus")
+        rows = []
+        for row in comparison_data:
+            error_v = abs(row["v_om"] - row["v_pps"])
+            error_theta = abs(row["theta_om"] - row["theta_pps"])
+            if pd.notna(error_theta) and error_theta > 180:
+                error_theta = 360 - error_theta
+            rows.append(
+                {
+                    "Bus": row["Bus"],
+                    "V_OM (pu)": rounded(row["v_om"], 5),
+                    "V_PPS (pu)": rounded(row["v_pps"], 5),
+                    "Δ V (pu)": rounded(error_v, 6),
+                    "Theta_OM (deg)": rounded(row["theta_om"], 4),
+                    "Theta_PPS (deg)": rounded(row["theta_pps"], 4),
+                    "Δ Theta (deg)": rounded(error_theta, 4),
+                }
+            )
+
+        df = pd.DataFrame(rows).set_index("Bus")
         return df.sort_values(by="Δ V (pu)", ascending=False)
 
 

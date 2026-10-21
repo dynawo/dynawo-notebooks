@@ -14,14 +14,14 @@ infinite bus in the load flow is removed from the network given to Dynawo.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 import pandas as pd
 import pypowsybl as pp
 
 from python_pypowsybl.Code.core.model_registry import ModelRegistry, ModelSpec
 
-logger = logging.getLogger("DynamicModelLinker")
+logger = logging.getLogger(__name__)
 
 # Model used for the buses of a fully dynamic network
 BUS_MODEL = "Dynawo.Electrical.Buses.Bus"
@@ -82,12 +82,8 @@ class DynamicModelSetup:
         """Allows ``mapping, registry = link_models(...)`` as with former versions."""
         return iter((self.mapping, self.registry))
 
-    def link_of(self, component: str) -> Optional[DynamicLink]:
-        """Returns the link of a Modelica component, if it has a dynamic model."""
-        return next((link for link in self.links if link.component == component), None)
 
-
-def _copy_network(network: pp.network.Network) -> pp.network.Network:
+def copy_network(network: pp.network.Network) -> pp.network.Network:
     """Returns an independent copy of a network, with its load flow results."""
     return pp.network.load_from_binary_buffer(network.save_to_binary_buffer(format="XIIDM"))
 
@@ -154,7 +150,7 @@ def link_models(network: pp.network.Network, parsed_data: Dict[str, Any]) -> Dyn
     ]
     simulated_network = network
     if removed:
-        simulated_network = _copy_network(network)
+        simulated_network = copy_network(network)
         simulated_network.remove_elements(removed)
         logger.info(f"Infinite bus stand-ins removed from the simulated network: {removed}")
 

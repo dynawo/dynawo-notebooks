@@ -19,6 +19,7 @@ classified from their Dynawo package and read with generic parameter names.
 import logging
 import math
 import re
+from collections import deque
 from typing import Dict, Any, Optional, List, Set, Tuple
 
 from .connector import OMCConnector
@@ -340,15 +341,16 @@ class ModelicaParser:
                 adj.setdefault(term1, []).append(term2)
                 adj.setdefault(term2, []).append(term1)
 
+        # Connected groups of terminals (breadth-first search), each one a network node
         visited: Set[str] = set()
         node_groups = []
-        for terminal in adj.keys():
+        for terminal in adj:
             if terminal not in visited:
-                queue, group = [terminal], {terminal}
+                queue, group = deque([terminal]), {terminal}
                 visited.add(terminal)
                 while queue:
-                    curr = queue.pop(0)
-                    for neighbor in adj.get(curr, []):
+                    curr = queue.popleft()
+                    for neighbor in adj[curr]:
                         if neighbor not in visited:
                             visited.add(neighbor)
                             group.add(neighbor)
@@ -357,11 +359,12 @@ class ModelicaParser:
 
         virtual_bus_idx = 1
         for group in node_groups:
+            # The node takes the name of its Bus component, or a virtual name if it has none
             bus_id = next(
                 (
-                    ".".join(t.split(".")[:-1])
-                    for t in group
-                    if ".".join(t.split(".")[:-1]) in topo["buses"]
+                    component
+                    for component, _, _ in (term.rpartition(".") for term in group)
+                    if component in topo["buses"]
                 ),
                 None,
             )
@@ -376,20 +379,13 @@ class ModelicaParser:
                 }
 
             for term in group:
-                parts = term.split(".")
-                if len(parts) < 2:
-                    continue
-                comp_name, pin_name = ".".join(parts[:-1]), parts[-1].lower()
-
-                for cat in ["lines", "transformers"]:
+                comp_name, _, pin_name = term.rpartition(".")
+                for cat in ("lines", "transformers"):
                     if comp_name in topo[cat]:
-                        side = (
-                            "bus1"
-                            if (pin_name.endswith("1") or pin_name in ["p", "terminal1", "a"])
-                            else "bus2"
-                        )
+                        # Branches are connected through terminal1 (side 1) and terminal2
+                        side = "bus1" if pin_name.endswith("1") else "bus2"
                         topo[cat][comp_name][side] = bus_id
-                for cat in ["generators", "loads", "shunts"]:
+                for cat in ("generators", "loads", "shunts"):
                     if comp_name in topo[cat]:
                         topo[cat][comp_name]["bus"] = bus_id
 

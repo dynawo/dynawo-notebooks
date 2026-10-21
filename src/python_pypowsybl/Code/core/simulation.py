@@ -22,11 +22,10 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-import pypowsybl as pp
 import pypowsybl.dynamic as dyn
 
 from python_pypowsybl.Code.core.cli_runner import CLIRunResult, DynawoCLIRunner
-from python_pypowsybl.Code.core.model_linker import DynamicModelSetup
+from python_pypowsybl.Code.core.model_linker import DynamicModelSetup, copy_network
 from python_pypowsybl.Code.core.parameter_generator import DynawoParameterFiles
 
 logger = logging.getLogger(__name__)
@@ -116,9 +115,7 @@ class DynawoSimulationRunner:
 
         # PyPowSyBl writes the final state of the simulation back into the network: a copy
         # is simulated so that the load flow results, used by the initialization, are kept
-        network = pp.network.load_from_binary_buffer(
-            setup.network.save_to_binary_buffer(format="XIIDM")
-        )
+        network = copy_network(setup.network)
 
         before = DynawoCLIRunner.list_working_directories()
         status, message = "FAILURE", ""

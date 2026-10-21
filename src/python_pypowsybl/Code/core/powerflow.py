@@ -108,6 +108,11 @@ class PowerFlowRunner:
                 # The generators built from the Modelica models have unbounded active power
                 # limits: they must not be excluded from the balance as implausible
                 "plausibleActivePowerLimit": "1e9",
+                # By default, the distribution of the balance stops when the mismatch left at
+                # the slack bus is below 1 MW, which shifts the angles of a large network by
+                # about 1e-3 deg from the steady state of the Modelica model: the balance is
+                # distributed up to a mismatch of 1e-4 MW instead
+                "slackBusPMaxMismatch": "1e-4",
             }
             if slack_bus_id:
                 provider_params.update(
