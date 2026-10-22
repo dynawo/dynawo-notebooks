@@ -15,9 +15,6 @@ from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-
 
 def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
     """
@@ -67,11 +64,13 @@ def parse_dynawo_xmls(folder_path: str, output_folder: str) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(models_data, f, indent=4)
         logger.info(f"Successfully exported parsed data to: {output_path}")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Failed to write output file: {e}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+
     parser = argparse.ArgumentParser(
         description="Extract initialization data from Dynawo XML files."
     )

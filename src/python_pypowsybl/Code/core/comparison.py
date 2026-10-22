@@ -5,14 +5,16 @@ This module provides utilities to cross-validate AC Load Flow results
 between OpenModelica dynamic simulations and PyPowSyBl steady-state calculations.
 """
 
-import tempfile
-import logging
 import json
+import logging
+import os
+import re
+import tempfile
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Sequence, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pypowsybl as pp
 
 from .connector import OMCConnector
@@ -25,6 +27,113 @@ class LoadFlowComparator:
     Utility class responsible for comparing steady-state power flow results
     (voltage magnitudes and phase angles) between OpenModelica and PyPowSyBl.
     """
+
+    @staticmethod
+    def open_case(
+        dynawo_package_path: str,
+        source_dir: str,
+        local_files: Sequence[str],
+        extra_files: Sequence[str] = (),
+    ) -> OMCConnector:
+        """
+        Opens a new OpenModelica session with the Dynawo library and the files of a case.
+
+        :param dynawo_package_path: Path of the Dynawo package.mo.
+        :param source_dir: Directory of the local Modelica files.
+        :param local_files: Local Modelica files of the case.
+        :param extra_files: Additional files given by their path (e.g. a generated model).
+        :return: The connector of the session.
+        """
+        connector = OMCConnector()
+        connector.load_libraries(dynawo_package_path)
+        connector.load_local_files(source_dir, list(local_files))
+        for extra_file in extra_files:
+            connector.load_local_files(
+                os.path.dirname(os.path.abspath(extra_file)), [os.path.basename(extra_file)]
+            )
+        return connector
+
+    @staticmethod
+    def find_reference_model(source_dir: str, model_name: str) -> Tuple[str, Optional[str]]:
+        """
+        Finds the OpenModelica reference of a case: an initialized version provided next
+        to the case (``<Model>_initialized.mo``), or else the model itself, which is a
+        valid reference when it is already initialized.
+
+        :param source_dir: Directory of the local Modelica files.
+        :param model_name: Fully qualified name of the root model.
+        :return: The reference model name and the file defining it (None for the model itself).
+        """
+        short_name = model_name.split(".")[-1]
+        reference_file = os.path.join(source_dir, f"{short_name}_initialized.mo")
+        if not os.path.exists(reference_file):
+            return model_name, None
+        with open(reference_file, "r", encoding="utf-8") as f:
+            source = f.read()
+        within = re.search(r"^\s*within\s+([\w\.]+)\s*;", source, re.MULTILINE)
+        name = f"{short_name}_initialized"
+        return (f"{within.group(1)}.{name}" if within else name), reference_file
+
+    @staticmethod
+    def compare_with_reference(
+        network: pp.network.Network,
+        parsed_data: Dict[str, Any],
+        dynawo_package_path: str,
+        source_dir: str,
+        local_files: Sequence[str],
+        model_name: str,
+    ) -> Tuple[pd.DataFrame, str]:
+        """
+        Compares the load flow with the OpenModelica reference of the case at t = 0.
+
+        :param network: The solved PyPowSyBl network.
+        :param parsed_data: The parsed topology of the case.
+        :param dynawo_package_path: Path of the Dynawo package.mo.
+        :param source_dir: Directory of the local Modelica files.
+        :param local_files: Local Modelica files of the case.
+        :param model_name: Fully qualified name of the root model.
+        :return: The comparison (empty if the reference cannot be simulated) and the name
+            of the reference model.
+        """
+        reference_model, reference_file = LoadFlowComparator.find_reference_model(
+            source_dir, model_name
+        )
+        files = list(local_files)
+        if reference_file and os.path.basename(reference_file) not in files:
+            files.append(os.path.basename(reference_file))
+        connector = LoadFlowComparator.open_case(dynawo_package_path, source_dir, files)
+        comparison = LoadFlowComparator.compare_voltages(
+            network, connector, reference_model, parsed_data
+        )
+        return comparison, reference_model
+
+    @staticmethod
+    def validate_initialized_model(
+        network: pp.network.Network,
+        parsed_data: Dict[str, Any],
+        initialized_model: Any,
+        dynawo_package_path: str,
+        source_dir: str,
+        local_files: Sequence[str],
+    ) -> pd.DataFrame:
+        """
+        Simulates the generated initialized model in OpenModelica and compares its initial
+        point with the load flow.
+
+        :param network: The solved PyPowSyBl network.
+        :param parsed_data: The parsed topology of the case.
+        :param initialized_model: The InitializedModel returned by the init generator.
+        :param dynawo_package_path: Path of the Dynawo package.mo.
+        :param source_dir: Directory of the local Modelica files.
+        :param local_files: Local Modelica files of the case.
+        :return: The comparison (empty if the initialized model cannot be simulated).
+        """
+        connector = LoadFlowComparator.open_case(
+            dynawo_package_path, source_dir, local_files, [initialized_model.path]
+        )
+        return LoadFlowComparator.compare_voltages(
+            network, connector, initialized_model.class_name, parsed_data
+        )
 
     @staticmethod
     def compare_voltages(
@@ -74,31 +183,18 @@ class LoadFlowComparator:
             buses_df = network.get_buses()
             vl_df = network.get_voltage_levels()
 
-            for bus_id in parsed_data.get("buses", {}).keys():
+            for bus_id, bus_info in parsed_data.get("buses", {}).items():
                 v_pu_om = connector.get_simulation_value(f"{bus_id}.UPu", 0.0)
                 theta_rad_om = connector.get_simulation_value(f"{bus_id}.UPhase", 0.0)
 
-                if v_pu_om is None:
-                    v_pu_om = connector.get_simulation_value(f"{bus_id}.V", 0.0)
-                if theta_rad_om is None:
-                    theta_rad_om = connector.get_simulation_value(f"{bus_id}.theta", 0.0)
-
-                bus_info = parsed_data.get("buses", {}).get(bus_id, {})
-                if v_pu_om is None and bus_info.get("is_virtual"):
-                    om_ref = bus_info.get("om_reference")
-                    if om_ref:
-                        v_re = connector.get_simulation_value(f"{om_ref}.V.re", 0.0)
-                        v_im = connector.get_simulation_value(f"{om_ref}.V.im", 0.0)
-
-                        if v_re is not None and v_im is not None:
-                            v_mag = np.sqrt(v_re**2 + v_im**2)
-                            theta_rad_om = np.arctan2(v_im, v_re)
-                            v_nom = float(bus_info.get("nominal_v", 225.0))
-
-                            if v_mag > 2.0 and v_nom > 0:
-                                v_pu_om = v_mag / v_nom
-                            else:
-                                v_pu_om = v_mag
+                if v_pu_om is None and bus_info.get("om_reference"):
+                    # Node without Bus component: read the voltage of a connected terminal
+                    om_ref = bus_info["om_reference"]
+                    v_re = connector.get_simulation_value(f"{om_ref}.V.re", 0.0)
+                    v_im = connector.get_simulation_value(f"{om_ref}.V.im", 0.0)
+                    if v_re is not None and v_im is not None:
+                        v_pu_om = float(np.hypot(v_re, v_im))
+                        theta_rad_om = float(np.arctan2(v_im, v_re))
 
                 theta_deg_om = np.degrees(theta_rad_om) if theta_rad_om is not None else np.nan
                 if v_pu_om is None:
@@ -112,69 +208,65 @@ class LoadFlowComparator:
                     matched_buses = buses_df[buses_df["voltage_level_id"] == vl_id]
                     if not matched_buses.empty:
                         b_row = matched_buses.iloc[0]
-                        v_mag_kv = b_row.get("v_mag", np.nan)
-                        v_ang_deg = b_row.get("v_angle", np.nan)
-
-                        actual_vl_id = b_row.get("voltage_level_id")
-                        if pd.notna(actual_vl_id) and actual_vl_id in vl_df.index:
-                            v_nom = float(vl_df.at[actual_vl_id, "nominal_v"])
-                        else:
-                            v_nom = float(bus_info.get("nominal_v", 225.0))
-
-                        if pd.notna(v_mag_kv):
-                            v_pu_pps = float(v_mag_kv) / v_nom if v_nom != 0 else np.nan
-                            theta_deg_pps = float(v_ang_deg)
+                        v_nom = float(vl_df.at[vl_id, "nominal_v"])
+                        if pd.notna(b_row.get("v_mag")):
+                            v_pu_pps = float(b_row["v_mag"]) / v_nom if v_nom != 0 else np.nan
+                            theta_deg_pps = float(b_row["v_angle"])
                 except Exception as e:
                     logger.error(f"Error extracting data for bus '{bus_id}': {e}")
-
-                error_v = (
-                    abs(v_pu_om - v_pu_pps) if pd.notna(v_pu_om) and pd.notna(v_pu_pps) else np.nan
-                )
-                error_theta = (
-                    abs(theta_deg_om - theta_deg_pps)
-                    if pd.notna(theta_deg_om) and pd.notna(theta_deg_pps)
-                    else np.nan
-                )
-
-                if pd.notna(error_theta) and error_theta > 180:
-                    error_theta = 360 - error_theta
 
                 comparison_data.append(
                     {
                         "Bus": bus_id,
-                        "V_OM (pu)": round(v_pu_om, 5) if pd.notna(v_pu_om) else None,
-                        "V_PPS (pu)": round(v_pu_pps, 5) if pd.notna(v_pu_pps) else None,
-                        "Δ V (pu)": round(error_v, 6) if pd.notna(error_v) else None,
-                        "Theta_OM (deg)": round(theta_deg_om, 4)
-                        if pd.notna(theta_deg_om)
-                        else None,
-                        "Theta_PPS (deg)": round(theta_deg_pps, 4)
-                        if pd.notna(theta_deg_pps)
-                        else None,
-                        "Δ Theta (deg)": round(error_theta, 4) if pd.notna(error_theta) else None,
+                        "v_om": v_pu_om,
+                        "v_pps": v_pu_pps,
+                        "theta_om": theta_deg_om,
+                        "theta_pps": theta_deg_pps,
                     }
                 )
 
             connector.set_working_directory(original_dir)
 
-        # Slack Angle Alignment
+        # Slack Angle Alignment: both angle references are moved to the slack bus, the bus
+        # whose load flow angle is zero
         slack_bus_record = next(
-            (row for row in comparison_data if row["Theta_PPS (deg)"] == 0.0), None
+            (
+                row
+                for row in comparison_data
+                if pd.notna(row["theta_pps"]) and round(row["theta_pps"], 4) == 0.0
+            ),
+            None,
         )
-        if slack_bus_record and pd.notna(slack_bus_record["Theta_OM (deg)"]):
-            theta_shift = slack_bus_record["Theta_OM (deg)"]
-
+        if slack_bus_record and pd.notna(slack_bus_record["theta_om"]):
+            theta_shift = slack_bus_record["theta_om"]
             for row in comparison_data:
-                if pd.notna(row["Theta_OM (deg)"]):
-                    shifted = (row["Theta_OM (deg)"] - theta_shift + 180) % 360 - 180
-                    row["Theta_OM (deg)"] = round(shifted, 4)
+                if pd.notna(row["theta_om"]):
+                    row["theta_om"] = (row["theta_om"] - theta_shift + 180) % 360 - 180
 
-                    if pd.notna(row["Theta_PPS (deg)"]):
-                        diff = abs(shifted - row["Theta_PPS (deg)"])
-                        diff = diff if diff <= 180 else 360 - diff
-                        row["Δ Theta (deg)"] = round(diff, 4)
+        # The differences are computed at full precision, the values are only rounded for
+        # display
+        def rounded(value: float, digits: int) -> Optional[float]:
+            return round(value, digits) if pd.notna(value) else None
 
-        df = pd.DataFrame(comparison_data).set_index("Bus")
+        rows = []
+        for row in comparison_data:
+            error_v = abs(row["v_om"] - row["v_pps"])
+            error_theta = abs(row["theta_om"] - row["theta_pps"])
+            if pd.notna(error_theta) and error_theta > 180:
+                error_theta = 360 - error_theta
+            rows.append(
+                {
+                    "Bus": row["Bus"],
+                    "V_OM (pu)": rounded(row["v_om"], 5),
+                    "V_PPS (pu)": rounded(row["v_pps"], 5),
+                    "Δ V (pu)": rounded(error_v, 6),
+                    "Theta_OM (deg)": rounded(row["theta_om"], 4),
+                    "Theta_PPS (deg)": rounded(row["theta_pps"], 4),
+                    "Δ Theta (deg)": rounded(error_theta, 4),
+                }
+            )
+
+        df = pd.DataFrame(rows).set_index("Bus")
         return df.sort_values(by="Δ V (pu)", ascending=False)
 
 
@@ -193,6 +285,8 @@ class NetworkParameterComparator:
     ) -> None:
         """
         Extracts parameters from the pipeline stages and exports the results to CSV files.
+        Every value is expressed with the per-unit conventions of the Dynawo models (see
+        the converter module).
 
         :param om_data: Dictionary with the OpenModelica parsed data.
         :param json_path: Path to the exported JSON topology file.
@@ -241,7 +335,7 @@ class NetworkParameterComparator:
                     return float(d[k])
             return default
 
-        # 1. LINES
+        # 1. LINES (half-admittances per side)
         for lid, om_info in om_data.get("lines", {}).items():
             j_info = json_data.get("lines", {}).get(lid, {})
             x_r, x_x, x_g, x_b = np.nan, np.nan, np.nan, np.nan
@@ -249,72 +343,59 @@ class NetworkParameterComparator:
             if lid in lines_df.index:
                 l_row = lines_df.loc[lid]
                 z_base = get_vl_base(l_row.get("voltage_level1_id"))
-
-                r_phys = l_row.get("r", np.nan)
-                x_phys = l_row.get("x", np.nan)
-                b_phys = l_row.get("b1", 0.0) + l_row.get("b2", 0.0)
-                g_phys = l_row.get("g1", 0.0) + l_row.get("g2", 0.0)
-
-                x_r = r_phys / z_base if pd.notna(r_phys) else np.nan
-                x_x = x_phys / z_base if pd.notna(x_phys) else np.nan
-                x_b = b_phys * z_base
-                x_g = g_phys * z_base
+                x_r = l_row.get("r", np.nan) / z_base
+                x_x = l_row.get("x", np.nan) / z_base
+                x_b = l_row.get("b1", 0.0) * z_base
+                x_g = l_row.get("g1", 0.0) * z_base
 
             lines_rows.append(
                 {
                     "ID": lid,
-                    "OM_R": safe_get(om_info, ["r_pu", "r"]),
-                    "JSON_R": safe_get(j_info, ["r_pu", "r"]),
+                    "OM_R": safe_get(om_info, ["r_pu"]),
+                    "JSON_R": safe_get(j_info, ["r_pu"]),
                     "XIIDM_R": x_r,
-                    "OM_X": safe_get(om_info, ["x_pu", "x"]),
-                    "JSON_X": safe_get(j_info, ["x_pu", "x"]),
+                    "OM_X": safe_get(om_info, ["x_pu"]),
+                    "JSON_X": safe_get(j_info, ["x_pu"]),
                     "XIIDM_X": x_x,
-                    "OM_B": safe_get(om_info, ["b_pu", "b"]),
-                    "JSON_B": safe_get(j_info, ["b_pu", "b"]),
+                    "OM_B": safe_get(om_info, ["b_pu"]),
+                    "JSON_B": safe_get(j_info, ["b_pu"]),
                     "XIIDM_B": x_b,
-                    "OM_G": safe_get(om_info, ["g_pu", "g"]),
-                    "JSON_G": safe_get(j_info, ["g_pu", "g"]),
+                    "OM_G": safe_get(om_info, ["g_pu"]),
+                    "JSON_G": safe_get(j_info, ["g_pu"]),
                     "XIIDM_G": x_g,
                 }
             )
 
-        # 2. TRANSFORMERS
+        # 2. TRANSFORMERS (impedance in base of the side 2 nominal voltage)
         for tid, om_info in om_data.get("transformers", {}).items():
             j_info = json_data.get("transformers", {}).get(tid, {})
             x_r, x_x, x_g, x_b, x_ratio = np.nan, np.nan, np.nan, np.nan, np.nan
 
             if tid in tfos_df.index:
                 t_row = tfos_df.loc[tid]
-                rated_u1 = t_row.get("rated_u1", np.nan)
-                rated_s = t_row.get("rated_s", 100.0)
-
-                if pd.notna(rated_u1) and rated_s > 0:
-                    z_base = (rated_u1**2) / rated_s
-                    r_phys = t_row.get("r", np.nan)
-                    x_phys = t_row.get("x", np.nan)
-
-                    x_r = r_phys / z_base if pd.notna(r_phys) else np.nan
-                    x_x = x_phys / z_base if pd.notna(x_phys) else np.nan
-                    x_b = t_row.get("b", 0.0) * z_base
-                    x_g = t_row.get("g", 0.0) * z_base
-
-                    un1 = get_vl_vnom(t_row.get("voltage_level1_id"))
-                    x_ratio = rated_u1 / un1 if un1 != 0 else np.nan
+                un1 = get_vl_vnom(t_row.get("voltage_level1_id"))
+                un2 = get_vl_vnom(t_row.get("voltage_level2_id"))
+                z_base = un2**2 / 100.0
+                x_r = t_row.get("r", np.nan) / z_base
+                x_x = t_row.get("x", np.nan) / z_base
+                x_b = t_row.get("b", 0.0) * z_base
+                x_g = t_row.get("g", 0.0) * z_base
+                x_ratio = (t_row.get("rated_u2") / t_row.get("rated_u1")) * (un1 / un2)
 
             tfos_rows.append(
                 {
                     "ID": tid,
-                    "OM_R": safe_get(om_info, ["r_pu", "r"]),
-                    "JSON_R": safe_get(j_info, ["r_pu", "r"]),
+                    "OM_R": safe_get(om_info, ["r_pu"]),
+                    "JSON_R": safe_get(j_info, ["r_pu"]),
                     "XIIDM_R": x_r,
-                    "OM_X": safe_get(om_info, ["x_pu", "x"]),
-                    "JSON_X": safe_get(j_info, ["x_pu", "x"]),
+                    "OM_X": safe_get(om_info, ["x_pu"]),
+                    "JSON_X": safe_get(j_info, ["x_pu"]),
                     "XIIDM_X": x_x,
-                    "OM_B": safe_get(om_info, ["b_pu", "b"]),
-                    "JSON_B": safe_get(j_info, ["b_pu", "b"]),
+                    "OM_B": safe_get(om_info, ["b_pu"]),
+                    "JSON_B": safe_get(j_info, ["b_pu"]),
                     "XIIDM_B": x_b,
-                    "OM_G": safe_get(om_info, ["g_pu", "g"]),
-                    "JSON_G": safe_get(j_info, ["g_pu", "g"]),
+                    "OM_G": safe_get(om_info, ["g_pu"]),
+                    "JSON_G": safe_get(j_info, ["g_pu"]),
                     "XIIDM_G": x_g,
                     "OM_Ratio": safe_get(om_info, ["ratio"]),
                     "JSON_Ratio": safe_get(j_info, ["ratio"]),
@@ -322,18 +403,15 @@ class NetworkParameterComparator:
                 }
             )
 
-        # 3. LOADS
+        # 3. LOADS (receptor convention)
         for lid, om_info in om_data.get("loads", {}).items():
             j_info = json_data.get("loads", {}).get(lid, {})
             x_p, x_q = np.nan, np.nan
 
             if lid in loads_df.index:
                 l_row = loads_df.loc[lid]
-                p0 = l_row.get("p0", np.nan)
-                q0 = l_row.get("q0", np.nan)
-
-                x_p = p0 / 100.0 if pd.notna(p0) else np.nan
-                x_q = q0 / 100.0 if pd.notna(q0) else np.nan
+                x_p = l_row.get("p0", np.nan) / 100.0
+                x_q = l_row.get("q0", np.nan) / 100.0
 
             loads_rows.append(
                 {
@@ -347,23 +425,17 @@ class NetworkParameterComparator:
                 }
             )
 
-        # 4. GENERATORS
+        # 4. GENERATORS (generator convention)
         for gid, om_info in om_data.get("generators", {}).items():
             j_info = json_data.get("generators", {}).get(gid, {})
             x_p, x_q, x_v = np.nan, np.nan, np.nan
 
             if gid in gens_df.index:
                 g_row = gens_df.loc[gid]
-                target_p = g_row.get("target_p", np.nan)
-                target_q = g_row.get("target_q", np.nan)
-                target_v = g_row.get("target_v", np.nan)
-
-                x_p = target_p / 100.0 if pd.notna(target_p) else np.nan
-                x_q = target_q / 100.0 if pd.notna(target_q) else np.nan
-
+                x_p = g_row.get("target_p", np.nan) / 100.0
+                x_q = g_row.get("target_q", np.nan) / 100.0
                 un_g = get_vl_vnom(g_row.get("voltage_level_id"))
-                if pd.notna(target_v) and un_g != 0:
-                    x_v = target_v / un_g
+                x_v = g_row.get("target_v", np.nan) / un_g
 
             gens_rows.append(
                 {
@@ -374,13 +446,13 @@ class NetworkParameterComparator:
                     "OM_Q": safe_get(om_info, ["q_pu"]),
                     "JSON_Q": safe_get(j_info, ["q_pu"]),
                     "XIIDM_Q": x_q,
-                    "OM_V": safe_get(om_info, ["u_pu", "v_pu"]),
-                    "JSON_V": safe_get(j_info, ["u_pu", "v_pu"]),
+                    "OM_V": safe_get(om_info, ["u_pu"]),
+                    "JSON_V": safe_get(j_info, ["u_pu"]),
                     "XIIDM_V": x_v,
                 }
             )
 
-        # 5. SHUNTS
+        # 5. SHUNTS (receptor convention of the Dynawo susceptance)
         for sid, om_info in om_data.get("shunts", {}).items():
             j_info = json_data.get("shunts", {}).get(sid, {})
             x_b, x_g = np.nan, np.nan
@@ -388,11 +460,9 @@ class NetworkParameterComparator:
             if sid in shunts_df.index:
                 s_row = shunts_df.loc[sid]
                 z_base = get_vl_base(s_row.get("voltage_level_id"))
-
                 b_val = s_row.get("b_per_section", s_row.get("b", np.nan))
                 g_val = s_row.get("g_per_section", s_row.get("g", np.nan))
-
-                x_b = float(b_val) * z_base if pd.notna(b_val) else np.nan
+                x_b = -float(b_val) * z_base if pd.notna(b_val) else np.nan
                 x_g = float(g_val) * z_base if pd.notna(g_val) else np.nan
 
             shunts_rows.append(
