@@ -1,0 +1,39 @@
+# 4. Initialization Workflow via PyPowSyBl + Dynawo
+
+These notebooks implement the approach that we called "Route B" (going through
+PyPowSyBl + Dynawo).
+
+## Phase 1: Network Generation (Python)
+
+1. **Topology Creation:** PyPowSyBl is used to build an IIDM grid case that
+   mirrors the user's input case (Substations, Voltage Levels, Lines, Buses,
+   Transformers). Also copies from the Modelica case all the steady-state values
+   for the load-flow.
+2. **The Loadflow (Critical Step):** Runs `pp.loadflow.run_ac(...)`.
+3. **Export:** Saves the converged state as `.iidm`.
+
+## Phase 2: Dynamic Model Mapping & Initialization
+
+The pypowsybl case is then enriched by mapping the dynamic models used in the
+user's input case. They need to be models from Dynawo's ddb library (it was
+planned to automatically preassemble any model from Dynawo's Modelica Model
+Library, but this approach could not be completed).
+
+1. **Model Mapping:** Detect the Dynawo models used in the input case and map
+   them.
+2. **Initialization Extraction:** The notebook then runs Dynawo, but only for
+   the purposes of dumping all internal initialization information (thanks to
+   the --dumpInit option). Then the notebook extracts all those internal
+   initialzation values and re-writes the user's input case as a fully
+   initialized `.mo` file.
+
+## Phase 3 (optional): Simulation & Analysis
+
+This is optional, and it's only offered so that Modelica users can see how they
+could run simulations using PowSyBl + Dynawo instead of pure OpenModelica.
+
+1. **Define Events:** Create events or perturbations (e.g., short circuits,
+   trips) via `dyn.EventMapping()`.
+2. **Run:** Execute `dyn.Simulation().run(...)`.
+3. **Visualize:** Use `matplotlib` to visualize the returned curves (Time vs
+   Variable).
