@@ -269,7 +269,7 @@ can obtain one at http://mozilla.org/MPL/2.0. The full text is available in
 
 ______________________________________________________________________
 
-## Contact
+## 10. Contact
 
 For questions, support, or contributions, please refer to the project repository
 or contact the maintainers.
