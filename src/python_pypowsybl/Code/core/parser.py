@@ -12,16 +12,20 @@ placeholder value; they are then reported as unknown, and listed per component a
 initial parameters that the initialization must provide.
 
 How each component enters the load flow is described in the model registry
-(``dynamic_models.json``). Components whose class is not in the registry are
-classified from their Dynawo package and read with generic parameter names.
+(``dynamic_models.json``). A user class, defined outside the Dynawo library, that extends
+a registered class is handled as that class (``registry_class``). Components whose class
+is not in the registry are classified from their Dynawo package and read with generic
+parameter names.
 """
 
 import logging
 import math
 import re
 from collections import deque
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Set, Tuple
 
+from .compatibility import check_shim_parameters
 from .connector import OMCConnector
 from .flat_model import FlatModel, split_statements
 from .model_registry import ModelRegistry, PowerFlowSpec
@@ -62,6 +66,7 @@ class ModelicaParser:
         self.conn = connector
         self.model_name = model_name
         self.registry = ModelRegistry.load()
+        self._registry_classes: Dict[str, Optional[str]] = {}
 
         # Source code of the root model and of its base classes
         self.top_code = self._get_full_code(model_name)
@@ -204,7 +209,8 @@ class ModelicaParser:
 
         for comp_name, comp_info in all_components_map.items():
             comp_type = comp_info["type"]
-            element = self._classify(comp_type)
+            registry_class = self._registry_class(comp_type) or comp_type
+            element = self._classify(registry_class)
             if element is None:
                 continue
 
@@ -212,7 +218,13 @@ class ModelicaParser:
                 "modelica_type": comp_type,
                 "declared_in": comp_info["declared_in"],
             }
-            data.update(self._ELEMENT_READERS[element](self, comp_name, comp_type))
+            if registry_class != comp_type:
+                data["registry_class"] = registry_class
+                logger.info(
+                    f"{comp_name}: user class {comp_type} handled as its base class "
+                    f"{registry_class}."
+                )
+            data.update(self._ELEMENT_READERS[element](self, comp_name, registry_class))
             data["parameters"] = self._component_parameters(comp_name)
             data["missing_initial_parameters"] = self._missing_parameters(comp_name)
             data["final_parameters"] = self._final_parameters(comp_name)
@@ -224,7 +236,46 @@ class ModelicaParser:
         if raw_connections:
             self._build_topological_nodes(topo, raw_connections)
 
+        check_shim_parameters(topo)
         return topo
+
+    def _registry_class(self, modelica_type: str) -> Optional[str]:
+        """
+        Returns the class of the model registry describing a Modelica class: the class
+        itself when it is registered or, for a user class (defined outside the Dynawo
+        library), its nearest registered base class, whose model it shares.
+
+        :param modelica_type: Fully qualified Modelica class.
+        :return: The registered class, or None if the class is not supported.
+        """
+        if self.registry.get(modelica_type) is not None:
+            return modelica_type
+        if modelica_type not in self._registry_classes:
+            result = None
+            if self._is_user_class(modelica_type):
+                queue, visited = deque(self.conn.get_extends(modelica_type)), {modelica_type}
+                while queue:
+                    base = queue.popleft()
+                    if base in visited:
+                        continue
+                    visited.add(base)
+                    if self.registry.get(base) is not None:
+                        result = base
+                        break
+                    queue.extend(self.conn.get_extends(base))
+            self._registry_classes[modelica_type] = result
+        return self._registry_classes[modelica_type]
+
+    def _is_user_class(self, modelica_type: str) -> bool:
+        """Tells whether a Modelica class is defined outside the loaded Dynawo library."""
+        source = self.conn.get_source_file(modelica_type)
+        if not source or self.conn.dynawo_library is None:
+            return False
+        try:
+            Path(source).resolve().relative_to(self.conn.dynawo_library.resolve())
+        except ValueError:
+            return True
+        return False
 
     def _classify(self, modelica_type: str) -> Optional[str]:
         """

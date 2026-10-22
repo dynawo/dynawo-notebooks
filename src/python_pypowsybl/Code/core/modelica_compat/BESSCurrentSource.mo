@@ -17,7 +17,11 @@ within Dynawo.Electrical.BESS.WECC;
 *  - the low voltage power logic is disabled (Lvplsw = false),
 *  - the plant transformers have no shunt admittance and a unit ratio,
 *  - REEC and REPC share the same power limits and active power time constant.
-* The assertions below stop the simulation when any of these conditions is violated.
+* The assertions below stop the simulation when any of the numerical conditions is
+* violated (written with <=, since Dynawo compares reals with a tolerance and would never
+* find a value strictly below 1e-12). The two Boolean switches are checked by the toolkit
+* when it reads the case (compatibility module): Dynawo stores Boolean parameters as
+* +1/-1, and the code it generates for an assertion on a Boolean parameter misreads false.
 *
 * The series impedance between the injector and the terminal is the sum of the
 * converter, group transformer and plant transformer impedances of the 1.8 model,
@@ -80,11 +84,9 @@ protected
   final parameter Types.PerUnit XConverterPu = if ConverterLVControl then 1e-5 else 0 "Converter source reactance in pu (base UNom, SNom)";
 
 equation
-  assert(PPCLocal, "BESSCurrentSource (Dynawo 1.7 compatibility): only PPCLocal = true can be represented");
-  assert(not Lvplsw, "BESSCurrentSource (Dynawo 1.7 compatibility): the low voltage power logic is not available (Lvplsw must be false)");
-  assert(abs(BMvHvPu) < 1e-12 and abs(GMvHvPu) < 1e-12 and abs(rTfoPu - 1) < 1e-12, "BESSCurrentSource (Dynawo 1.7 compatibility): the plant transformer must have no shunt admittance and a unit ratio");
-  assert(abs(PMaxREPCPu - PMaxREECPu) < 1e-12 and abs(PMinREPCPu - PMinREECPu) < 1e-12 and abs(QMaxREPCPu - QMaxREECPu) < 1e-12 and abs(QMinREPCPu - QMinREECPu) < 1e-12, "BESSCurrentSource (Dynawo 1.7 compatibility): REEC and REPC must share the same power limits");
-  assert(abs(tpREPC - tpREEC) < 1e-12, "BESSCurrentSource (Dynawo 1.7 compatibility): REEC and REPC must share the same active power time constant");
+  assert(abs(BMvHvPu) <= 1e-12 and abs(GMvHvPu) <= 1e-12 and abs(rTfoPu - 1) <= 1e-12, "BESSCurrentSource (Dynawo 1.7 compatibility): the plant transformer must have no shunt admittance and a unit ratio");
+  assert(abs(PMaxREPCPu - PMaxREECPu) <= 1e-12 and abs(PMinREPCPu - PMinREECPu) <= 1e-12 and abs(QMaxREPCPu - QMaxREECPu) <= 1e-12 and abs(QMinREPCPu - QMinREECPu) <= 1e-12, "BESSCurrentSource (Dynawo 1.7 compatibility): REEC and REPC must share the same power limits");
+  assert(abs(tpREPC - tpREEC) <= 1e-12, "BESSCurrentSource (Dynawo 1.7 compatibility): REEC and REPC must share the same active power time constant");
 
   annotation(preferredView = "text");
 end BESSCurrentSource;

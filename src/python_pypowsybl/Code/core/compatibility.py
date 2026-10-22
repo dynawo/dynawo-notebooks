@@ -14,14 +14,16 @@ files:
   before they are handed to OpenModelica, for API changes that cannot be bridged by
   a class (for instance a connector that changed from a record to a plain Real).
 
-Every adaptation is logged, so that it is always visible what was bridged.
+Every adaptation is logged, so that it is always visible what was bridged. The
+configurations that a class shim cannot represent are rejected when the case is read
+(check_shim_parameters).
 """
 
 import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +31,38 @@ SHIM_DIRECTORY = Path(__file__).resolve().parent / "modelica_compat"
 
 
 @dataclass(frozen=True)
+class ParameterCheck:
+    """
+    A value that a parameter of a class shim must take.
+
+    :param parameter: Name of the parameter.
+    :param expected: Only supported value.
+    :param message: Explanation given when another value is used.
+    """
+
+    parameter: str
+    expected: Any
+    message: str
+
+
+@dataclass(frozen=True)
 class ClassShim:
-    """A Modelica class provided by this package when the loaded library lacks it."""
+    """
+    A Modelica class provided by this package when the loaded library lacks it.
+
+    :param class_name: Fully qualified name of the class.
+    :param file_name: Modelica file of the class in modelica_compat/.
+    :param required_classes: Classes of the loaded library the shim is built on.
+    :param parameter_checks: Configuration switches the shim cannot represent, checked on
+        the parsed components rather than by assertions of the model: Dynawo stores Boolean
+        parameters as +1/-1, and the code it generates for an assertion on a Boolean
+        parameter misreads false.
+    """
 
     class_name: str
     file_name: str
     required_classes: Tuple[str, ...] = ()
+    parameter_checks: Tuple[ParameterCheck, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -111,6 +139,18 @@ CLASS_SHIMS: List[ClassShim] = [
         class_name="Dynawo.Electrical.BESS.WECC.BESSCurrentSource",
         file_name="BESSCurrentSource.mo",
         required_classes=("Dynawo.Electrical.BESS.WECC.BESScbCurrentSource",),
+        parameter_checks=(
+            ParameterCheck(
+                "PPCLocal",
+                True,
+                "only PPCLocal = true can be represented (plant control at the terminal)",
+            ),
+            ParameterCheck(
+                "Lvplsw",
+                False,
+                "the low voltage power logic is not available (Lvplsw must be false)",
+            ),
+        ),
     ),
 ]
 
@@ -186,3 +226,27 @@ class DynawoLibraryCompatibility:
             if changes:
                 logger.info(f"{file_name}: {changes} statement(s) adapted ({adapter.description}).")
         return source
+
+
+def check_shim_parameters(parsed_data: Dict[str, Any]) -> None:
+    """
+    Checks that the components modelled with a class shim use a configuration it can
+    represent.
+
+    :param parsed_data: Parsed topology of the case.
+    :raises ValueError: If a component uses an unsupported configuration.
+    """
+    checks = {shim.class_name: shim.parameter_checks for shim in CLASS_SHIMS}
+    for category in parsed_data.values():
+        if not isinstance(category, dict):
+            continue
+        for name, info in category.items():
+            if not isinstance(info, dict):
+                continue
+            for check in checks.get(info.get("modelica_type"), ()):
+                value = info.get("parameters", {}).get(check.parameter)
+                if value is not None and value != check.expected:
+                    raise ValueError(
+                        f"{name} ({info['modelica_type']}, Dynawo 1.7 compatibility): "
+                        f"{check.message}."
+                    )

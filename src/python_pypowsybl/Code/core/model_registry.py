@@ -47,6 +47,8 @@ class DynawoModelSpec:
     parameters: Dict[str, str] = field(default_factory=dict)
     additional_model: Optional[Dict[str, Any]] = None
     minimum_magnitude: Dict[str, float] = field(default_factory=dict)
+    modelica_model: Optional[str] = None
+    init_model: Optional[str] = None
 
     @property
     def requires_full_dynamic_network(self) -> bool:
@@ -66,12 +68,20 @@ class ModelSpec:
     power_flow: PowerFlowSpec
     dynawo: Optional[DynawoModelSpec]
 
+    @property
+    def standard_class(self) -> Optional[str]:
+        """Modelica class the Dynawo model of the model database is compiled from."""
+        if self.dynawo is None:
+            return None
+        return self.dynawo.modelica_model or self.modelica_class
+
 
 class ModelRegistry:
     """Read-only access to the registry of supported dynamic models."""
 
-    def __init__(self, models: Dict[str, ModelSpec]) -> None:
+    def __init__(self, models: Dict[str, ModelSpec], categories: Dict[str, str]) -> None:
         self._models = models
+        self._categories = categories
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -95,8 +105,22 @@ class ModelRegistry:
                 dynawo=DynawoModelSpec(**dynawo) if dynawo else None,
             )
         logger.info(f"Loaded {len(models)} dynamic model definitions from {path.name}")
-        return cls(models)
+        return cls(models, content.get("categories", {}))
 
     def get(self, modelica_class: str) -> Optional[ModelSpec]:
         """Returns the registry entry of a Modelica class, or None if it is not supported."""
         return self._models.get(modelica_class)
+
+    def spec_of(self, component: Dict[str, Any]) -> Optional[ModelSpec]:
+        """
+        Returns the registry entry of a parsed component: the one of its class, or the one
+        of the supported base class of a user class (``registry_class`` of the parser).
+        """
+        return self.get(component.get("registry_class") or component.get("modelica_type", ""))
+
+    def category_key(self, category: str) -> Optional[str]:
+        """
+        Returns the key of a PyPowSyBl dynamic model category in the PyPowSyBl model
+        configuration, under which additional models of the category are registered.
+        """
+        return self._categories.get(category)

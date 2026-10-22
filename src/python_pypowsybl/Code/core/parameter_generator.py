@@ -12,10 +12,13 @@ the solved load flow:
 - network.par: the parameters of the default Dynawo network model.
 - solvers.par: the solver parameters, from a template with a bounded time step so that
   short events (faults) are not stepped over.
-- additional_models.json: the Dynawo models that PyPowSyBl does not ship.
+- additional_models.json: the Dynawo models that PyPowSyBl does not ship, and the models
+  compiled for the case from other classes than the standard ones.
 
-All the files are written to the export directory of the case, so that several cases
-never overwrite each other's parameters.
+The descriptions of the Dynawo models are read from the model database of the case when
+its models were compiled, and from the one of the installation otherwise. All the files
+are written to the export directory of the case, so that several cases never overwrite
+each other's parameters.
 """
 
 import cmath
@@ -34,6 +37,7 @@ import pandas as pd
 
 from python_pypowsybl.Code.core.flat_model import FlatModel
 from python_pypowsybl.Code.core.model_linker import DynamicLink, DynamicModelSetup
+from python_pypowsybl.Code.core.model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -132,15 +136,21 @@ class DynamicParameterGenerator:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def read_ddb_parameters(dynawo_path: str, lib: str) -> Tuple[List[DdbParameter], List[str]]:
+    def read_ddb_parameters(
+        dynawo_path: str, lib: str, model_database: Optional[str] = None
+    ) -> Tuple[List[DdbParameter], List[str]]:
         """
         Reads the parameters of a model of the Dynawo model database.
 
         :param dynawo_path: Root of the Dynawo installation.
         :param lib: Name of the model.
+        :param model_database: Model database of the case, when its models were compiled
+            (defaults to the one of the installation).
         :return: The writable parameters and the names of the read-only ones.
         """
-        ddb_path = os.path.join(dynawo_path, "ddb", f"{lib}.desc.xml")
+        ddb_path = os.path.join(
+            model_database or os.path.join(dynawo_path, "ddb"), f"{lib}.desc.xml"
+        )
         if not os.path.exists(ddb_path):
             raise FileNotFoundError(
                 f"Model {lib} not found in the Dynawo model database: {ddb_path}"
@@ -335,9 +345,11 @@ class DynamicParameterGenerator:
         sets: List[str] = []
         ddb_cache: Dict[str, List[DdbParameter]] = {}
         for link in setup.links:
-            lib = link.spec.dynawo.lib
+            lib = link.lib
             if lib not in ddb_cache:
-                ddb_cache[lib] = DynamicParameterGenerator.read_ddb_parameters(dynawo_path, lib)[0]
+                ddb_cache[lib] = DynamicParameterGenerator.read_ddb_parameters(
+                    dynawo_path, lib, setup.model_database
+                )[0]
             component = parsed_data.get(link.category, {}).get(link.component, {})
             quantities = DynamicParameterGenerator.load_flow_quantities(setup.network, link)
             triplets, missing = DynamicParameterGenerator.resolve_parameters(
@@ -413,18 +425,36 @@ class DynamicParameterGenerator:
 
     @staticmethod
     def _write_additional_models(setup: DynamicModelSetup, target: Path) -> Optional[Path]:
-        """Writes the additionalModelsFile registering the Dynawo models unknown to PyPowSyBl."""
+        """
+        Writes the additionalModelsFile registering the Dynawo models unknown to PyPowSyBl:
+        the models of the registry that PyPowSyBl does not ship, and the models compiled
+        for the case from another class than the standard one, registered in the category
+        of the model they stand for.
+        """
+        registry = ModelRegistry.load()
         content: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
         registered = set()
         for link in setup.links:
             dynawo = link.spec.dynawo
-            if not dynawo.additional_model or dynawo.lib in registered:
+            if link.lib in registered or (link.lib == dynawo.lib and not dynawo.additional_model):
                 continue
-            registered.add(dynawo.lib)
-            definition = dict(dynawo.additional_model)
-            category_key = definition.pop("category_key")
+            registered.add(link.lib)
+            definition = dict(dynawo.additional_model or {})
+            category_key = definition.pop("category_key", None) or registry.category_key(
+                dynawo.category
+            )
+            if category_key is None:
+                raise ValueError(
+                    f"{link.lib}: the PyPowSyBl category key of {dynawo.category} is unknown "
+                    "(categories section of dynamic_models.json)."
+                )
+            if link.lib != dynawo.lib:
+                definition["doc"] = (
+                    f"{link.modelica_class} compiled for the case, with the interface of "
+                    f"{dynawo.lib}."
+                )
             content.setdefault(category_key, {"libs": []})["libs"].append(
-                {"lib": dynawo.lib, **definition}
+                {"lib": link.lib, **definition}
             )
         if not content:
             return None

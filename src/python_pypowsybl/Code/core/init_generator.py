@@ -461,10 +461,10 @@ class ModelicaInitGenerator:
             if not os.path.exists(dump_file):
                 logger.warning(f"No initial values dumped for {link.component} ({dump_file}).")
                 continue
-            lib = link.spec.dynawo.lib
+            lib = link.lib
             if lib not in read_only_cache:
                 read_only_cache[lib] = DynamicParameterGenerator.read_ddb_parameters(
-                    dynawo_path, lib
+                    dynawo_path, lib, setup.model_database
                 )[1]
             component = parsed_data.get(link.category, {}).get(link.component, {})
             quantities = DynamicParameterGenerator.load_flow_quantities(setup.network, link)
@@ -531,8 +531,10 @@ class ModelicaInitGenerator:
             if not found:
                 logger.warning(f"Extends clause of {base_class} not found in {source_file}.")
 
-        within = re.search(r"^\s*within\s+([\w\.]+)\s*;", source, re.MULTILINE)
-        class_name = f"{within.group(1)}.{initialized_name}" if within else initialized_name
+        # The initialized model is defined next to the root model, in the same scope (its
+        # package, given by the within clause of the file or by an enclosing package)
+        package = model_name.rpartition(".")[0]
+        class_name = f"{package}.{initialized_name}" if package else initialized_name
 
         os.makedirs(export_folder, exist_ok=True)
         target = os.path.join(export_folder, f"{initialized_name}.mo")
@@ -581,7 +583,7 @@ class ModelicaInitGenerator:
         nominal = setup.network.get_voltage_levels()["nominal_v"]
         start_values: Dict[str, Dict[str, Any]] = {}
         for bus, info in parsed_data.get("buses", {}).items():
-            spec = registry.get(info.get("modelica_type", ""))
+            spec = registry.spec_of(info)
             if (
                 info.get("is_virtual")
                 or spec is None

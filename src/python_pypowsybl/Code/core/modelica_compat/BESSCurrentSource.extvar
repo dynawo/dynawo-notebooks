@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+    External variables of the compatibility model BESSCurrentSource (dynawo-notebooks):
+    those of the BESScbCurrentSource model of the Dynawo library 1.7 it extends, and the
+    measurements at the point of common coupling of the 1.8 interface, which the model
+    does not use (optional).
+-->
+<external_variables xmlns="http://www.rte-france.com/dynawo">
+  <variable type="continuous" id="terminal.V.re"/>
+  <variable type="continuous" id="terminal.V.im"/>
+  <variable type="continuous" id="PAuxPu" optional="true"/>
+  <variable type="continuous" id="PFaRef" optional="true"/>
+  <variable type="continuous" id="PRefPu" optional="true"/>
+  <variable type="continuous" id="QRefPu" optional="true"/>
+  <variable type="continuous" id="URefPu" optional="true"/>
+  <variable type="continuous" id="omegaRefPu"/>
+  <variable type="continuous" id="PPccPu" optional="true"/>
+  <variable type="continuous" id="QPccPu" optional="true"/>
+  <variable type="continuous" id="uPccPu.re" optional="true"/>
+  <variable type="continuous" id="uPccPu.im" optional="true"/>
+  <variable type="discrete" id="injector.switchOffSignal1.value" defaultValue="false"/>
+  <variable type="discrete" id="injector.switchOffSignal2.value" defaultValue="false"/>
+  <variable type="discrete" id="injector.switchOffSignal3.value" defaultValue="false"/>
+</external_variables>

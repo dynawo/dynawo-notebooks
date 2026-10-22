@@ -5,6 +5,9 @@ This module provides utilities to copy the input files of a PyPowSyBl dynamic
 simulation from its working directory, adapt them (enabling the dump of the initial
 values, and applying the compatibility fixes required by the installed Dynawo
 version), and replay the simulation directly with the Dynawo command line interface.
+
+When the models of the case were compiled, the replay reads them from the model database
+of the case (DYNAWO_DDB_DIR), as the PyPowSyBl run.
 """
 
 import glob
@@ -91,7 +94,12 @@ class DynawoCLIRunner:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def prepare_replay(source_dir: str, target_dir: str, dynawo_sys_path: str) -> str:
+    def prepare_replay(
+        source_dir: str,
+        target_dir: str,
+        dynawo_sys_path: str,
+        model_database: Optional[str] = None,
+    ) -> str:
         """
         Copies the inputs of a PyPowSyBl simulation (without its outputs) and adapts them
         for the replay.
@@ -99,6 +107,7 @@ class DynawoCLIRunner:
         :param source_dir: PyPowSyBl working directory.
         :param target_dir: Directory of the replay (overwritten).
         :param dynawo_sys_path: Root of the Dynawo installation.
+        :param model_database: Model database of the case, when its models were compiled.
         :return: The path of the jobs file of the replay.
         """
         if os.path.exists(target_dir):
@@ -117,7 +126,7 @@ class DynawoCLIRunner:
 
         DynawoCLIRunner._patch_jobs(jobs_file)
         for dyd_file in Path(target_dir).glob("*.dyd"):
-            DynawoCLIRunner._patch_dyd(str(dyd_file), dynawo_sys_path)
+            DynawoCLIRunner._patch_dyd(str(dyd_file), dynawo_sys_path, model_database)
         return jobs_file
 
     @staticmethod
@@ -147,14 +156,14 @@ class DynawoCLIRunner:
 
     @staticmethod
     def _model_variables(
-        dynawo_sys_path: str, lib: str, cache: Dict[str, Tuple[Set[str], Set[str]]]
+        model_database: str, lib: str, cache: Dict[str, Tuple[Set[str], Set[str]]]
     ) -> Tuple[Set[str], Set[str]]:
         """
-        Returns the variables declared by a model of the Dynawo model database, and the
+        Returns the variables declared by a model of a Dynawo model database, and the
         connector names of its external variables (cached).
         """
         if lib not in cache:
-            ddb = Path(dynawo_sys_path) / "ddb"
+            ddb = Path(model_database)
             names: Set[str] = set()
             description = ddb / f"{lib}.desc.xml"
             if description.exists():
@@ -196,12 +205,15 @@ class DynawoCLIRunner:
         return variable
 
     @staticmethod
-    def _patch_dyd(dyd_file: str, dynawo_sys_path: str) -> None:
+    def _patch_dyd(
+        dyd_file: str, dynawo_sys_path: str, model_database: Optional[str] = None
+    ) -> None:
         """
         Applies the compatibility fixes needed by the installed Dynawo version to a dynamic
         models file written by PyPowSyBl: every connected variable is checked against the
         description of its model in the Dynawo model database (see _fix_variable_name).
         """
+        database = model_database or os.path.join(dynawo_sys_path, "ddb")
         ET.register_namespace("dyn", DYNAWO_NAMESPACE)
         tree = ET.parse(dyd_file)
         root = tree.getroot()
@@ -222,7 +234,7 @@ class DynawoCLIRunner:
                 if not lib:
                     continue
                 variable = connect.get(attribute)
-                variables, external = DynawoCLIRunner._model_variables(dynawo_sys_path, lib, cache)
+                variables, external = DynawoCLIRunner._model_variables(database, lib, cache)
                 fixed = DynawoCLIRunner._fix_variable_name(variable, variables, external)
                 if fixed != variable:
                     connect.set(attribute, fixed)
@@ -247,22 +259,30 @@ class DynawoCLIRunner:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def run(jobs_file: str, dynawo_sys_path: str) -> CLIRunResult:
+    def run(
+        jobs_file: str, dynawo_sys_path: str, model_database: Optional[str] = None
+    ) -> CLIRunResult:
         """
         Runs a Dynawo jobs file with the command line interface.
 
         :param jobs_file: Path of the jobs file.
         :param dynawo_sys_path: Root of the Dynawo installation.
+        :param model_database: Model database of the case, when its models were compiled.
         :return: The outcome of the execution.
         """
         working_directory = os.path.dirname(os.path.abspath(jobs_file))
         dynawo_executable = os.path.join(dynawo_sys_path, "dynawo.sh")
+        environment = None
+        if model_database:
+            environment = dict(os.environ, DYNAWO_DDB_DIR=model_database)
+            logger.info(f"Dynawo model database: {model_database}")
         logger.info(f"Starting Dynawo execution via command line in {working_directory}...")
         process = subprocess.run(
             [dynawo_executable, "jobs", os.path.basename(jobs_file)],
             capture_output=True,
             text=True,
             cwd=working_directory,
+            env=environment,
         )
         success = (
             process.returncode == 0

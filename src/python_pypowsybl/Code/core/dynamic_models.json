@@ -9,7 +9,10 @@
         "dynawo.initial_values": "Dynawo parameters taken from the solved load flow. Available quantities: p_pu/q_pu (receptor convention), p_gen_pu/q_gen_pu (generator convention), u_pu, angle_rad, u_nom_kv, and the complex u0/s0/i0 (receptor convention) through their re and im parts.",
         "dynawo.parameters": "Dynawo parameters computed from the Modelica parameters of the component when their names or units differ. Any other Dynawo parameter takes the value of the Modelica parameter with the same name.",
         "dynawo.additional_model": "Registration of a Dynawo model that PyPowSyBl does not ship, written to the additionalModelsFile of the simulation.",
-        "dynawo.minimum_magnitude": "Dynawo parameters whose absolute value is raised to a minimum to keep the Dynawo solver well conditioned."
+        "dynawo.minimum_magnitude": "Dynawo parameters whose absolute value is raised to a minimum to keep the Dynawo solver well conditioned.",
+        "dynawo.modelica_model": "Modelica class compiled into the Dynawo model (preassembled model definition of the model database), when it is not the class of the entry itself. Defaults to the class of the entry.",
+        "dynawo.init_model": "Initialization model (initName) compiled with the Dynawo model, which computes its initial state from the load flow. Omitted when the model has none.",
+        "categories": "Key of each PyPowSyBl dynamic model category in the PyPowSyBl model configuration (models.json), under which the models compiled for a case are registered as additional models."
     },
     "models": {
         "Dynawo.Electrical.Buses.Bus": {
@@ -52,7 +55,12 @@
         },
         "Dynawo.Electrical.Transformers.TransformersFixedTap.TransformerFixedRatio": {
             "element": "transformer",
-            "dynawo": {"category": "Transformer", "lib": "TransformerFixedRatio", "prefix": "transformer"}
+            "dynawo": {
+                "category": "Transformer",
+                "lib": "TransformerFixedRatio",
+                "prefix": "transformer",
+                "modelica_model": "Dynawo.Electrical.Transformers.TransformerFixedRatio"
+            }
         },
         "Dynawo.Electrical.Sources.InertialGrid.InertialGrid": {
             "element": "generator",
@@ -78,6 +86,7 @@
                 "category": "SignalNGenerator",
                 "lib": "GeneratorPVSignalN",
                 "prefix": "generator",
+                "init_model": "Dynawo.Electrical.Machines.SignalN.GeneratorPV_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"},
                 "parameters": {
                     "PMax": "PMaxPu * 100",
@@ -94,6 +103,7 @@
                 "category": "SimplifiedGenerator",
                 "lib": "GeneratorPVFixed",
                 "prefix": "generator",
+                "init_model": "Dynawo.Electrical.Machines.Simplified.GeneratorSimplified_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"}
             }
         },
@@ -104,6 +114,8 @@
                 "category": "Wecc",
                 "lib": "BESScbWeccCurrentSource",
                 "prefix": "BESScb",
+                "modelica_model": "Dynawo.Electrical.BESS.WECC.BESScbCurrentSource",
+                "init_model": "Dynawo.Electrical.BESS.WECC.BESS_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"},
                 "additional_model": {
                     "category_key": "WECC",
@@ -121,6 +133,7 @@
                 "category": "Wecc",
                 "lib": "BESScbWeccCurrentSource",
                 "prefix": "BESScb",
+                "init_model": "Dynawo.Electrical.BESS.WECC.BESS_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"},
                 "additional_model": {
                     "category_key": "WECC",
@@ -137,6 +150,7 @@
                 "category": "Load",
                 "lib": "LoadPQ",
                 "prefix": "load",
+                "init_model": "Dynawo.Electrical.Loads.Load_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"}
             }
         },
@@ -146,6 +160,7 @@
                 "category": "Load",
                 "lib": "LoadZIP",
                 "prefix": "load",
+                "init_model": "Dynawo.Electrical.Loads.Load_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"}
             }
         },
@@ -155,6 +170,7 @@
                 "category": "Load",
                 "lib": "LoadAlphaBetaRestorative",
                 "prefix": "load",
+                "init_model": "Dynawo.Electrical.Loads.Load_INIT",
                 "initial_values": {"P0Pu": "p_pu", "Q0Pu": "q_pu", "U0Pu": "u_pu", "UPhase0": "angle_rad"}
             }
         },
@@ -174,5 +190,21 @@
                 }
             }
         }
+    },
+    "categories": {
+        "Bus": "BASE_BUS",
+        "InfiniteBus": "INFINITE_BUS",
+        "Line": "BASE_LINE",
+        "Transformer": "TRANSFORMER",
+        "Load": "BASE_LOAD",
+        "Shunt": "BASE_SHUNT",
+        "SimplifiedGenerator": "BASE_GENERATOR",
+        "SynchronizedGenerator": "SYNCHRONIZED_GENERATOR",
+        "SynchronousGenerator": "SYNCHRONOUS_GENERATOR",
+        "SignalNGenerator": "SIGNAL_N_GENERATOR",
+        "InertialGrid": "INERTIAL_GRID",
+        "Wecc": "WECC",
+        "GridFormingConverter": "GRID_FORMING_CONVERTER",
+        "StaticVarCompensator": "BASE_STATIC_VAR_COMPENSATOR"
     }
 }

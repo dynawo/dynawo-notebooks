@@ -56,6 +56,8 @@ class OMCConnector:
         self._list_cache: Dict[str, str] = {}
 
         self.compatibility: Optional[DynawoLibraryCompatibility] = None
+        # Directory of the loaded Dynawo Modelica library (package Dynawo)
+        self.dynawo_library: Optional[Path] = None
         self.last_error: str = ""
 
     # ------------------------------------------------------------------ #
@@ -131,6 +133,7 @@ class OMCConnector:
         if not self.load_file(load_path_str):
             logger.error("Failed to load Dynawo package. Please check the path.")
             return
+        self.dynawo_library = pkg_path.parent
 
         self.compatibility = DynawoLibraryCompatibility(self)
         self.compatibility.install()
