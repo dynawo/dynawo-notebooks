@@ -4,18 +4,33 @@ PyPowSyBl Converter Module.
 This module is responsible for converting the parsed electrical topology dictionary
 into a strictly typed PyPowSyBl Network object. It handles the grouping of buses
 into substations to satisfy transformer connectivity requirements.
+
+Per-unit conventions of the Dynawo models (base SnRef = 100 MVA):
+
+- Lines: R + jX in series, and the half-admittance G + jB on each side (positive B is
+  capacitive).
+- Transformers (fixed ratio): ideal ratio rTfoPu = U2/U1 on side 1, then R + jX and
+  the admittance G + jB, both in base of the side 2 nominal voltage.
+- Shunts: receptor convention, Q = B U^2 (negative B is capacitive).
+- Injections: active and reactive powers already converted by the parser to the
+  generator convention for generators and to the receptor convention for loads.
 """
 
 import json
 import logging
+from collections import Counter
 from pathlib import Path
-from typing import Dict, Set, Any
+from typing import Dict, Any, List, Optional
 
 import pandas as pd
 import pypowsybl as pp
 from python_pypowsybl.Code.core.powerflow import PowerFlowRunner
 
 logger = logging.getLogger(__name__)
+
+S_REF_MVA = 100.0
+# Generous limits used when the Modelica model does not define them
+UNBOUNDED_POWER = 99999.0
 
 
 class PowsyblConverter:
@@ -57,138 +72,156 @@ class PowsyblConverter:
         logger.info("Initializing PyPowSyBl Network construction...")
 
         if "source_xiidm" in data:
-            network = pp.network.load(data["source_xiidm"])
+            network = pp.network.load(str(data["source_xiidm"]))
         else:
             network = pp.network.create_empty()
 
-        # Load external configuration for voltage naming conventions
-        voltage_mapping = PowsyblConverter._load_voltage_mapping()
+        buses = data.get("buses", {})
+        bus_nominal_v = PowsyblConverter._assign_nominal_voltages(data)
 
-        # 1. Substation Grouping Logic
-        bus_to_sub: Dict[str, str] = {bid: bid for bid in data.get("buses", {})}
+        # 1. Substation grouping: the two sides of a transformer must share a substation
+        bus_to_sub: Dict[str, str] = {bid: bid for bid in buses}
+        for info in data.get("transformers", {}).values():
+            b1, b2 = info.get("bus1"), info.get("bus2")
+            if b1 in bus_to_sub and b2 in bus_to_sub:
+                old_sub, new_sub = bus_to_sub[b2], bus_to_sub[b1]
+                for bus, sub in bus_to_sub.items():
+                    if sub == old_sub:
+                        bus_to_sub[bus] = new_sub
 
-        if "transformers" in data:
-            for tid, info in data["transformers"].items():
-                b1, b2 = info.get("bus1"), info.get("bus2")
-                if b1 in bus_to_sub and b2 in bus_to_sub:
-                    old_sub = bus_to_sub[b2]
-                    new_sub = bus_to_sub[b1]
-                    for b, s in bus_to_sub.items():
-                        if s == old_sub:
-                            bus_to_sub[b] = new_sub
-
-        # Unique substations to create
-        unique_subs: Set[str] = set(bus_to_sub.values())
-        for sub_id in unique_subs:
+        for sub_id in sorted(set(bus_to_sub.values())):
             network.create_substations(id=f"Sub_{sub_id}")
 
-        # 2. Voltage Discovery & Creation
-        bus_nominal_v: Dict[str, float] = {}
+        # 2. Voltage levels and buses
+        for bid in buses:
+            v = bus_nominal_v[bid]
+            network.create_voltage_levels(
+                id=f"VL_{bid}",
+                substation_id=f"Sub_{bus_to_sub[bid]}",
+                nominal_v=v,
+                low_voltage_limit=v * 0.8,
+                high_voltage_limit=v * 1.2,
+                topology_kind="BUS_BREAKER",
+            )
+            network.create_buses(id=bid, voltage_level_id=f"VL_{bid}")
 
-        def is_valid_kv(vol: Any) -> bool:
-            try:
-                return vol is not None and float(vol) > 1.5
-            except (ValueError, TypeError):
-                return False
-
-        if "buses" in data:
-            for bid, info in data["buses"].items():
-                v = info.get("nominal_v")
-
-                if not is_valid_kv(v):
-                    for tid, t_info in data.get("transformers", {}).items():
-                        if t_info.get("bus1") == bid and is_valid_kv(t_info.get("rated_u1")):
-                            v = t_info.get("rated_u1")
-                            break
-                        if t_info.get("bus2") == bid and is_valid_kv(t_info.get("rated_u2")):
-                            v = t_info.get("rated_u2")
-                            break
-
-                if not is_valid_kv(v):
-                    for gid, g_info in data.get("generators", {}).items():
-                        if g_info.get("bus") == bid and is_valid_kv(g_info.get("nominal_v")):
-                            v = g_info.get("nominal_v")
-                            break
-
-                if not is_valid_kv(v):
-                    for lid, l_info in data.get("loads", {}).items():
-                        if l_info.get("bus") == bid and is_valid_kv(l_info.get("nominal_v")):
-                            v = l_info.get("nominal_v")
-                            break
-
-                if not is_valid_kv(v):
-                    for lid, l_info in data.get("lines", {}).items():
-                        if (
-                            l_info.get("bus1") == bid or l_info.get("bus2") == bid
-                        ) and is_valid_kv(l_info.get("nominal_v")):
-                            v = l_info.get("nominal_v")
-                            break
-
-                if not is_valid_kv(v):
-                    for prefix, mapped_voltage in voltage_mapping.items():
-                        if prefix != "default" and prefix in bid:
-                            v = mapped_voltage
-                            break
-                    if not is_valid_kv(v):
-                        v = voltage_mapping.get("default", 225.0)
-
-                try:
-                    v = float(v)
-                    if v > 1000.0:
-                        v = v / 1000.0
-                except (ValueError, TypeError):
-                    logger.warning(
-                        f"Could not cast voltage '{v}' to float for bus {bid}. Using default."
-                    )
-                    v = float(voltage_mapping.get("default", 225.0))
-
-                bus_nominal_v[bid] = v
-                sub_assigned = bus_to_sub[bid]
-
-                network.create_voltage_levels(
-                    id=f"VL_{bid}",
-                    substation_id=f"Sub_{sub_assigned}",
-                    nominal_v=v,
-                    low_voltage_limit=v * 0.8,
-                    high_voltage_limit=v * 1.2,
-                    topology_kind="BUS_BREAKER",
-                )
-
-                network.create_buses(id=bid, voltage_level_id=f"VL_{bid}")
-
-        # 3. Lines
+        # 3. Branches and shunts
         for lid, info in data.get("lines", {}).items():
             PowsyblConverter._create_line(network, lid, info, bus_nominal_v)
-
-        total_load_p = sum(
-            abs(info.get("p_pu", 0.0) * info.get("sn_nom", 100.0))
-            for info in data.get("loads", {}).values()
-        )
-        total_gen_p = sum(
-            abs(info.get("p", info.get("p_pu", 0.0) * info.get("sn_nom", 100.0)))
-            for info in data.get("generators", {}).values()
-        )
-        estimated_mismatch = max(total_load_p - total_gen_p, 100.0)
-
-        # 4. Generators
-        for gid, info in data.get("generators", {}).items():
-            PowsyblConverter._create_generator(
-                network, gid, info, bus_nominal_v, estimated_mismatch
-            )
-
-        # 5. Loads
-        for lid, info in data.get("loads", {}).items():
-            PowsyblConverter._create_load(network, lid, info, bus_nominal_v)
-
-        # 6. Shunts
+        for tid, info in data.get("transformers", {}).items():
+            PowsyblConverter._create_transformer(network, tid, info, bus_nominal_v)
         for sid, info in data.get("shunts", {}).items():
             PowsyblConverter._create_shunt(network, sid, info, bus_nominal_v)
 
-        # 7. Transformers
-        for tid, info in data.get("transformers", {}).items():
-            PowsyblConverter._create_transformer(network, tid, info, bus_nominal_v, bus_to_sub)
+        # 4. Injections
+        for lid, info in data.get("loads", {}).items():
+            PowsyblConverter._create_load(network, lid, info)
+
+        generators = data.get("generators", {})
+        slack_id = PowsyblConverter._select_slack(generators)
+        slack_takes_balance = not any(
+            info.get("participation_factor") for info in generators.values()
+        )
+        for gid, info in generators.items():
+            if gid == slack_id and info.get("p_pu") is None:
+                # OpenLoadFlow discards the generators whose target is exactly zero from the
+                # balance distribution: the slack starts from an estimate of the balance
+                info = dict(info, p_pu=PowsyblConverter._estimate_balance(data, slack_id))
+            PowsyblConverter._create_generator(
+                network, gid, info, bus_nominal_v, gid == slack_id, slack_takes_balance
+            )
+
+        if slack_id:
+            slack_bus = generators[slack_id]["bus"]
+            network.create_extensions(
+                "slackTerminal", voltage_level_id=f"VL_{slack_bus}", element_id=slack_id
+            )
+            logger.info(f"Slack generator: {slack_id} (bus {slack_bus}).")
 
         return network
+
+    # ------------------------------------------------------------------ #
+    # Voltage levels
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _assign_nominal_voltages(data: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Assigns a nominal voltage to every bus.
+
+        Buses connected by lines form a voltage zone, which must share a single nominal
+        voltage. The zone voltage is taken, in order of preference, from the voltages
+        declared by the buses, from the impedance bases used by the parameters of its
+        lines, shunts and transformers (side 2), and finally from the bus name rules of
+        voltage_mapping.json. The per-unit results of the load flow do not depend on
+        this choice, since every conversion uses the same voltages.
+
+        :param data: The parsed topology.
+        :return: A dictionary mapping each bus to its nominal voltage in kV.
+        """
+        buses = list(data.get("buses", {}))
+        parent = {bus: bus for bus in buses}
+
+        def find(bus: str) -> str:
+            while parent[bus] != bus:
+                parent[bus] = parent[parent[bus]]
+                bus = parent[bus]
+            return bus
+
+        for info in data.get("lines", {}).values():
+            b1, b2 = info.get("bus1"), info.get("bus2")
+            if b1 in parent and b2 in parent:
+                parent[find(b1)] = find(b2)
+
+        hints: Dict[str, List[float]] = {}
+
+        def add_hint(bus: Optional[str], value: Optional[float]) -> None:
+            if bus in parent and value is not None and value > 1.5:
+                hints.setdefault(find(bus), []).append(float(value))
+
+        for bid, info in data.get("buses", {}).items():
+            add_hint(bid, info.get("nominal_v"))
+        for info in data.get("lines", {}).values():
+            add_hint(info.get("bus1"), info.get("base_kv"))
+        for info in data.get("shunts", {}).values():
+            add_hint(info.get("bus"), info.get("base_kv"))
+        for info in data.get("transformers", {}).values():
+            add_hint(info.get("bus2"), info.get("base_kv"))
+
+        voltage_mapping = PowsyblConverter._load_voltage_mapping()
+        default_v = float(voltage_mapping.get("default", 225.0))
+
+        def mapped_voltage(bus: str) -> Optional[float]:
+            for prefix, value in voltage_mapping.items():
+                if prefix != "default" and prefix in bus:
+                    return float(value)
+            return None
+
+        zones: Dict[str, List[str]] = {}
+        for bus in buses:
+            zones.setdefault(find(bus), []).append(bus)
+
+        nominal: Dict[str, float] = {}
+        for root, members in zones.items():
+            zone_hints = hints.get(root, [])
+            if zone_hints:
+                counts = Counter(zone_hints)
+                value = counts.most_common(1)[0][0]
+                if len(counts) > 1:
+                    logger.warning(
+                        f"Inconsistent voltage bases {sorted(counts)} kV in the zone of bus "
+                        f"{members[0]}: {value} kV is used."
+                    )
+            else:
+                mapped = (mapped_voltage(bus) for bus in members)
+                value = next((voltage for voltage in mapped if voltage), default_v)
+            for bus in members:
+                nominal[bus] = value
+        return nominal
+
+    # ------------------------------------------------------------------ #
+    # Branches and shunts
+    # ------------------------------------------------------------------ #
 
     @staticmethod
     def _create_line(
@@ -204,30 +237,9 @@ class PowsyblConverter:
         """
         b1, b2 = info.get("bus1"), info.get("bus2")
         if not b1 or not b2:
+            logger.warning(f"Line {lid} is not connected on both sides and is skipped.")
             return
-        sn = info.get("sn_nom", 100.0)
-        un = bus_v.get(b1, 225.0)
-        z_base = (un**2) / sn
-
-        is_pu = "r_pu" in info or "x_pu" in info
-
-        raw_r = info.get("r_pu", info.get("r", 0.0))
-        raw_x = info.get("x_pu", info.get("x", 0.001))
-        raw_b = info.get("b_pu", info.get("b", 0.0))
-        raw_g = info.get("g_pu", info.get("g", 0.0))
-
-        raw_r = max(float(raw_r), 1e-6)
-
-        if is_pu:
-            r_ohm = raw_r * z_base
-            x_ohm = raw_x * z_base
-            b_sie = -float(raw_b) / z_base
-            g_sie = float(raw_g) / z_base
-        else:
-            r_ohm = raw_r
-            x_ohm = raw_x
-            b_sie = -float(raw_b)
-            g_sie = float(raw_g)
+        z_base = bus_v[b1] ** 2 / S_REF_MVA
 
         network.create_lines(
             id=str(lid),
@@ -235,116 +247,48 @@ class PowsyblConverter:
             bus1_id=str(b1),
             voltage_level2_id=f"VL_{b2}",
             bus2_id=str(b2),
-            r=r_ohm,
-            x=x_ohm,
-            g1=g_sie / 2,
-            b1=b_sie / 2,
-            g2=g_sie / 2,
-            b2=b_sie / 2,
+            r=float(info.get("r_pu", 0.0)) * z_base,
+            x=float(info.get("x_pu", 0.0)) * z_base,
+            g1=float(info.get("g_pu", 0.0)) / z_base,
+            b1=float(info.get("b_pu", 0.0)) / z_base,
+            g2=float(info.get("g_pu", 0.0)) / z_base,
+            b2=float(info.get("b_pu", 0.0)) / z_base,
         )
 
     @staticmethod
-    def _create_generator(
-        network: pp.network.Network,
-        gid: str,
-        info: Dict[str, Any],
-        bus_v: Dict[str, float],
-        slack_warm_start_mw: float = 1.0,
+    def _create_transformer(
+        network: pp.network.Network, tid: str, info: Dict[str, Any], bus_v: Dict[str, float]
     ) -> None:
         """
-        Creates a generator in the PyPowSyBl network, properly configuring slack bus behavior.
-        Incorporates a Warm Start active power estimation to prevent Newton-Raphson divergence.
+        Creates a 2-winding transformer in the PyPowSyBl network. The rated voltages
+        reproduce the per-unit ratio (rated_u2 / rated_u1 = ratio * U2Nom / U1Nom) and
+        the impedance is converted with the side 2 nominal voltage.
 
         :param network: The PyPowSyBl network instance.
-        :param gid: The unique identifier for the generator.
-        :param info: Dictionary containing the generator's parameters.
-        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
-        :param slack_warm_start_mw: Initial active power injected by the slack bus (MW) to prevent divergence.
-        """
-        bid = info.get("bus")
-
-        sn = info.get("sn_nom", 100.0)
-        if "genpv" in gid.lower() and sn == 100.0:
-            sn = 6.0
-
-        modelica_type = info.get("modelica_type", "").lower()
-
-        power_base = 100.0 if "inertialgrid" in modelica_type else sn
-
-        p_mw = info.get("p") or (info.get("p_pu", 0.0) * power_base)
-
-        is_slack = False
-        valid_slack_identifiers = PowerFlowRunner.load_slack_mapping()
-        gid_str = str(gid).lower()
-
-        if any(identifier in gid_str for identifier in valid_slack_identifiers):
-            is_slack = True
-
-        if is_slack and p_mw == 0.0:
-            p_mw = slack_warm_start_mw
-
-        is_pq = "pq" in modelica_type or "inertialgrid" in modelica_type
-
-        is_regulator_on = True
-        if is_pq and not is_slack:
-            is_regulator_on = False
-
-        target_q = 0.0
-        if is_pq:
-            target_q = info.get("q_mvar") or info.get("q", 0.0)
-            if "q_pu" in info:
-                target_q = info["q_pu"] * sn
-
-        base_v = bus_v.get(bid)
-        if not base_v or base_v == 0.0:
-            base_v = 130.0
-
-        target_p_val = p_mw
-
-        min_p_val = -9999.0 if is_slack else min(p_mw, 0.0)
-        max_p_val = 9999.0 if is_slack else max(p_mw, 0.0)
-
-        network.create_generators(
-            id=str(gid),
-            voltage_level_id=f"VL_{bid}",
-            bus_id=str(bid),
-            target_p=target_p_val,
-            target_q=target_q,
-            target_v=info.get("u_pu", 1.0) * base_v,
-            voltage_regulator_on=is_regulator_on,
-            min_p=min_p_val,
-            max_p=max_p_val,
-        )
-
-        min_q_val = -99999.0
-        max_q_val = 99999.0
-
-        q_limits_df = pd.DataFrame(
-            {"id": [str(gid)], "min_q": [min_q_val], "max_q": [max_q_val]}
-        ).set_index("id")
-
-        network.create_minmax_reactive_limits(q_limits_df)
-
-    @staticmethod
-    def _create_load(
-        network: pp.network.Network, lid: str, info: Dict[str, Any], bus_v: Dict[str, float]
-    ) -> None:
-        """
-        Creates a load in the PyPowSyBl network.
-
-        :param network: The PyPowSyBl network instance.
-        :param lid: The unique identifier for the load.
-        :param info: Dictionary containing the load's parameters.
+        :param tid: The unique identifier for the transformer.
+        :param info: Dictionary containing the transformer's parameters.
         :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
         """
-        bid = info.get("bus")
-        sn = info.get("sn_nom", 100.0)
-        network.create_loads(
-            id=str(lid),
-            voltage_level_id=f"VL_{bid}",
-            bus_id=str(bid),
-            p0=info.get("p_pu", 0.0) * sn,
-            q0=info.get("q_pu", 0.0) * sn,
+        b1, b2 = info.get("bus1"), info.get("bus2")
+        if not b1 or not b2:
+            logger.warning(f"Transformer {tid} is not connected on both sides and is skipped.")
+            return
+        u1, u2 = bus_v[b1], bus_v[b2]
+        z_base = u2**2 / S_REF_MVA
+
+        network.create_2_windings_transformers(
+            id=str(tid),
+            voltage_level1_id=f"VL_{b1}",
+            bus1_id=str(b1),
+            voltage_level2_id=f"VL_{b2}",
+            bus2_id=str(b2),
+            rated_s=S_REF_MVA,
+            rated_u1=u1,
+            rated_u2=float(info.get("ratio", 1.0)) * u2,
+            r=float(info.get("r_pu", 0.0)) * z_base,
+            x=float(info.get("x_pu", 0.0)) * z_base,
+            g=float(info.get("g_pu", 0.0)) / z_base,
+            b=float(info.get("b_pu", 0.0)) / z_base,
         )
 
     @staticmethod
@@ -352,7 +296,9 @@ class PowsyblConverter:
         network: pp.network.Network, sid: str, info: Dict[str, Any], bus_v: Dict[str, float]
     ) -> None:
         """
-        Creates a linear shunt compensator in the PyPowSyBl network.
+        Creates a linear shunt compensator in the PyPowSyBl network. The Dynawo
+        susceptance follows the receptor convention (Q = B U^2), the IIDM one the
+        generator convention, hence the change of sign.
 
         :param network: The PyPowSyBl network instance.
         :param sid: The unique identifier for the shunt.
@@ -360,25 +306,10 @@ class PowsyblConverter:
         :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
         """
         bid = info.get("bus")
-
-        un = bus_v.get(bid, 225.0)
-        sn = info.get("sn_nom", 100.0)
-
-        if un > 1000.0:
-            un = un / 1000.0
-
-        z_base = (un**2) / sn if sn != 0 else 1.0
-
-        is_pu = "b_pu" in info or "g_pu" in info
-        raw_b = info.get("b_pu", info.get("b", 0.0))
-        raw_g = info.get("g_pu", info.get("g", 0.0))
-
-        if is_pu:
-            b_sie = -float(raw_b) / z_base
-            g_sie = float(raw_g) / z_base
-        else:
-            b_sie = -float(raw_b)
-            g_sie = float(raw_g)
+        if not bid:
+            logger.warning(f"Shunt {sid} is not connected and is skipped.")
+            return
+        z_base = bus_v[bid] ** 2 / S_REF_MVA
 
         shunt_df = pd.DataFrame(
             {
@@ -393,117 +324,161 @@ class PowsyblConverter:
         linear_model_df = pd.DataFrame(
             {
                 "id": [str(sid)],
-                "g_per_section": [g_sie],
-                "b_per_section": [b_sie],
+                "g_per_section": [float(info.get("g_pu", 0.0)) / z_base],
+                "b_per_section": [-float(info.get("b_pu", 0.0)) / z_base],
                 "max_section_count": [1],
             }
         ).set_index("id")
 
         network.create_shunt_compensators(shunt_df, linear_model_df)
 
+    # ------------------------------------------------------------------ #
+    # Injections
+    # ------------------------------------------------------------------ #
+
     @staticmethod
-    def _create_transformer(
-        network: pp.network.Network,
-        tid: str,
-        info: Dict[str, Any],
-        bus_v: Dict[str, float],
-        bus_to_sub: Dict[str, str] = None,
-    ) -> None:
+    def _create_load(network: pp.network.Network, lid: str, info: Dict[str, Any]) -> None:
         """
-        Creates a 2-winding transformer in the PyPowSyBl network.
+        Creates a load in the PyPowSyBl network.
 
         :param network: The PyPowSyBl network instance.
-        :param tid: The unique identifier for the transformer.
-        :param info: Dictionary containing the transformer's parameters.
-        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
-        :param bus_to_sub: Dictionary mapping bus IDs to substation IDs.
+        :param lid: The unique identifier for the load.
+        :param info: Dictionary containing the load's parameters (receptor convention).
         """
-        b1, b2 = info.get("bus1"), info.get("bus2")
-        if not b1 or not b2:
+        bid = info.get("bus")
+        if not bid:
+            logger.warning(f"Load {lid} is not connected and is skipped.")
             return
-
-        un1 = bus_v.get(b1, 225.0)
-        un2 = bus_v.get(b2, 225.0)
-
-        if un1 > 1000.0:
-            un1 = un1 / 1000.0
-        if un2 > 1000.0:
-            un2 = un2 / 1000.0
-
-        sn_comp = info.get("sn_nom", 100.0)
-
-        base_ratio = info.get("ratio", 1.0)
-        tap_pos = info.get("tap0", 6.0)
-        n_tap = info.get("n_tap", 13.0)
-
-        rho_max = info.get("rho_max")
-        rho_min = info.get("rho_min")
-
-        rated_u1_base = un1 / base_ratio if base_ratio != 0.0 else un1
-
-        is_pu = "r_pu" in info or "x_pu" in info
-
-        raw_r = info.get("r_pu", info.get("r", 0.0))
-        raw_x = info.get("x_pu", info.get("x", 0.001))
-        raw_b = info.get("b_pu", info.get("b", 0.0))
-        raw_g = info.get("g_pu", info.get("g", 0.0))
-
-        raw_r = max(float(raw_r), 1e-6)
-
-        z_base = ((un1 * base_ratio) ** 2) / sn_comp if base_ratio != 0.0 else (un1**2) / sn_comp
-
-        if is_pu:
-            r_ohm = raw_r * z_base
-            x_ohm = raw_x * z_base
-            b_sie = -float(raw_b) / z_base
-            g_sie = float(raw_g) / z_base
-        else:
-            r_ohm = raw_r
-            x_ohm = raw_x
-            b_sie = -float(raw_b)
-            g_sie = float(raw_g)
-
-        network.create_2_windings_transformers(
-            id=str(tid),
-            voltage_level1_id=f"VL_{b1}",
-            bus1_id=str(b1),
-            voltage_level2_id=f"VL_{b2}",
-            bus2_id=str(b2),
-            rated_s=sn_comp,
-            rated_u1=rated_u1_base,
-            rated_u2=un2,
-            r=r_ohm,
-            x=x_ohm,
-            g=g_sie,
-            b=b_sie,
+        network.create_loads(
+            id=str(lid),
+            voltage_level_id=f"VL_{bid}",
+            bus_id=str(bid),
+            p0=float(info.get("p_pu", 0.0)) * S_REF_MVA,
+            q0=float(info.get("q_pu", 0.0)) * S_REF_MVA,
         )
 
-        if rho_max is not None and rho_min is not None and n_tap > 1:
-            rtc_df = pd.DataFrame(
-                {
-                    "id": [str(tid)],
-                    "low_tap": [0],
-                    "tap": [int(tap_pos)],
-                    "regulating": [False],
-                }
-            ).set_index("id")
+    @staticmethod
+    def _select_slack(generators: Dict[str, Dict[str, Any]]) -> Optional[str]:
+        """
+        Selects the generator holding the slack bus: an infinite bus or a source without
+        active power set point first, then the generators matching the identifiers of
+        slack_bus_mapping.json, and finally the largest participating generator.
 
-            network.create_ratio_tap_changers(rtc_df)
+        :param generators: Parsed generators.
+        :return: The identifier of the slack generator, or None if there is no generator.
+        """
+        connected = {gid: info for gid, info in generators.items() if info.get("bus")}
+        if not connected:
+            return None
 
-            steps_data = []
-            step_size = (rho_max - rho_min) / (n_tap - 1)
-
-            for i in range(int(n_tap)):
-                steps_data.append(
-                    {
-                        "id": str(tid),
-                        "rho": rho_min + (i * step_size),
-                        "r": r_ohm,
-                        "x": x_ohm,
-                        "g": g_sie,
-                        "b": b_sie,
-                    }
+        candidates = [gid for gid, info in connected.items() if info.get("slack")]
+        if candidates:
+            if len(candidates) > 1:
+                logger.warning(
+                    f"Several sources could hold the slack bus {candidates}: "
+                    f"{candidates[0]} is used."
                 )
+            return candidates[0]
 
-            steps_df = pd.DataFrame(steps_data).set_index("id")
-            network.update_ratio_tap_changer_steps(steps_df)
+        identifiers = PowerFlowRunner.load_slack_mapping()
+        for gid in connected:
+            if any(identifier in gid.lower() for identifier in identifiers):
+                return gid
+
+        return max(
+            connected,
+            key=lambda gid: (
+                connected[gid].get("participation_factor") or 0.0,
+                abs(connected[gid].get("p_pu") or 0.0),
+            ),
+        )
+
+    @staticmethod
+    def _estimate_balance(data: Dict[str, Any], slack_id: str) -> float:
+        """
+        Estimates the active power of the slack generator (pu, generator convention) as
+        the difference between the loads and the other generators, losses excluded.
+        The estimate is never zero, so that the slack takes part in the balance.
+
+        :param data: The parsed topology.
+        :param slack_id: The identifier of the slack generator.
+        :return: The estimated active power in pu (base SnRef).
+        """
+        loads = sum(info.get("p_pu", 0.0) for info in data.get("loads", {}).values())
+        generation = sum(
+            info.get("p_pu") or 0.0
+            for gid, info in data.get("generators", {}).items()
+            if gid != slack_id
+        )
+        estimate = loads - generation
+        return estimate if abs(estimate) * S_REF_MVA >= 1.0 else 1.0 / S_REF_MVA
+
+    @staticmethod
+    def _create_generator(
+        network: pp.network.Network,
+        gid: str,
+        info: Dict[str, Any],
+        bus_v: Dict[str, float],
+        is_slack: bool,
+        slack_takes_balance: bool,
+    ) -> None:
+        """
+        Creates a generator in the PyPowSyBl network.
+
+        :param network: The PyPowSyBl network instance.
+        :param gid: The unique identifier for the generator.
+        :param info: Dictionary containing the generator's parameters (generator convention).
+        :param bus_v: Dictionary mapping bus IDs to their nominal voltages.
+        :param is_slack: Whether the generator holds the slack bus.
+        :param slack_takes_balance: Whether the slack generator takes the whole balance
+            (no participation factors in the model).
+        """
+        bid = info.get("bus")
+        if not bid:
+            logger.warning(f"Generator {gid} is not connected and is skipped.")
+            return
+
+        p_pu = info.get("p_pu")
+        if p_pu is None and not is_slack:
+            logger.warning(f"Generator {gid}: no active power set point, 0 MW is used.")
+        q_pu = info.get("q_pu")
+        voltage_control = bool(info.get("voltage_control")) or is_slack
+        u_pu = info.get("u_pu") if info.get("u_pu") is not None else 1.0
+
+        network.create_generators(
+            id=str(gid),
+            voltage_level_id=f"VL_{bid}",
+            bus_id=str(bid),
+            target_p=(p_pu or 0.0) * S_REF_MVA,
+            target_q=(q_pu or 0.0) * S_REF_MVA,
+            target_v=u_pu * bus_v[bid],
+            voltage_regulator_on=voltage_control,
+            min_p=-UNBOUNDED_POWER,
+            max_p=UNBOUNDED_POWER,
+        )
+
+        q_min = info.get("q_min_pu")
+        q_max = info.get("q_max_pu")
+        q_limits_df = pd.DataFrame(
+            {
+                "id": [str(gid)],
+                "min_q": [q_min * S_REF_MVA if q_min is not None else -UNBOUNDED_POWER],
+                "max_q": [q_max * S_REF_MVA if q_max is not None else UNBOUNDED_POWER],
+            }
+        ).set_index("id")
+        network.create_minmax_reactive_limits(q_limits_df)
+
+        # The load flow balance is shared in proportion to the participation factors of
+        # the model (frequency regulation through SignalN). Without them, the slack
+        # generator takes the whole balance, so that its active power is written back
+        # to the network and can initialize its dynamic model.
+        participation = info.get("participation_factor") or 0.0
+        if is_slack and slack_takes_balance:
+            participation = 1.0
+        network.create_extensions(
+            "activePowerControl",
+            id=str(gid),
+            participate=participation > 0.0,
+            droop=4.0,
+            participation_factor=float(participation),
+        )

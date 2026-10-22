@@ -1,9 +1,9 @@
 model Demo_ManyBESS_auxiliary "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
   extends Dynawo.Icons.Example;
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -0.03, U0Pu = 1) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -(-0.03), U0Pu = 1) annotation(
  // From internal initialization
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS2(PGen0Pu = -0.03, U0Pu = 1) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS2(PGen0Pu = -(-0.03), U0Pu = 1) annotation(
  // From internal initialization
     Placement(transformation(origin = {-12, 60}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
   Dynawo.Electrical.Lines.Line line(BPu = 0, GPu = 0, RPu = 0, XPu = 0.0000020661) annotation(
@@ -44,9 +44,9 @@ equation
     Line(points = {{-26, -32}, {-10, -32}, {-10, 0}, {0, 0}}, color = {0, 0, 255}));
   connect(bus1.terminal, BESS2.terminal);
 initial equation
-  BESS_INIT.Q0Pu = BESS.QGenPu;
+  BESS_INIT.Q0Pu = -(BESS.QGenPu);
   BESS_INIT.UPhase0 = BESS.UPhase;
-  BESS2_INIT.Q0Pu = BESS2.QGenPu;
+  BESS2_INIT.Q0Pu = -(BESS2.QGenPu);
   BESS2_INIT.UPhase0 = BESS2.UPhase;
   annotation(
     preferredView = "diagram",

@@ -5,7 +5,7 @@ const REPLACEMENTS = Dict{String, Any}(
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource" => Dict(
         "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers" => Dict(
-            "PGen0Pu" => "P0Pu",
+            "PGen0Pu" => "-P0Pu",
             "U0Pu"    => "U0Pu",
         )
     ),
@@ -13,7 +13,7 @@ const REPLACEMENTS = Dict{String, Any}(
     "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource" => Dict(
         "new_class" => "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers" => Dict(
-            "PGen0Pu" => "P0Pu",
+            "PGen0Pu" => "-P0Pu",
             "U0Pu"    => "U0Pu",
         )
     ),

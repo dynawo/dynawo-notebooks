@@ -15,7 +15,7 @@ model Demo_PVCurrent_auxiliary "WECC PV Model on infinite bus"
     Placement(visible = true, transformation(origin = {-82, 0}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
   Dynawo.Electrical.Lines.Line line(RPu = 0, XPu = 0.0000020661, BPu = 0, GPu = 0) annotation(
     Placement(visible = true, transformation(origin = {-40, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed PV(PGen0Pu = -0.7, U0Pu = 1) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed PV(PGen0Pu = -(-0.7), U0Pu = 1) annotation(
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
   Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT PV_INIT(PPCLocal = true, GMvHvPu = 0, U0Pu = 1, rTfoPu = 1, QPcc0Pu = 0, SNom = 100, UPcc0Pu = 1, P0Pu = -0.7, RLvTrPu = 0, XLvTrPu = 0, RMvHvPu = 0, XMvHvPu = 0.15, BMvHvPu = 0, ConverterLVControl = true, PPcc0Pu = 0, Q0Pu(fixed = false), UPhase0(fixed = false));
 equation
@@ -29,7 +29,7 @@ equation
   connect(infiniteBus.terminal, line.terminal1) annotation(
     Line(points = {{-82, 0}, {-60, 0}, {-60, 0}, {-60, 0}}, color = {0, 0, 255}));
 initial equation
-  PV_INIT.Q0Pu = PV.QGenPu;
+  PV_INIT.Q0Pu = -(PV.QGenPu);
   PV_INIT.UPhase0 = PV.UPhase;
   annotation(
     preferredView = "diagram",

@@ -16,7 +16,7 @@ from python_pypowsybl.Code.core.connector import OMCConnector
 from python_pypowsybl.Code.core.parser import ModelicaParser
 from python_pypowsybl.Code.core.converter import PowsyblConverter
 
-logger = logging.getLogger("MoTopologyToolkit")
+logger = logging.getLogger(__name__)
 
 
 class MoTopologyToolkit:
@@ -51,7 +51,7 @@ class MoTopologyToolkit:
                 )
         except Exception as e:
             logger.critical(f"Initialization CRITICAL FAILURE: {e}")
-            raise e
+            raise
 
         self.parser = ModelicaParser(self.connector, model_name)
 
@@ -90,7 +90,7 @@ class MoTopologyToolkit:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
             logger.info(f"Data exported successfully to: {file_path}")
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to export data: {e}")
 
     def import_from_standard_json(self, filepath: str) -> Dict[str, Any]:

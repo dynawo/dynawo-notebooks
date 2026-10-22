@@ -110,7 +110,7 @@ const INIT_MODELS = Dict{String, Any}(
         ],
 
         "init_equations" => Dict(
-            "Q0Pu"    => "QGenPu",
+            "Q0Pu"    => "-QGenPu",
             "UPhase0" => "UPhase",
         )
     ),
@@ -143,7 +143,7 @@ const INIT_MODELS = Dict{String, Any}(
         ],
 
         "init_equations" => Dict(
-            "Q0Pu"    => "QGenPu",
+            "Q0Pu"    => "-QGenPu",
             "UPhase0" => "UPhase",
         )
     ),
