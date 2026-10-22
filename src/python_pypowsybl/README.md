@@ -120,6 +120,25 @@ the system.
 The [`compile_example`](../../compile_example/) directory at the root of the repository
 contains a simple case with a user model to compile.
 
+## Getting Started notebooks
+
+The `PyPowSyBl_Dynawo_Getting_Started_<N>.ipynb` notebooks are self-contained tutorials of
+PyPowSyBl-Dynawo that do not use the library: they build a network programmatically, solve
+its load flow, map its elements to models of the Dynawo model database, write the parameter
+files to [`getting_started_data/`](Notebooks/getting_started_data/) and simulate an event.
+I, II and III use networks of 2, 3 and 12 buses. IV builds the Kundur two-area system
+(4 generators with their step-up transformers, 8 lines, 2 loads and 2 shunt capacitors) and
+compares its inter-area oscillation without and with power system stabilizers. Their first
+cells replace the PyPowSyBl configuration (`~/.itools/config.yml`) with the template
+`getting_started_data/config.yml`, after a backup.
+
+Each one has a `_compilation` copy that compiles its dynamic models step by step with the
+Dynawo model generator, using only `DynawoToolchain` from the library: the standard models,
+which replace the precompiled ones in a model database of the notebook and give the same
+curves, and a variant of its own, a generator with another voltage regulator
+(`VRProportional`, I to III) or with a speed governor (`GoverProportional`, IV). The compiled
+models are written to `grid_export_GettingStarted_<N>/compiled_models/`.
+
 ## Dynawo versions
 
 The pipeline runs with the Dynawo 1.7 simulator and the Modelica library of its model
