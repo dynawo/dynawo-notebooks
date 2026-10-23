@@ -165,8 +165,8 @@ The following software must be installed globally (requires administrator
 rights):
 
 - **OpenModelica 1.27** (with the `omc` compiler available on your `PATH`).
-- **Python 3.12+** (`install_python_pypowsybl.sh` checks for it and does not install it;
-  `install_python_openmodelica.sh` fetches its own with `uv` if needed).
+- **Python 3.12+** (required for Route B; the Route A Python installer installs
+  it if needed).
 - **Java Runtime** (strictly required for Route B / PyPowSyBl).
 
 You also need standard utilities: `git`, `wget`, `curl`, `tar`, and `xz`. The
