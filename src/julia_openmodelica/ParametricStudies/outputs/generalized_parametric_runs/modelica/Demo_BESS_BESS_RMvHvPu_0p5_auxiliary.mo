@@ -1,6 +1,6 @@
 model Demo_BESS_BESS_RMvHvPu_0p5_auxiliary "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
   extends Dynawo.Icons.Example;
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -0.03, U0Pu = 1) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -(-0.03), U0Pu = 1) annotation(
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
   Dynawo.Electrical.Lines.Line line(BPu = 0, GPu = 0, RPu = 0, XPu = 0.0000020661) annotation(
     Placement(visible = true, transformation(origin = {-40, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 0)));
@@ -18,7 +18,7 @@ equation
   connect(line.terminal2, BESS.terminal) annotation(
     Line(points = {{-20, 0}, {0, 0}}, color = {0, 0, 255}));
 initial equation
-  BESS_INIT.Q0Pu = BESS.QGenPu;
+  BESS_INIT.Q0Pu = -(BESS.QGenPu);
   BESS_INIT.UPhase0 = BESS.UPhase;
   annotation(
     preferredView = "diagram",

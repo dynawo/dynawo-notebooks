@@ -15,7 +15,7 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
   Dynawo `nightly` GitHub release on 2026-09-08, built from `dynawo/dynawo` commit
   `62d451ac`.
 - [`docs/`](docs/): rendered HTML exports of the notebooks, with their outputs, to view the results without running them.
-- `Older notebooks/`: previous examples and workflows kept for reference.
+- [`Older notebooks/`](<Older notebooks/>): previous examples and workflows kept for reference.
 
 ## Prerequisites
 

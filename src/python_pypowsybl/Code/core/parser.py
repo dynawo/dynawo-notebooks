@@ -3,19 +3,51 @@ Modelica Topology Parser Module.
 
 This module is responsible for extracting the electrical topology and physical
 parameters from Modelica network models. It utilizes the OMCConnector to query
-the OpenModelica compiler, inspecting flat models and resolving variable mappings
-to build a standardized topological dictionary.
+the OpenModelica compiler and builds a standardized topological dictionary.
+
+The parameters are read from the flattened model. A model that is not initialized
+yet cannot be flattened as is, because some of its initial parameters have no value.
+In that case the model is flattened through a probe that gives those parameters a
+placeholder value; they are then reported as unknown, and listed per component as the
+initial parameters that the initialization must provide.
+
+How each component enters the load flow is described in the model registry
+(``dynamic_models.json``). A user class, defined outside the Dynawo library, that extends
+a registered class is handled as that class (``registry_class``). Components whose class
+is not in the registry are classified from their Dynawo package and read with generic
+parameter names.
 """
 
-import json
 import logging
+import math
 import re
+from collections import deque
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Set
+from typing import Dict, Any, Optional, List, Set, Tuple
 
+from .compatibility import check_shim_parameters
 from .connector import OMCConnector
+from .flat_model import FlatModel, split_statements
+from .model_registry import ModelRegistry, PowerFlowSpec
 
 logger = logging.getLogger(__name__)
+
+# Maximum number of probe instantiations (each one reveals one parameter without value)
+MAX_PROBE_ITERATIONS = 400
+PROBE_MODEL_NAME = "DynawoNotebooksProbe"
+PROBE_PLACEHOLDER = "1.0"
+
+CATEGORY_OF_ELEMENT = {
+    "bus": "buses",
+    "line": "lines",
+    "transformer": "transformers",
+    "generator": "generators",
+    "load": "loads",
+    "shunt": "shunts",
+}
+
+# Package fragments used to classify the Dynawo classes that are not in the registry
+FALLBACK_GENERATOR_PACKAGES = (".machines.", ".sources.", ".bess.", ".photovoltaics.", ".wind.")
 
 
 class ModelicaParser:
@@ -26,82 +58,138 @@ class ModelicaParser:
 
     def __init__(self, connector: OMCConnector, model_name: str):
         """
-        Initializes the ModelicaParser instance.
-
-        It attempts to flatten the model to resolve variables and stores
-        the raw code of the top-level model to be used as a fallback for regex parsing.
+        Initializes the ModelicaParser instance and flattens the model.
 
         :param connector: Active OMCConnector instance for Modelica queries.
         :param model_name: The name of the root Modelica model to parse.
         """
         self.conn = connector
         self.model_name = model_name
-        self.flat_model = self.conn.instantiate_model(model_name) or ""
+        self.registry = ModelRegistry.load()
+        self._registry_classes: Dict[str, Optional[str]] = {}
 
-        def _get_full_code(model: str, visited: Optional[Set[str]] = None) -> str:
-            if visited is None:
-                visited = set()
-            if model in visited:
-                return ""
-            visited.add(model)
-            code = str(self.conn._omc.sendExpression(f"list({model})") or "")
-            for base in self.conn.get_extends(model):
-                code += "\n" + _get_full_code(base, visited)
-            return code
+        # Source code of the root model and of its base classes
+        self.top_code = self._get_full_code(model_name)
 
-        self.top_code = _get_full_code(self.model_name)
-        self._flat_cache: Dict[str, str] = {}
-
-        # --- LOAD PARAMETER MAPPING ---
-        self.param_map = self._load_param_mapping()
-
-        # --- OPTIMIZATION: BULK PARSING ---
-        self._flat_assignments = self._prebuild_assignment_map(self.flat_model)
-        self._source_assignments = self._prebuild_source_map(self.top_code)
-
-    def _load_param_mapping(self, filename: str = "param_mapping.json") -> Dict[str, str]:
-        """Loads the parameter mapping dictionary from an external JSON configuration file."""
-        filepath = Path(__file__).resolve().parent / filename
-
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                mapping = json.load(f)
-            logger.info(f"Loaded {len(mapping)} parameter mappings from {filename}")
-            return mapping
-        except Exception as e:
-            logger.error(
-                f"Failed to load parameter mapping from {filepath}. Using empty map. Error: {e}"
+        flat_text, self.probed_parameters = self._flatten_with_probe()
+        self.flat_model = flat_text or ""
+        if flat_text:
+            self.flat = FlatModel(flat_text, unknown=self.probed_parameters)
+        else:
+            logger.warning(
+                f"OpenModelica could not flatten {model_name}: the parameters are read "
+                "from the component modifiers only, which may leave some of them unresolved."
             )
-            return {}
+            self.flat = self._build_source_model()
 
-    def _prebuild_assignment_map(self, flat_str: str) -> Dict[str, str]:
-        """Scans the flattened model string once to map all parameter assignments."""
-        pattern = re.compile(r"([\w\.]+)(?:\([^)]*\))?\s*=\s*([^;]+);")
-        return {
-            match.group(1).strip(): match.group(2)
-            .split('"')[0]
-            .split("//")[0]
-            .split("/*")[0]
-            .strip()
-            for match in pattern.finditer(flat_str)
-        }
+    # ------------------------------------------------------------------ #
+    # Flattening
+    # ------------------------------------------------------------------ #
 
-    def _prebuild_source_map(self, source_str: str) -> Dict[str, str]:
-        """Scans the raw source code string once to map all parameter assignments."""
-        assignments = {}
-        pattern_semi = re.compile(r"\b([\w\.]+)\s*=\s*([^;]+);")
-        for match in pattern_semi.finditer(source_str):
-            val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
-            assignments[match.group(1).strip()] = val
+    def _get_full_code(self, model: str, visited: Optional[Set[str]] = None) -> str:
+        """Returns the source code of a model and of all its base classes."""
+        visited = visited if visited is not None else set()
+        if model in visited:
+            return ""
+        visited.add(model)
+        code = self.conn.list_class(model)
+        for base in self.conn.get_extends(model):
+            code += "\n" + self._get_full_code(base, visited)
+        return code
 
-        pattern_args = re.compile(r"\b([\w\.]+)\s*=\s*([+\-\w\.\s\*\/\^\(\)]+)[,\)]")
-        for match in pattern_args.finditer(source_str):
-            key = match.group(1).strip()
-            if key not in assignments:
-                val = match.group(2).split('"')[0].split("//")[0].split("/*")[0].strip()
-                assignments[key] = val
+    def _flatten_with_probe(self) -> Tuple[Optional[str], Set[str]]:
+        """
+        Flattens the root model. If some parameters have no value (model not initialized
+        yet), they receive a placeholder through a probe model extending the root model,
+        until the flattening succeeds.
 
-        return assignments
+        :return: The flattened model (None on failure) and the set of probed parameters.
+        """
+        flat, error = self.conn.instantiate(self.model_name)
+        if flat:
+            logger.info(f"Model {self.model_name} flattened ({len(flat)} characters).")
+            return flat, set()
+
+        probed: List[str] = []
+        for _ in range(MAX_PROBE_ITERATIONS):
+            missing = re.findall(
+                r"Parameter ([\w\.\[\],']+) has neither value nor start value", error
+            )
+            new = [name for name in missing if name not in probed]
+            if not new:
+                logger.debug(f"Probe flattening stopped on an unrelated error: {error[-500:]}")
+                return None, set(probed)
+            probed.extend(new)
+
+            probe = (
+                f"model {PROBE_MODEL_NAME}\n"
+                f"  extends .{self.model_name}({self._render_modifiers(probed)});\n"
+                f"end {PROBE_MODEL_NAME};"
+            )
+            if not self.conn.load_string(probe, f"{PROBE_MODEL_NAME}.mo"):
+                return None, set(probed)
+            flat, error = self.conn.instantiate(PROBE_MODEL_NAME)
+            if flat:
+                logger.info(
+                    f"Model {self.model_name} flattened through a probe: {len(probed)} "
+                    "parameter(s) without value are left to the initialization."
+                )
+                return flat, set(probed)
+        return None, set(probed)
+
+    @staticmethod
+    def _render_modifiers(names: List[str]) -> str:
+        """Renders dotted parameter names as nested Modelica modifiers with a placeholder value."""
+        tree: Dict[str, Any] = {}
+        for name in names:
+            node = tree
+            parts = name.split(".")
+            for part in parts[:-1]:
+                node = node.setdefault(part, {})
+            node[parts[-1]] = PROBE_PLACEHOLDER
+
+        def render(node: Dict[str, Any]) -> str:
+            return ", ".join(
+                f"{key}({render(value)})" if isinstance(value, dict) else f"{key} = {value}"
+                for key, value in node.items()
+            )
+
+        return render(tree)
+
+    def _build_source_model(self) -> FlatModel:
+        """
+        Builds a partial model from the source code when flattening fails: the component
+        modifiers, the parameters of the root model and the equations of its sources.
+        """
+        model = FlatModel()
+        for statement in split_statements(re.sub(r"//[^\n]*", "", self.top_code)):
+            declaration = re.match(
+                r"^\s*(?:final\s+)?parameter\s+[\w\.]+\s+(\w+)\s*(?:\([^)]*\))?\s*=\s*(.+)$",
+                statement,
+                re.DOTALL,
+            )
+            if declaration:
+                model.bindings[declaration.group(1)] = re.sub(
+                    r'\s*"[^"]*"\s*$', "", declaration.group(2)
+                )
+                model.kinds[declaration.group(1)] = "parameter"
+        for name, info in self._collect_all_components_recursive().items():
+            for key, expression in _split_modifiers(info.get("modifiers", "")):
+                model.bindings[f"{name}.{key}"] = expression
+                model.kinds[f"{name}.{key}"] = "parameter"
+        equations = re.split(r"\bequation\b", self.top_code)
+        for section in equations[1:]:
+            for statement in split_statements(section):
+                model._parse_equation(statement)
+        model._equation_index.clear()
+        for lhs, rhs in model.equations:
+            model._equation_index.setdefault(lhs, []).append(rhs)
+            model._equation_index.setdefault(rhs, []).append(lhs)
+        return model
+
+    # ------------------------------------------------------------------ #
+    # Topology
+    # ------------------------------------------------------------------ #
 
     def parse_topology(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -115,77 +203,105 @@ class ModelicaParser:
         all_components_map = self._collect_all_components_recursive()
         logger.info(f"Total unique components found: {len(all_components_map)}")
 
-        if self.flat_model and len(self.flat_model) > 100:
-            logger.info(
-                f"SUCCESS: Flattened model generated correctly ({len(self.flat_model)} characters)."
-            )
-        else:
-            logger.info(
-                f"WARNING: Flattened model is empty or too short. "
-                f"OpenModelica could not resolve equations for {self.model_name}. "
-            )
-
         topo: Dict[str, Dict[str, Any]] = {
-            "buses": {},
-            "lines": {},
-            "generators": {},
-            "loads": {},
-            "shunts": {},
-            "transformers": {},
+            category: {} for category in CATEGORY_OF_ELEMENT.values()
         }
 
         for comp_name, comp_info in all_components_map.items():
-            if isinstance(comp_info, dict):
-                comp_type = comp_info["type"]
-                declaring_model = comp_info["declared_in"]
-                modifiers_str = comp_info.get("modifiers", "")
-            else:
-                comp_type = comp_info
-                declaring_model = self.model_name
-                modifiers_str = ""
+            comp_type = comp_info["type"]
+            registry_class = self._registry_class(comp_type) or comp_type
+            element = self._classify(registry_class)
+            if element is None:
+                continue
 
-            params = self._extract_parameters(declaring_model, comp_name, modifiers_str)
-            params["modelica_type"] = comp_type
-            type_lower = comp_type.lower()
-
-            if "bus" in type_lower and "infinite" not in type_lower:
-                topo["buses"][comp_name] = params
-            elif "line" in type_lower:
-                topo["lines"][comp_name] = params
-            elif (
-                "generator" in type_lower
-                or "infinitebus" in type_lower
-                or "pv" in type_lower
-                or "inertialgrid" in type_lower
-            ):
-                topo["generators"][comp_name] = params
-            elif "load" in type_lower:
-                topo["loads"][comp_name] = params
-            elif "shunt" in type_lower or "capacitor" in type_lower:
-                topo["shunts"][comp_name] = params
-            elif "transformer" in type_lower:
-                topo["transformers"][comp_name] = params
+            data: Dict[str, Any] = {
+                "modelica_type": comp_type,
+                "declared_in": comp_info["declared_in"],
+            }
+            if registry_class != comp_type:
+                data["registry_class"] = registry_class
+                logger.info(
+                    f"{comp_name}: user class {comp_type} handled as its base class "
+                    f"{registry_class}."
+                )
+            data.update(self._ELEMENT_READERS[element](self, comp_name, registry_class))
+            data["parameters"] = self._component_parameters(comp_name)
+            data["missing_initial_parameters"] = self._missing_parameters(comp_name)
+            data["final_parameters"] = self._final_parameters(comp_name)
+            data["computed_parameters"] = self._computed_parameters(comp_name)
+            data["enumerations"] = self._enumeration_parameters(comp_name)
+            topo[CATEGORY_OF_ELEMENT[element]][comp_name] = data
 
         raw_connections = self._collect_all_connections_recursive()
         if raw_connections:
             self._build_topological_nodes(topo, raw_connections)
 
-        for cat in ["lines", "shunts"]:
-            for comp_name, params in topo.get(cat, {}).items():
-                if "_deduced_v" in params:
-                    v = params.pop("_deduced_v")
-                    bus1 = params.get("bus1") or params.get("bus")
-                    bus2 = params.get("bus2")
-                    if bus1 and bus1 in topo["buses"]:
-                        topo["buses"][bus1]["nominal_v"] = v
-                    if bus2 and bus2 in topo["buses"]:
-                        topo["buses"][bus2]["nominal_v"] = v
-
-        for cat in topo.keys():
-            for params in topo[cat].values():
-                params.pop("_deduced_v", None)
-
+        check_shim_parameters(topo)
         return topo
+
+    def _registry_class(self, modelica_type: str) -> Optional[str]:
+        """
+        Returns the class of the model registry describing a Modelica class: the class
+        itself when it is registered or, for a user class (defined outside the Dynawo
+        library), its nearest registered base class, whose model it shares.
+
+        :param modelica_type: Fully qualified Modelica class.
+        :return: The registered class, or None if the class is not supported.
+        """
+        if self.registry.get(modelica_type) is not None:
+            return modelica_type
+        if modelica_type not in self._registry_classes:
+            result = None
+            if self._is_user_class(modelica_type):
+                queue, visited = deque(self.conn.get_extends(modelica_type)), {modelica_type}
+                while queue:
+                    base = queue.popleft()
+                    if base in visited:
+                        continue
+                    visited.add(base)
+                    if self.registry.get(base) is not None:
+                        result = base
+                        break
+                    queue.extend(self.conn.get_extends(base))
+            self._registry_classes[modelica_type] = result
+        return self._registry_classes[modelica_type]
+
+    def _is_user_class(self, modelica_type: str) -> bool:
+        """Tells whether a Modelica class is defined outside the loaded Dynawo library."""
+        source = self.conn.get_source_file(modelica_type)
+        if not source or self.conn.dynawo_library is None:
+            return False
+        try:
+            Path(source).resolve().relative_to(self.conn.dynawo_library.resolve())
+        except ValueError:
+            return True
+        return False
+
+    def _classify(self, modelica_type: str) -> Optional[str]:
+        """
+        Returns the network element represented by a Modelica class, from the registry
+        or, for unregistered classes, from their Dynawo package.
+        """
+        spec = self.registry.get(modelica_type)
+        if spec is not None:
+            return spec.element
+
+        type_lower = modelica_type.lower()
+        if not type_lower.startswith("dynawo.electrical."):
+            return None
+        if ".buses." in type_lower:
+            return "generator" if "infinite" in type_lower else "bus"
+        if ".lines." in type_lower:
+            return "line"
+        if ".transformers." in type_lower:
+            return "transformer"
+        if ".loads." in type_lower:
+            return "load"
+        if ".shunts." in type_lower:
+            return "shunt"
+        if any(package in type_lower for package in FALLBACK_GENERATOR_PACKAGES):
+            return "generator"
+        return None
 
     def _collect_all_components_recursive(
         self, current_model: Optional[str] = None, visited: Optional[Set[str]] = None
@@ -219,7 +335,8 @@ class ModelicaParser:
                     }
 
         for base in self.conn.get_extends(current_model):
-            components.update(self._collect_all_components_recursive(base, visited))
+            for name, info in self._collect_all_components_recursive(base, visited).items():
+                components.setdefault(name, info)
         return components
 
     def _collect_all_connections_recursive(
@@ -256,35 +373,49 @@ class ModelicaParser:
         :param topo: The topological dictionary containing extracted components.
         :param connections: List of connection terminal pairs.
         """
+        electrical_components = {name for category in topo.values() for name in category}
+
+        def is_electrical_terminal(terminal: str) -> bool:
+            # Only the AC terminals of electrical components define network nodes: control
+            # signal connections (e.g. a set point connected to a generator) are ignored
+            component, _, pin = terminal.rpartition(".")
+            return (
+                component in electrical_components and re.fullmatch(r"terminal\d*", pin) is not None
+            )
+
         adj: Dict[str, List[str]] = {}
         for c in connections:
             if len(c) >= 2:
                 term1, term2 = str(c[0]), str(c[1])
+                if not (is_electrical_terminal(term1) and is_electrical_terminal(term2)):
+                    continue
                 adj.setdefault(term1, []).append(term2)
                 adj.setdefault(term2, []).append(term1)
 
+        # Connected groups of terminals (breadth-first search), each one a network node
         visited: Set[str] = set()
         node_groups = []
-        for terminal in adj.keys():
+        for terminal in adj:
             if terminal not in visited:
-                queue, group = [terminal], {terminal}
+                queue, group = deque([terminal]), {terminal}
                 visited.add(terminal)
                 while queue:
-                    curr = queue.pop(0)
-                    for neighbor in adj.get(curr, []):
+                    curr = queue.popleft()
+                    for neighbor in adj[curr]:
                         if neighbor not in visited:
                             visited.add(neighbor)
                             group.add(neighbor)
                             queue.append(neighbor)
-                node_groups.append(group)
+                node_groups.append(sorted(group))
 
         virtual_bus_idx = 1
         for group in node_groups:
+            # The node takes the name of its Bus component, or a virtual name if it has none
             bus_id = next(
                 (
-                    ".".join(t.split(".")[:-1])
-                    for t in group
-                    if ".".join(t.split(".")[:-1]) in topo["buses"]
+                    component
+                    for component, _, _ in (term.rpartition(".") for term in group)
+                    if component in topo["buses"]
                 ),
                 None,
             )
@@ -292,301 +423,293 @@ class ModelicaParser:
             if not bus_id:
                 bus_id = f"VirtualBus_{virtual_bus_idx}"
                 virtual_bus_idx += 1
-
-                om_ref = list(group)[0] if group else None
                 topo["buses"][bus_id] = {
-                    "nominal_v": 225.0,
+                    "nominal_v": None,
                     "is_virtual": True,
-                    "om_reference": om_ref,
+                    "om_reference": group[0],
                 }
 
             for term in group:
-                parts = term.split(".")
-                if len(parts) < 2:
-                    continue
-                comp_name, pin_name = ".".join(parts[:-1]), parts[-1].lower()
-
-                for cat in ["lines", "transformers"]:
+                comp_name, _, pin_name = term.rpartition(".")
+                for cat in ("lines", "transformers"):
                     if comp_name in topo[cat]:
-                        side = (
-                            "bus1"
-                            if (pin_name.endswith("1") or pin_name in ["p", "terminal1", "a"])
-                            else "bus2"
-                        )
+                        # Branches are connected through terminal1 (side 1) and terminal2
+                        side = "bus1" if pin_name.endswith("1") else "bus2"
                         topo[cat][comp_name][side] = bus_id
-                for cat in ["generators", "loads", "shunts"]:
+                for cat in ("generators", "loads", "shunts"):
                     if comp_name in topo[cat]:
                         topo[cat][comp_name]["bus"] = bus_id
 
-    def _extract_from_flat(self, comp_name: str, param: str) -> Optional[float]:
-        """Extracts parameters utilizing the pre-built memory map."""
-        raw_val = self._flat_assignments.get(f"{comp_name}.{param}")
-        if raw_val is not None:
-            resolved = self._resolve_val(raw_val)
-            if isinstance(resolved, (float, int)):
-                return float(resolved)
+    # ------------------------------------------------------------------ #
+    # Parameter evaluation
+    # ------------------------------------------------------------------ #
+
+    def evaluate(self, component: str, expression: Optional[str]) -> Optional[float]:
+        """
+        Evaluates an expression in the scope of a component (e.g. "-PRef0Pu" for Gen1).
+
+        :param component: Name of the component.
+        :param expression: Modelica expression over the component parameters.
+        :return: The value, or None if the expression cannot be evaluated.
+        """
+        if not expression:
+            return None
+        value = self.flat.evaluate(expression, scope=component)
+        if isinstance(value, bool) or value is None:
+            return None
+        value = float(value)
+        return value if math.isfinite(value) else None
+
+    def _first_value(self, component: str, *expressions: str) -> Optional[float]:
+        """Returns the first expression that can be evaluated in the scope of a component."""
+        for expression in expressions:
+            value = self.evaluate(component, expression)
+            if value is not None:
+                return value
         return None
 
-    def _extract_raw_value_from_modifiers(self, mods_str: str, param: str) -> Optional[str]:
-        """Extracts a parameter's assigned value from a raw Modelica modifier string."""
-        if not mods_str:
-            return None
-        s = str(mods_str).strip().strip("\"'")
-        pattern = re.compile(rf"\b{param}\b\s*=\s*([^,)]+)")
-        match = pattern.search(s)
-        if match:
-            raw_val = match.group(1).strip()
-            clean_val = raw_val.split('"')[0].split("/*")[0].split("//")[0].strip()
-            return clean_val if clean_val else None
+    def _component_parameters(self, component: str) -> Dict[str, Any]:
+        """
+        Returns the numerical (and boolean) parameters of a component, including the real
+        and imaginary parts of its complex parameters ("u0Pu.re").
+        """
+        parameters: Dict[str, Any] = {}
+        prefix_length = len(component) + 1
+        for name in self.flat.names_with_prefix(component):
+            relative = name[prefix_length:]
+            depth = relative.count(".")
+            if depth > 1 or (depth == 1 and not relative.endswith((".re", ".im"))):
+                continue
+            if not self.flat.is_parameter(name):
+                continue
+            value = self.flat.value(name)
+            if isinstance(value, bool):
+                parameters[relative] = value
+            elif value is not None and math.isfinite(float(value)):
+                parameters[relative] = float(value)
+        return parameters
+
+    def _enumeration_parameters(self, component: str) -> Dict[str, Dict[str, Any]]:
+        """
+        Returns the enumeration parameters of a component: their literals (in declaration
+        order) and the qualified type used by their current value, so that the
+        initialization can write another literal of the same type.
+        """
+        enumerations: Dict[str, Dict[str, Any]] = {}
+        prefix = f"{component}."
+        for name in self.flat.names_with_prefix(component):
+            relative = name[len(prefix) :]
+            type_name = self.flat.types.get(name, "")
+            if (
+                "." in relative
+                or not type_name.startswith("enumeration(")
+                or not self.flat.is_parameter(name)
+            ):
+                continue
+            literals = [
+                literal.strip() for literal in type_name[len("enumeration(") : -1].split(",")
+            ]
+            binding = self.flat.bindings.get(name, "")
+            type_path, _, current = binding.rpartition(".")
+            enumerations[relative] = {
+                "literals": literals,
+                "type": type_path or None,
+                "value": current if current in literals else None,
+            }
+        return enumerations
+
+    def _final_parameters(self, component: str) -> List[str]:
+        """Returns the parameters of a component that are final, hence cannot be modified."""
+        return self._component_subset(component, self.flat.finals)
+
+    def _computed_parameters(self, component: str) -> List[str]:
+        """Returns the parameters of a component computed by its initial equations (fixed=false)."""
+        return self._component_subset(component, self.flat.computed)
+
+    @staticmethod
+    def _component_subset(component: str, names: Set[str]) -> List[str]:
+        """Returns the parameters (complex ones by their base name) of a component among names."""
+        prefix = f"{component}."
+        return sorted(
+            {
+                name[len(prefix) :].split(".")[0]
+                for name in names
+                if name.startswith(prefix) and name[len(prefix) :].count(".") <= 1
+            }
+        )
+
+    def _missing_parameters(self, component: str) -> List[str]:
+        """Returns the parameters of a component that have no value in the Modelica model."""
+        prefix = f"{component}."
+        missing = set()
+        for name in self.probed_parameters:
+            if name.startswith(prefix):
+                relative = name[len(prefix) :]
+                missing.add(relative.split(".")[0])
+        return sorted(missing)
+
+    def _base_voltage_hint(self, component: str, *parameters: str) -> Optional[float]:
+        """
+        Deduces a base voltage in kV from the impedance base used in the binding of a
+        parameter, following the naming conventions of the Dynawo examples
+        (ZBASE69_0 for 69.0 kV, XBase_130 for 130 kV).
+        """
+        for parameter in parameters:
+            binding = self.flat.bindings.get(f"{component}.{parameter}", "")
+            match = re.search(r"ZBASE(\d+)_(\d+)", binding, re.IGNORECASE)
+            if match:
+                return float(f"{match.group(1)}.{match.group(2)}")
+            match = re.search(r"XBase_(\d+)", binding, re.IGNORECASE)
+            if match:
+                return float(match.group(1))
         return None
 
-    def _resolve_val(
-        self,
-        val_str: Optional[str],
-        pj: Optional[str] = "",
-        model_name: Optional[str] = "",
-        depth: int = 0,
-    ) -> Any:
-        """
-        Safely casts a raw Modelica string value into a Python float or complex number.
+    # ------------------------------------------------------------------ #
+    # Element readers
+    # ------------------------------------------------------------------ #
 
-        :param val_str: The raw string expression assigned to a parameter.
-        :param pj: Parameter JSON key (for debugging/context).
-        :param model_name: The name of the model component being parsed.
-        :param depth: Current recursion depth to prevent infinite loops.
-        :return: A numerical value (float or complex), or None if unresolved.
-        """
-        if not val_str or depth > 5:
-            return None
+    def _read_bus(self, name: str, modelica_type: str) -> Dict[str, Any]:
+        """Reads a bus: its nominal voltage, when the model gives a meaningful one."""
+        u_nom = self.evaluate(name, "UNom")
+        return {"nominal_v": u_nom if u_nom is not None and u_nom > 1.5 else None}
 
-        clean = val_str.split('"')[0].split("//")[0].split("/*")[0].strip()
-        clean = clean.replace("'", "")
-        clean = clean.replace("Dynawo.Electrical.SystemBase.SnRef", "100.0")
-        clean = clean.replace("SystemBase.SnRef", "100.0")
-        clean = clean.replace("^", "**")
-        clean = re.sub(r"XBase_(\d+)", r"((\1**2)/100.0)", clean)
-
-        try:
-            return float(clean)
-        except ValueError:
-            pass
-
-        identifiers = set(re.findall(r"[a-zA-Z_][a-zA-Z0-9_\.]*", clean))
-        resolved_expr = clean
-        for var in identifiers:
-            if var in ["Complex", "sin", "cos", "tan", "sqrt", "j"]:
-                continue
-
-            var_val = self._source_assignments.get(var)
-            if var_val is None:
-                var_val = self._flat_assignments.get(var)
-
-            if var_val is None and any(suffix in var for suffix in [".setPoint", ".step", ".y"]):
-                alt_var = (
-                    var.replace(".setPoint", ".Value0")
-                    .replace(".step", ".Value0")
-                    .replace(".y", ".k")
-                )
-                var_val = self._source_assignments.get(alt_var) or self._flat_assignments.get(
-                    alt_var
-                )
-
-            if isinstance(var_val, (float, int)):
-                resolved_expr = re.sub(r"\b" + var + r"\b", str(var_val), resolved_expr)
-                continue
-
-            if var_val is None:
-                var_val = self.conn.get_parameter_value(self.model_name, var)
-
-            if var_val is not None:
-                val_num = self._resolve_val(str(var_val), pj, model_name, depth + 1)
-                if val_num is not None:
-                    if isinstance(val_num, complex):
-                        resolved_expr = re.sub(
-                            rf"\b{var}\b",
-                            f"Complex({val_num.real}, {val_num.imag})",
-                            resolved_expr,
-                        )
-                    else:
-                        resolved_expr = re.sub(r"\b" + var + r"\b", str(val_num), resolved_expr)
-
-        py_expr = resolved_expr.replace("^", "**")
-
-        def complex_func(r: float, i: float) -> complex:
-            return complex(r, i)
-
-        try:
-            return eval(py_expr, {"__builtins__": None}, {"Complex": complex_func})
-        except Exception:
-            return None
-
-    def _extract_parameters(
-        self, declaring_model: str, comp_name: str, modifiers: str = ""
-    ) -> Dict[str, float]:
-        """Extracts physical parameters for a specific component using multi-strategy lookups."""
-        extracted: Dict[str, float] = {}
-        extraction_priority: Dict[str, int] = {}
-        critical_params = {"r_pu", "x_pu", "b_pu", "g_pu", "r", "x", "b", "g"}
-        positive_only_params = {
-            "u_pu",
-            "nominal_v",
-            "sn_nom",
-            "ratio",
-            "rated_u1",
-            "rated_u2",
+    def _read_line(self, name: str, modelica_type: str) -> Dict[str, Any]:
+        """Reads a line (impedance in pu base SnRef, half-admittances per side)."""
+        x_pu = self.evaluate(name, "XPu")
+        if x_pu is None:
+            logger.warning(f"Line {name}: reactance not found, a negligible value is used.")
+            x_pu = 1e-6
+        return {
+            "r_pu": self.evaluate(name, "RPu") or 0.0,
+            "x_pu": x_pu,
+            "g_pu": self.evaluate(name, "GPu") or 0.0,
+            "b_pu": self.evaluate(name, "BPu") or 0.0,
+            "base_kv": self._base_voltage_hint(name, "XPu", "RPu", "BPu"),
         }
 
-        for pm, pj in self.param_map.items():
-            val = None
-            current_priority = 99
+    def _read_transformer(self, name: str, modelica_type: str) -> Dict[str, Any]:
+        """Reads a transformer (impedance and admittance in pu base SnRef and side 2 voltage)."""
+        data = self._read_line(name, modelica_type)
+        data["ratio"] = self._first_value(name, "rTfoPu", "RatioTfo0Pu") or 1.0
+        return data
 
-            dot_notation = f"{comp_name}.{pm}"
-            top_level_alias = f"{pm}_{comp_name}"
+    def _read_shunt(self, name: str, modelica_type: str) -> Dict[str, Any]:
+        """Reads a shunt (susceptance in pu base SnRef, receptor convention: Q = B U^2)."""
+        return {
+            "b_pu": self.evaluate(name, "BPu") or 0.0,
+            "g_pu": self.evaluate(name, "GPu") or 0.0,
+            "base_kv": self._base_voltage_hint(name, "BPu"),
+        }
 
-            raw_flat = self._flat_assignments.get(dot_notation)
-            if raw_flat is None:
-                raw_flat = self._flat_assignments.get(top_level_alias)
+    def _read_load(self, name: str, modelica_type: str) -> Dict[str, Any]:
+        """
+        Reads the active and reactive power requested by a load, in pu base SnRef and
+        receptor convention, from its references (PRefPu, QRefPu) or its start values.
+        """
+        delta_p = self.evaluate(name, "deltaP") or 0.0
+        delta_q = self.evaluate(name, "deltaQ") or 0.0
+        p_ref = self._first_value(name, "PRefPu")
+        q_ref = self._first_value(name, "QRefPu")
+        p_pu = (
+            p_ref * (1.0 + delta_p)
+            if p_ref is not None
+            else self._first_value(name, "s0Pu.re", "P0Pu")
+        )
+        q_pu = (
+            q_ref * (1.0 + delta_q)
+            if q_ref is not None
+            else self._first_value(name, "s0Pu.im", "Q0Pu")
+        )
+        if p_pu is None or q_pu is None:
+            logger.warning(
+                f"Load {name}: power request not fully resolved, missing values set to 0."
+            )
+        return {"p_pu": p_pu or 0.0, "q_pu": q_pu or 0.0}
 
-            raw_src = self._source_assignments.get(dot_notation)
-            if raw_src is None:
-                raw_src = self._source_assignments.get(top_level_alias)
+    def _read_generator(self, name: str, modelica_type: str) -> Dict[str, Any]:
+        """
+        Reads the load flow behaviour of an injection: active and reactive power in pu
+        base SnRef (generator convention), voltage set point, voltage angle and whether
+        it controls its voltage or acts as the slack.
+        """
+        spec = self.registry.get(modelica_type)
+        power_flow = spec.power_flow if spec is not None else self._generic_power_flow(name)
 
-            for raw_text in [raw_src, raw_flat]:
-                if raw_text and isinstance(raw_text, str):
-                    match_zbase = re.search(r"ZBASE(\d+)_(\d+)", raw_text, re.IGNORECASE)
-                    if match_zbase:
-                        extracted["_deduced_v"] = float(
-                            f"{match_zbase.group(1)}.{match_zbase.group(2)}"
-                        )
-                        break
+        sign = 1.0 if power_flow.convention == "generator" else -1.0
+        p_value = self.evaluate(name, power_flow.p)
+        q_value = self.evaluate(name, power_flow.q)
+        p_pu = sign * p_value if p_value is not None else None
+        q_pu = sign * q_value if q_value is not None else None
+        u_pu = self.evaluate(name, power_flow.u)
+        angle_rad = self.evaluate(name, power_flow.angle)
+        q_min = self.evaluate(name, power_flow.q_min)
+        q_max = self.evaluate(name, power_flow.q_max)
 
-                    match_xbase = re.search(r"XBase_(\d+)", raw_text, re.IGNORECASE)
-                    if match_xbase:
-                        extracted["_deduced_v"] = float(match_xbase.group(1))
-                        break
+        slack = power_flow.slack or p_pu is None
+        voltage_control = power_flow.voltage_control and not (q_pu is not None and u_pu is None)
+        if slack and u_pu is None:
+            logger.warning(
+                f"Generator {name}: no voltage set point found for a slack, 1 pu is used."
+            )
+            u_pu = 1.0
+        if voltage_control and u_pu is None:
+            logger.warning(f"Generator {name}: no voltage set point found, 1 pu is used.")
+            u_pu = 1.0
 
-            if raw_src is not None:
-                resolved = self._resolve_val(raw_src, pj, comp_name)
-                if resolved is not None:
-                    val = resolved
-                    current_priority = 1
+        return {
+            "p_pu": p_pu,
+            "q_pu": q_pu,
+            "u_pu": u_pu,
+            "angle_rad": angle_rad,
+            "q_min_pu": q_min,
+            "q_max_pu": q_max,
+            "participation_factor": self.evaluate(name, power_flow.participation),
+            "slack": slack,
+            "voltage_control": voltage_control or slack,
+            "sn_nom": self.evaluate(name, "SNom"),
+        }
 
-            if val is None:
-                for query_str in [dot_notation, top_level_alias]:
-                    try:
-                        sim_val = self.conn.get_simulation_value(query_str)
-                        if sim_val is not None:
-                            val = float(sim_val)
-                            current_priority = 2
-                            break
-                    except Exception:
-                        pass
+    def _generic_power_flow(self, name: str) -> PowerFlowSpec:
+        """
+        Load flow description of an injection whose class is not in the registry, using
+        the usual Dynawo parameter names (generator convention for PGen0Pu, receptor
+        convention for P0Pu).
+        """
+        if self.flat.has(f"{name}.PGen0Pu"):
+            return PowerFlowSpec(
+                p="PGen0Pu", q="QGen0Pu", convention="generator", u="U0Pu", angle="UPhase0"
+            )
+        return PowerFlowSpec(p="P0Pu", q="Q0Pu", convention="receptor", u="U0Pu", angle="UPhase0")
 
-            if val is None:
-                if raw_flat is not None:
-                    resolved = self._resolve_val(raw_flat, pj, comp_name)
-                    if resolved is not None:
-                        val = resolved
-                        current_priority = 3
+    _ELEMENT_READERS = {
+        "bus": _read_bus,
+        "line": _read_line,
+        "transformer": _read_transformer,
+        "shunt": _read_shunt,
+        "load": _read_load,
+        "generator": _read_generator,
+    }
 
-            if val is None:
-                for query_str in [dot_notation, top_level_alias]:
-                    raw_api = self.conn.get_parameter_value(self.model_name, query_str)
-                    if raw_api:
-                        resolved = self._resolve_val(raw_api, pj, comp_name)
-                        if resolved is not None:
-                            val = resolved
-                            current_priority = 4
-                            break
 
-            if val is None:
-                raw_mod = self._extract_raw_value_from_modifiers(modifiers, pm)
-                if raw_mod:
-                    resolved = self._resolve_val(raw_mod, pj, comp_name)
-                    if resolved is not None:
-                        val = resolved
-                        current_priority = 5
-
-            if val is None:
-                raw_ast = self.conn.get_modifier_value(declaring_model, comp_name, pm)
-                if raw_ast:
-                    resolved = self._resolve_val(raw_ast, pj, comp_name)
-                    if resolved is not None:
-                        val = resolved
-                        current_priority = 6
-
-            if val is not None:
-                numeric_val = val.real if isinstance(val, complex) else float(val)
-                final_val = abs(numeric_val) if pj in ["p_pu", "p"] else numeric_val
-
-                if final_val == 0.0 and pj in positive_only_params:
-                    continue
-
-                if pj in extracted and pj in critical_params:
-                    if final_val == 0.0 and extracted[pj] != 0.0:
-                        continue
-
-                best_prio = extraction_priority.get(pj, 99)
-                if current_priority < best_prio:
-                    extracted[pj] = final_val
-                    extraction_priority[pj] = current_priority
-                elif current_priority == best_prio:
-                    if pj not in extracted:
-                        extracted[pj] = final_val
-                        extraction_priority[pj] = current_priority
-
-        if "p_pu" not in extracted:
-            for prefix in ["PrefPu_", "PRefPu_"]:
-                block_name = f"{prefix}{comp_name}"
-                match = re.search(
-                    rf"\b{block_name}\b\s*\([^)]*\bValue0\s*=\s*([^,)]+)", self.top_code
-                )
-                if match:
-                    val = self._resolve_val(match.group(1).strip(), "p_pu", comp_name)
-                    if val is not None:
-                        extracted["p_pu"] = abs(float(val))
-                        break
-
-        if "q_pu" not in extracted:
-            for prefix in ["QrefPu_", "QRefPu_"]:
-                block_name = f"{prefix}{comp_name}"
-                match = re.search(
-                    rf"\b{block_name}\b\s*\([^)]*\bValue0\s*=\s*([^,)]+)", self.top_code
-                )
-                if match:
-                    val = self._resolve_val(match.group(1).strip(), "q_pu", comp_name)
-                    if val is not None:
-                        extracted["q_pu"] = float(val)
-                        break
-
-        for s_param in ["s0Pu", "s10Pu", "s20Pu"]:
-            p_val = None
-            q_val = None
-
-            complex_str = self._extract_raw_value_from_modifiers(modifiers, s_param)
-            if complex_str:
-                res_cplx = self._resolve_val(complex_str)
-                if isinstance(res_cplx, complex):
-                    p_val = abs(res_cplx.real)
-                    q_val = res_cplx.imag
-
-            if p_val is None:
-                raw_p_flat = self._flat_assignments.get(f"{comp_name}.{s_param}.re")
-                if raw_p_flat is not None:
-                    p_val = self._resolve_val(raw_p_flat, "p_pu", comp_name)
-            if q_val is None:
-                raw_q_flat = self._flat_assignments.get(f"{comp_name}.{s_param}.im")
-                if raw_q_flat is not None:
-                    q_val = self._resolve_val(raw_q_flat, "q_pu", comp_name)
-
-            if p_val is None:
-                raw_p_src = self._source_assignments.get(f"{comp_name}.{s_param}")
-                if raw_p_src is not None:
-                    p_val = self._resolve_val(raw_p_src, "p_pu", comp_name)
-
-            if p_val is not None and "p_pu" not in extracted:
-                extracted["p_pu"] = abs(float(p_val))
-            if q_val is not None and "q_pu" not in extracted:
-                extracted["q_pu"] = float(q_val)
-
-        return extracted
+def _split_modifiers(modifiers: str) -> List[Tuple[str, str]]:
+    """
+    Splits a component modification such as ``(a = 1, b = f(2, 3))`` into
+    (name, expression) pairs, ignoring nested modifications.
+    """
+    text = modifiers.strip().strip('"').strip()
+    if text.startswith("(") and text.endswith(")"):
+        text = text[1:-1]
+    pairs, depth, current = [], 0, ""
+    for char in text + ",":
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        if char == "," and depth == 0:
+            match = re.match(r"^\s*(?:final\s+)?(\w+)\s*=\s*(.+?)\s*$", current, re.DOTALL)
+            if match:
+                pairs.append((match.group(1), match.group(2)))
+            current = ""
+        else:
+            current += char
+    return pairs
