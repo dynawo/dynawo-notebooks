@@ -38,3 +38,4 @@ dynawo/
 *examples*
 omc-build/
 src/julia_openmodelica/StabilityAnalysis/outputs/
+src/python_openmodelica/StabilityAnalysis/outputs/

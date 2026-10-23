@@ -20,7 +20,7 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
 ## Prerequisites
 
 OpenModelica 1.27 has to be installed beforehand, with the `omc` compiler available on
-the PATH. Everything else is set up by `Installation/install_julia.sh`: Julia and its
+the PATH. Everything else is set up by `Installation/install_julia_openmodelica.sh`: Julia and its
 packages, JupyterLab, the `Julia (clean) 1.10` kernel these notebooks declare, and the
 Modelica Standard Library 3.2.3.
 

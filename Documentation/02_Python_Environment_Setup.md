@@ -13,7 +13,7 @@ provided automated script. This script utilizes `uv` for lightning-fast
 installations.
 
 ```bash
-./Installation/install_python.sh
+./Installation/install_python_pypowsybl.sh
 ```
 
 This script will:
