@@ -1,15 +1,15 @@
 # Installation
 
 There is one installer per family of notebooks, and each one only sets up what its own
-notebooks need. Both live in this directory and both work within the user account,
+notebooks need. They all live in this directory and all work within the user account,
 without administrator rights.
 
 ## What the installers do
 
-Both scripts start by asking whether to use the files already in the current directory
+Each script starts by asking whether to use the files already in the current directory
 or to clone the remote repository.
 
-`install_python.sh` prepares the notebooks under `src/python_pypowsybl/Notebooks/`:
+`install_python_pypowsybl.sh` prepares the notebooks under `src/python_pypowsybl/Notebooks/`:
 
 - Checks that `python3` (version >= 3.12), a Java runtime, `git`, `wget`, `curl`, `tar`, and `xz` are 
   available, and installs the `uv` package manager if it is missing.
@@ -19,7 +19,19 @@ or to clone the remote repository.
 - Writes `~/.itools/config.yml` pointing at it, which is how PyPowSyBl finds the 
   Dynawo simulator.
 
-`install_julia.sh` prepares the notebooks under `src/julia_openmodelica/`:
+`install_python_openmodelica.sh` prepares the notebooks under `src/python_openmodelica/`:
+
+- Checks that `python3`, `omc` (OpenModelica Compiler), `wget`, `curl`, `tar`, `xz`, and 
+  `git` are available, and installs the `uv` package manager if it is missing.
+- Creates the `.venv-python-om` environment with Python 3.12 using `uv`, downloading the 
+  interpreter if the system one is older, and installs JupyterLab in it.
+- Downloads the standalone Dynawo Library (`dynawo_library_1_8.tar.xz`) and extracts 
+  it directly into `src/python_openmodelica/dynawo_library`, so it is exactly where the 
+  notebooks expect it to be.
+- Installs the Modelica Standard Library 3.2.3 with the OpenModelica package manager.
+- Installs `OMPython`, `pandas`, `numpy`, and `matplotlib` into the environment.
+
+`install_julia_openmodelica.sh` prepares the notebooks under `src/julia_openmodelica/`:
 
 - Checks that `python3`, `omc` (OpenModelica Compiler), `wget`, `curl`, `tar`, `xz`, and 
   `git` are available, and installs the `uv` package manager if it is missing.
@@ -36,12 +48,13 @@ or to clone the remote repository.
 ## Running the notebooks
 
 Open them with whichever viewer you prefer. The Julia notebooks use the `Julia (clean)` 
-kernel and the Python ones the `.venv` interpreter.
+kernel, and the Python ones the interpreter of their own environment.
 
 For JupyterLab, activate the environment first.
 
 ```bash
-source .venv-julia/bin/activate    # .venv for the Python notebooks
+source .venv-julia/bin/activate    # .venv-python-om for python_openmodelica,
+                                   # .venv for python_pypowsybl
 jupyter lab
 ```
 

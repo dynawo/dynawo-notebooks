@@ -89,14 +89,15 @@ ______________________________________________________________________
 The project provides two distinct routes to achieve steady-state initialization,
 depending on your preferred language and tools.
 
-### ROUTE A: Julia & OpenModelica
+### ROUTE A: OpenModelica, from Julia or Python
 
-Using Julia and `OMJulia`, this route performs initialization using only
-OpenModelica:
+Using only OpenModelica, driven either from Julia with `OMJulia` or from Python
+with `OMPython`. Both implementations follow the same four steps and produce the
+same initialized case:
 
 - **1. Rewrite:** The code automatically builds a static auxiliary twin of your
   dynamic model, stripping out events and controls.
-- **2. Stand-ins:** It applies replacements from `dictionaries.jl` (e.g.,
+- **2. Stand-ins:** It applies replacements from the dictionaries (e.g.,
   swapping `BESSCurrentSource` for `GeneratorPVFixed`) and adds the `_INIT`
   companions.
 - **3. Solve & Read:** It simulates the auxiliary model to settle the network,
@@ -142,14 +143,17 @@ ______________________________________________________________________
   `ParametricStudies` and `StabilityAnalysis` build on top of it with parameter
   sweeps and small-signal analysis. Every folder has a single-file and a package
   version.
+- **`src/python_openmodelica/`** — Route A in Python. The same five folders as
+  the Julia family, with the same notebooks and the same results, driven through
+  `OMPython` instead of `OMJulia`.
 - **`src/python_pypowsybl/Notebooks/`** — Route B. The three
   `PyPowSyBl_Dynawo_Getting_Started` notebooks are only an entry point, showing
-  how to build up small cases from scracth, not from a given Modelica network
+  how to build up small cases from scratch, not from a given Modelica network
   case. The `PyPowSyBl_approach_*` notebooks contain the full workflow described
   as Route B above, i.e., starting from a given network case written in
-  modelica. We show four examples: BESS, DIGrid, IEEE57 and Nordic.
-- **`Installation/`** — the setup script for each route, `install_julia.sh` and
-  `install_python.sh`.
+  Modelica. We show four examples: BESS, DIGrid, IEEE57 and Nordic.
+- **`Installation/`** — one setup script per family: `install_julia_openmodelica.sh`,
+  `install_python_openmodelica.sh` and `install_python_pypowsybl.sh`.
 - **`Documentation/`** — background on the environment and the initialization
   logic.
 
@@ -161,7 +165,8 @@ The following software must be installed globally (requires administrator
 rights):
 
 - **OpenModelica 1.27** (with the `omc` compiler available on your `PATH`).
-- **Python 3.12+** (the installers check for it, they do not install it).
+- **Python 3.12+** (`install_python_pypowsybl.sh` checks for it and does not install it;
+  `install_python_openmodelica.sh` fetches its own with `uv` if needed).
 - **Java Runtime** (strictly required for Route B / PyPowSyBl).
 
 You also need standard utilities: `git`, `wget`, `curl`, `tar`, and `xz`. The
@@ -169,10 +174,13 @@ You also need standard utilities: `git`, `wget`, `curl`, `tar`, and `xz`. The
 
 Everything else is set up locally by the installers, inside your user account:
 
-- **Route A:** Julia 1.10.12, a `.venv-julia` environment with JupyterLab, the
-  `OMJulia`, `DataFrames`, `CSV`, `Plots` and `IJulia` packages, the
-  `Julia (clean) 1.10` kernel, the Modelica Standard Library 3.2.3 and the
+- **Route A, Julia:** Julia 1.10.12, a `.venv-julia` environment with
+  JupyterLab, the `OMJulia`, `DataFrames`, `CSV`, `Plots` and `IJulia` packages,
+  the `Julia (clean) 1.10` kernel, the Modelica Standard Library 3.2.3 and the
   Dynawo Modelica library 1.8.0.
+- **Route A, Python:** a `.venv-python-om` environment with Python 3.12,
+  JupyterLab, `OMPython`, `pandas`, `numpy` and `matplotlib`, the Modelica
+  Standard Library 3.2.3 and the Dynawo Modelica library 1.8.0.
 - **Route B:** a `.venv` environment with `pypowsybl`, JupyterLab and the other
   pinned dependencies, plus Dynawo 1.7 downloaded into `~/dynawo` and linked
   through `~/.itools/config.yml`.
@@ -181,8 +189,8 @@ ______________________________________________________________________
 
 ## 6. Installation
 
-There is one installer per route. Both operate safely within your user directory
-without root privileges.
+There is one installer per family of notebooks. They all operate safely within
+your user directory without root privileges.
 
 1. **Clone the repository:**
 
@@ -193,23 +201,29 @@ without root privileges.
 
 2. **Run the installer for your preferred route:**
 
-   For Route A:
+   For Route A with Julia:
 
    ```sh
-   ./Installation/install_julia.sh
+   ./Installation/install_julia_openmodelica.sh
+   ```
+
+   For Route A with Python:
+
+   ```sh
+   ./Installation/install_python_openmodelica.sh
    ```
 
    For Route B:
 
    ```sh
-   ./Installation/install_python.sh
+   ./Installation/install_python_pypowsybl.sh
    ```
 
    *Note: The script will ask whether to use existing local files or clone the
    remote repository. Answer `L` (Local) since you just cloned it.*
 
-   Each installer creates its own environment: `.venv-julia` for Route A and
-   `.venv` for Route B.
+   Each installer creates its own environment: `.venv-julia` and
+   `.venv-python-om` for Route A, and `.venv` for Route B.
 
 ______________________________________________________________________
 
@@ -218,7 +232,7 @@ ______________________________________________________________________
 Once the installation is complete, activate your environment and launch
 JupyterLab.
 
-**For Route A:**
+**For Route A with Julia:**
 
 ```sh
 source .venv-julia/bin/activate
@@ -227,6 +241,15 @@ jupyter lab
 
 *Entry Point:* Start with the notebooks in `src/julia_openmodelica/`. Make sure
 to select the `Julia (clean) 1.10` kernel.
+
+**For Route A with Python:**
+
+```sh
+source .venv-python-om/bin/activate
+jupyter lab
+```
+
+*Entry Point:* Start with the notebooks in `src/python_openmodelica/`.
 
 **For Route B:**
 
