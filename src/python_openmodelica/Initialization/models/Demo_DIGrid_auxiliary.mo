@@ -26,7 +26,7 @@ model Demo_DIGrid_auxiliary
   parameter Real L3 = 100 "Branch 3 length (in km)";
   Dynawo.Electrical.Buses.InfiniteBus inertialGrid1(UPu = 1, UPhase = 0) annotation(
     Placement(visible = true, transformation(origin = {-38, 40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
-  Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta inertialGrid2(QGen0Pu = 0, PGen0Pu = 3.3, Alpha = 0, Beta = 0, U0Pu = 1, u0Pu = Complex(1, 0), i0Pu = Modelica.ComplexMath.conj(Complex(inertialGrid2.PGen0Pu, inertialGrid2.QGen0Pu)/inertialGrid2.u0Pu)) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta inertialGrid2(PGen0Pu = 3.3, QGen0Pu = 0, Alpha = 0, Beta = 0, U0Pu = 1, u0Pu = Complex(1, 0), i0Pu = Modelica.ComplexMath.conj(Complex(inertialGrid2.PGen0Pu, inertialGrid2.QGen0Pu)/inertialGrid2.u0Pu)) annotation(
     Placement(visible = true, transformation(origin = {-38, -40}, extent = {{-10, -10}, {10, 10}}, rotation = 0)));
   Dynawo.Electrical.Loads.LoadPQ load(i0Pu(re(start = 5, fixed = false), im(start = -(0), fixed = false)), s0Pu(re(start = 5, fixed = false), im(start = 0, fixed = false)), u0Pu(re(start = 1, fixed = false), im(start = 0, fixed = false))) annotation(
     Placement(visible = true, transformation(origin = {84, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
@@ -50,8 +50,8 @@ model Demo_DIGrid_auxiliary
     Placement(visible = true, transformation(origin = {16, -26}, extent = {{-10, -10}, {10, 10}}, rotation = 90)));
   Dynawo.Electrical.Lines.Line line3(BPu = 0, GPu = 0, RPu = R3Pu*L3, XPu = X3Pu*L3) annotation(
     Placement(visible = true, transformation(origin = {50, 0}, extent = {{-10, -10}, {10, 10}}, rotation = 180)));
-  Dynawo.Electrical.Loads.Load_INIT load_INIT(Q0Pu = 0, P0Pu = 5, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT loadPQ_INIT(Q0Pu = 0, P0Pu = 0, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT load_INIT(P0Pu = 5, Q0Pu = 0, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT loadPQ_INIT(P0Pu = 0, Q0Pu = 0, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
 equation
 // deltaFrequency calculation
 //Switch-off equations inhibitions

@@ -1,11 +1,11 @@
 model Demo_BESSloadAB_auxiliary "WECC BESS with REEC-C and REGC-B with a plant controller REPC-A on infinite bus"
   extends Dynawo.Icons.Example;
-  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -0.03, U0Pu = 1) annotation(
+  Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed BESS(PGen0Pu = -(-0.03), U0Pu = 1) annotation(
  // From internal initialization
     Placement(visible = true, transformation(origin = {20, 0}, extent = {{-20, -20}, {20, 20}}, rotation = 180)));
   Dynawo.Electrical.Lines.Line line(BPu = 0, GPu = 0, RPu = 0, XPu = 0.0000020661) annotation(
     Placement(transformation(origin = {-54, 56}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
-  Dynawo.Electrical.Buses.InfiniteBus infiniteBus(UPhase = 0, UPu = 1) annotation(
+  Dynawo.Electrical.Buses.InfiniteBus infiniteBus(UPu = 1, UPhase = 0) annotation(
     Placement(transformation(origin = {-86, 76}, extent = {{-20, -20}, {20, 20}}, rotation = -90)));
   Dynawo.Electrical.Buses.Bus bus1 annotation(
     Placement(transformation(origin = {-54, 20}, extent = {{-10, -10}, {10, 10}})));
@@ -17,8 +17,8 @@ model Demo_BESSloadAB_auxiliary "WECC BESS with REEC-C and REGC-B with a plant c
     Placement(transformation(origin = {-90, 19}, extent = {{-10, -10}, {10, 10}})));
   Dynawo.Electrical.Controls.Basics.SetPoint PrefPu_load_01(Value0 = 0.20);
   Dynawo.Electrical.Controls.Basics.SetPoint QrefPu_load_01(Value0 = 0.05);
-  Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT BESS_INIT(PPCLocal = true, GMvHvPu = 0, U0Pu = 1, rTfoPu = 1, QPcc0Pu = 0, SNom = 6, UPcc0Pu = 1, P0Pu = -0.03, RLvTrPu = 0, XLvTrPu = 0, RMvHvPu = 0, XMvHvPu = 1e-10, BMvHvPu = 0, ConverterLVControl = true, PPcc0Pu = 0, Q0Pu(fixed = false), UPhase0(fixed = false));
-  Dynawo.Electrical.Loads.Load_INIT loadAB1_INIT(Q0Pu = 0.05, P0Pu = 0.20, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
+  Dynawo.Electrical.Controls.WECC.BaseClasses_INIT.WECCPlantCurrentSource_INIT BESS_INIT(RLvTrPu = 0, XLvTrPu = 0, RMvHvPu = 0, XMvHvPu = 1e-10, BMvHvPu = 0, GMvHvPu = 0, rTfoPu = 1, SNom = 6, P0Pu = -0.03, U0Pu = 1, ConverterLVControl = true, PPCLocal = true, PPcc0Pu = 0, QPcc0Pu = 0, UPcc0Pu = 1, Q0Pu(fixed = false), UPhase0(fixed = false));
+  Dynawo.Electrical.Loads.Load_INIT loadAB1_INIT(P0Pu = 0.20, Q0Pu = 0.05, U0Pu(start = 1, fixed = false), UPhase0(start = 0, fixed = false));
 equation
   line.switchOffSignal1 = false;
   line.switchOffSignal2 = false;
@@ -47,7 +47,7 @@ equation
   connect(bus1.terminal, loadAB1.terminal) annotation(
     Line(points = {{-54, 20}, {-90, 20}, {-90, 22}}, color = {0, 0, 255}));
 initial equation
-  BESS_INIT.Q0Pu = BESS.QGenPu;
+  BESS_INIT.Q0Pu = -(BESS.QGenPu);
   BESS_INIT.UPhase0 = BESS.UPhase;
   loadAB1_INIT.U0Pu = Modelica.ComplexMath.'abs'(loadAB1.terminal.V);
   loadAB1_INIT.UPhase0 = Modelica.ComplexMath.arg(loadAB1.terminal.V);
