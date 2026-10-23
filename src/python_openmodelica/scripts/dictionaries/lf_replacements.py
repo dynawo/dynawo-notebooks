@@ -5,7 +5,7 @@ REPLACEMENTS = {
     "Dynawo.Electrical.BESS.WECC.BESSCurrentSource": {
         "new_class": "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers": {
-            "PGen0Pu": "P0Pu",
+            "PGen0Pu": "-P0Pu",
             "U0Pu": "U0Pu",
         },
     },
@@ -13,7 +13,7 @@ REPLACEMENTS = {
     "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource": {
         "new_class": "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers": {
-            "PGen0Pu": "P0Pu",
+            "PGen0Pu": "-P0Pu",
             "U0Pu": "U0Pu",
         },
     },

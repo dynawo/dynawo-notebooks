@@ -110,7 +110,7 @@ INIT_MODELS = {
         ],
 
         "init_equations": {
-            "Q0Pu": "QGenPu",
+            "Q0Pu": "-QGenPu",
             "UPhase0": "UPhase",
         },
     },
@@ -143,7 +143,7 @@ INIT_MODELS = {
         ],
 
         "init_equations": {
-            "Q0Pu": "QGenPu",
+            "Q0Pu": "-QGenPu",
             "UPhase0": "UPhase",
         },
     },
