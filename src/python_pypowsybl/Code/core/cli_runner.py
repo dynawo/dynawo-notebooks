@@ -312,12 +312,14 @@ class DynawoCLIRunner:
             in the meantime.
         :return: The outcome of the execution, or None if no working directory was found.
         """
+        dynamic_dir = os.path.join(export_folder, "dynamic_files")
         source = working_dir or DynawoCLIRunner._find_latest_temp_dir()
         if not source:
+            # The replay of a previous run must not be taken for the one of this run
+            shutil.rmtree(dynamic_dir, ignore_errors=True)
             logger.critical("Could not find any Dynawo temporary directory.")
             return None
 
-        dynamic_dir = os.path.join(export_folder, "dynamic_files")
         jobs_file = DynawoCLIRunner.prepare_replay(source, dynamic_dir, dynawo_sys_path)
         result = DynawoCLIRunner.run(jobs_file, dynawo_sys_path)
         if result.success:

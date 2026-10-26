@@ -21,6 +21,7 @@ from the model database of the case, given to Dynawo through DYNAWO_DDB_DIR.
 import logging
 import os
 import re
+import shutil
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -160,6 +161,11 @@ class DynawoSimulationRunner:
         # is simulated so that the load flow results, used by the initialization, are kept
         network = copy_network(setup.network)
 
+        # The replay of a previous run is removed first: if this run fails, its initial
+        # values dump must not be taken for the one of this run
+        replay_dir = os.path.join(self.export_directory, "dynamic_files")
+        shutil.rmtree(replay_dir, ignore_errors=True)
+
         before = DynawoCLIRunner.list_working_directories()
         status, message = "FAILURE", ""
         try:
@@ -186,7 +192,6 @@ class DynawoSimulationRunner:
             )
             return DynawoSimulationResult(status, message, None, pd.DataFrame(), None)
 
-        replay_dir = os.path.join(self.export_directory, "dynamic_files")
         jobs_file = DynawoCLIRunner.prepare_replay(
             working_dir, replay_dir, self.dynawo_path, setup.model_database
         )
