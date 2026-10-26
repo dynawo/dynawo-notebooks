@@ -13,7 +13,7 @@ $\\dot{x} = f(x, y)$.
   steady state at $t=0$, we must find the values of all internal variables $x_0$
   such that $\\dot{x} = 0$.
 - However, we only know the "boundary" variables $y$ (voltages, angles, flows)
-  at all the devices's terminals, which can be obtained from a loadflow
+  at all the devices' terminals, which can be obtained from a loadflow
   calculation.
 - Inverting the complex function $f(x, y)$ to find the internal state $x_0$ for
   each device is often numerically unstable or impossible for the standard
@@ -43,13 +43,14 @@ simulation.
 
 4. **Write back (global initialization):** This $x\_{init}$ vector is written
    back into the main Dynamic Model as parameter modifiers (e.g.,
-   `s0Pu(re=..., im=...)`), for the global simulation.
+   `s0Pu = Complex(..., ...)`), for the global simulation.
 
 ### Practical Implementation in the Notebooks
 
-When you run the Julia initialization notebooks, the code automates this entire
+When you run the Julia or Python OpenModelica initialization notebooks, the code
+automates this entire
 process for network cases that are wholly built in pure Modelica (using models
-from Dynawo's library ). OpenModelica does not know anything about Dynawo's
+from Dynawo's library). OpenModelica does not know anything about Dynawo's
 initialization strategy or INIT models, so the notebooks perform all this work
 in a fashion quite similar to Dynawo.
 

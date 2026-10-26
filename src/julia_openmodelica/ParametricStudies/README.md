@@ -8,7 +8,7 @@ This folder contains notebooks for running parameter sweeps on OpenModelica mode
 - `ParametricStudies_Demo_IEEE14_Package.ipynb`: parameter sweep for a Demo_IEEE14 package model.
 - `outputs/`: generated Modelica cases and selected simulation results.
 
-The notebooks reuse the shared helper modules in `../scripts/`.
+The notebooks reuse the shared helper modules in `../scripts/` and read their input models from `../FullWorkflow/models/`.
 
 ## Configuration
 

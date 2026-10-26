@@ -46,7 +46,7 @@ class PowsyblConverter:
         Provides a safe fallback to default values if the configuration file is missing.
 
         :param filename: The name of the JSON file containing the voltage mapping rules.
-        :return: A dictionary mapping string prefixes to nominal voltage values (float).
+        :return: A dictionary mapping bus name fragments to nominal voltage values (float).
         """
         filepath = Path(__file__).resolve().parent / filename
 
@@ -67,7 +67,7 @@ class PowsyblConverter:
         Constructs a complete PyPowSyBl Network from the raw parsed topology data.
 
         :param data: A dictionary containing topological elements (buses, lines, etc.).
-        :return: A fully instantiated PyPowSybl Network.
+        :return: A fully instantiated PyPowSyBl Network.
         """
         logger.info("Initializing PyPowSyBl Network construction...")
 

@@ -1,5 +1,5 @@
 # helpers/auxiliary_patch.py
-# Text rewrite and post-save patch helpers
+# Text rewrite and equation cleanup helpers for the auxiliary model.
 
 import re
 
@@ -18,7 +18,9 @@ def rewrite_aux_extends(text, aux_name_map):
     rewritten = text
     for original_parent, aux_parent in aux_name_map.items():
         # Escape the parent name so regex metacharacters stay literal.
-        pattern = re.compile(r"(\bextends\s+)" + re.escape(original_parent) + r"(\s*[;(])", flags=re.MULTILINE)
+        pattern = re.compile(
+            r"(\bextends\s+)" + re.escape(original_parent) + r"(\s*[;(])", flags=re.MULTILINE
+        )
         rewritten = pattern.sub(lambda m: m.group(1) + aux_parent + m.group(2), rewritten)
     return rewritten
 
@@ -63,7 +65,9 @@ def _collect_allowed_component_refs(components, slack_component):
 
         # Slack replacements always end up as InfiniteBus.
         if comp_name == slack_component:
-            allowed_refs_by_component[comp_name] = set(AUX_ALLOWED_REFS["Dynawo.Electrical.Buses.InfiniteBus"])
+            allowed_refs_by_component[comp_name] = set(
+                AUX_ALLOWED_REFS["Dynawo.Electrical.Buses.InfiniteBus"]
+            )
             continue
 
         old_class = c.get("class", "")
@@ -85,14 +89,16 @@ def _statement_uses_disallowed_ref(statement, allowed_refs_by_component):
     if not stripped_statement:
         return False
 
-    # Connections are already cleaned up earlier in the notebook workflow.
+    # Connections are already cleaned up earlier in the build workflow (delete_connections).
     if stripped_statement.startswith("connect("):
         return False
 
     # Delete the full statement if any tracked component is referenced through a dead path.
     for comp_name, allowed_refs in allowed_refs_by_component.items():
         ref_pattern = re.compile(
-            r"\b" + re.escape(comp_name) + r"\.([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)"
+            r"\b"
+            + re.escape(comp_name)
+            + r"\.([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)"
         )
 
         for m in ref_pattern.finditer(statement):

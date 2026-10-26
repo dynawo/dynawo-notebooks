@@ -4,6 +4,7 @@ This folder contains notebook workflows for OpenModelica cases using the Dynawo 
 
 ## Contents
 
+- [`OMJulia_Dynawo_Getting_Started.ipynb`](OMJulia_Dynawo_Getting_Started.ipynb): the entry point, a first contact with OMJulia and the Dynawo library: it simulates a library example, changes a parameter and simulates again.
 - [`BuildAux/`](BuildAux/): builds an auxiliary steady-state model or package.
 - [`Initialization/`](Initialization/): creates an initialized dynamic model or package from an existing auxiliary case.
 - [`FullWorkflow/`](FullWorkflow/): builds the auxiliary case and creates the initialized dynamic case in one workflow.
@@ -29,7 +30,7 @@ is in `dynawo_library/`, and the notebooks read it from there.
 
 ## Configuration
 
-Each notebook starts with a configuration cell. It points at the Modelica Standard
+Each notebook has a configuration cell near the top. It points at the Modelica Standard
 Library installed under `~/.openmodelica/libraries` and at the Dynawo library in
 `dynawo_library/`, and either can be pointed somewhere else by editing that cell. The
 rest of it selects the model to work on and the options for that workflow.

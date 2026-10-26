@@ -33,9 +33,15 @@ def load_modelica_file(omc, model_file_path, modelica_package_path, dynawo_packa
     omc_call(omc, f'loadFile("{model_file_path}")')
 
 
-def _transform_auxiliary_class(omc, source_model, auxiliary_model, components,
-                               init_model_by_component, slack_component,
-                               global_cleanup_targets=None):
+def _transform_auxiliary_class(
+    omc,
+    source_model,
+    auxiliary_model,
+    components,
+    init_model_by_component,
+    slack_component,
+    global_cleanup_targets=None,
+):
     """
     Apply the shared dynamic-to-auxiliary transformation to one copied class.
 
@@ -50,15 +56,22 @@ def _transform_auxiliary_class(omc, source_model, auxiliary_model, components,
         delete_connections(omc, auxiliary_model, components, global_targets=global_cleanup_targets)
 
     delete_components(omc, auxiliary_model, components)
-    add_init_models(omc, source_model, auxiliary_model, components,
-                    init_model_by_component, slack_component)
+    add_init_models(
+        omc, source_model, auxiliary_model, components, init_model_by_component, slack_component
+    )
     apply_LF_modifiers(omc, source_model, auxiliary_model, components)
-    add_init_equations(omc, source_model, auxiliary_model, components,
-                       init_model_by_component, slack_component)
+    add_init_equations(
+        omc, source_model, auxiliary_model, components, init_model_by_component, slack_component
+    )
 
 
-def _simulate_auxiliary_model(auxiliary_model, auxiliary_model_file, modelica_package_path,
-                              dynawo_package_path, resultfile=None):
+def _simulate_auxiliary_model(
+    auxiliary_model,
+    auxiliary_model_file,
+    modelica_package_path,
+    dynawo_package_path,
+    resultfile=None,
+):
     """
     Open an OpenModelica session, load and simulate an auxiliary model/package, and
     return the built model so the caller can extract values and close it explicitly.
@@ -70,8 +83,9 @@ def _simulate_auxiliary_model(auxiliary_model, auxiliary_model_file, modelica_pa
         resultfile = auxiliary_model + "_res.mat"
 
     auxiliary_omc = OMCSessionLocal()
-    load_modelica_file(auxiliary_omc, auxiliary_model_file, modelica_package_path,
-                       dynawo_package_path)
+    load_modelica_file(
+        auxiliary_omc, auxiliary_model_file, modelica_package_path, dynawo_package_path
+    )
     omc_call(auxiliary_omc, f"checkModel({auxiliary_model})", parsed=False)
 
     auxiliary_system = ModelicaSystemOMC(session=auxiliary_omc)
@@ -81,9 +95,15 @@ def _simulate_auxiliary_model(auxiliary_model, auxiliary_model_file, modelica_pa
     return auxiliary_system
 
 
-def _build_initialized_class(omc, source_model, initialized_model, initializable_components,
-                             initialization_values, init_model_by_component,
-                             target_package=None):
+def _build_initialized_class(
+    omc,
+    source_model,
+    initialized_model,
+    initializable_components,
+    initialization_values,
+    init_model_by_component,
+    target_package=None,
+):
     """
     Copy one source class/model into an initialized class and apply extracted
     initialization modifiers. File/package saving stays in the caller.
@@ -94,5 +114,10 @@ def _build_initialized_class(omc, source_model, initialized_model, initializable
         initialized_class_name = initialized_model.split(".")[-1]
         omc_call(omc, f'copyClass({source_model}, "{initialized_class_name}", {target_package})')
 
-    apply_initialization_modifiers(omc, initialized_model, initializable_components,
-                                   initialization_values, init_model_by_component)
+    apply_initialization_modifiers(
+        omc,
+        initialized_model,
+        initializable_components,
+        initialization_values,
+        init_model_by_component,
+    )

@@ -132,6 +132,8 @@ Apply the configured class replacements to `aux_model`.
 
 For each mapped `new_param => old_param`, this reuses call-style modifiers
 first, then assignment modifiers, then falls back to OpenModelica value lookup.
+The `slack_component` is replaced by `InfiniteBus` instead, and an `old_param`
+starting with `-` is written with its sign flipped.
 """
 function apply_replacements!(
     omc,

@@ -18,8 +18,15 @@ from .parametric_study_helpers import (
 )
 
 
-def _build_auxiliary_model(dynamic_omc, source_model, auxiliary_model, auxiliary_model_file,
-                           source_components, init_model_by_component, slack_component):
+def _build_auxiliary_model(
+    dynamic_omc,
+    source_model,
+    auxiliary_model,
+    auxiliary_model_file,
+    source_components,
+    init_model_by_component,
+    slack_component,
+):
     """
     Create and save the auxiliary static model used for initialization.
     """
@@ -40,9 +47,14 @@ def _build_auxiliary_model(dynamic_omc, source_model, auxiliary_model, auxiliary
     omc_call(dynamic_omc, f'saveModel("{auxiliary_model_file}", {auxiliary_model})')
 
 
-def _simulate_auxiliary_model_and_extract_values(auxiliary_model, auxiliary_model_file,
-                                                 source_components, modelica_package_path,
-                                                 dynawo_package_path, init_model_by_component):
+def _simulate_auxiliary_model_and_extract_values(
+    auxiliary_model,
+    auxiliary_model_file,
+    source_components,
+    modelica_package_path,
+    dynawo_package_path,
+    init_model_by_component,
+):
     """
     Simulate the auxiliary model and return values for the initialized dynamic model.
     """
@@ -66,9 +78,15 @@ def _simulate_auxiliary_model_and_extract_values(auxiliary_model, auxiliary_mode
     return initializable_components, initialization_values
 
 
-def _build_initialized_model(dynamic_omc, source_model, initialized_model, initialized_model_file,
-                             initializable_components, initialization_values,
-                             init_model_by_component):
+def _build_initialized_model(
+    dynamic_omc,
+    source_model,
+    initialized_model,
+    initialized_model_file,
+    initializable_components,
+    initialization_values,
+    init_model_by_component,
+):
     """
     Create and save the initialized dynamic model from extracted initialization
     values.
@@ -85,9 +103,16 @@ def _build_initialized_model(dynamic_omc, source_model, initialized_model, initi
     omc_call(dynamic_omc, f'saveModel("{initialized_model_file}", {initialized_model})')
 
 
-def initialize_loaded_model(dynamic_omc, source_model, case_name, output_dir,
-                            modelica_package_path, dynawo_package_path,
-                            init_model_by_component=None, slack_component=""):
+def initialize_loaded_model(
+    dynamic_omc,
+    source_model,
+    case_name,
+    output_dir,
+    modelica_package_path,
+    dynawo_package_path,
+    init_model_by_component=None,
+    slack_component="",
+):
     """
     Build the auxiliary initialization model, simulate it, and save the initialized
     dynamic model.

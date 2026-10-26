@@ -1,3 +1,4 @@
+# scripts/package_model_initialization.jl
 # High-level initialization helper for parametric studies of package models.
 
 module PackageModelInitialization

@@ -10,21 +10,22 @@ PyPowSyBl + Dynawo).
    Transformers). Also copies from the Modelica case all the steady-state values
    for the load-flow.
 2. **The Loadflow (Critical Step):** Runs `pp.loadflow.run_ac(...)`.
-3. **Export:** Saves the converged state as `.iidm`.
+3. **Export:** Saves the converged state as `.xiidm`.
 
 ## Phase 2: Dynamic Model Mapping & Initialization
 
 The pypowsybl case is then enriched by mapping the dynamic models used in the
-user's input case. They need to be models from Dynawo's ddb library (it was
-planned to automatically preassemble any model from Dynawo's Modelica Model
-Library, but this approach could not be completed).
+user's input case. By default they are models from Dynawo's ddb library; the
+`_compilation` notebooks can also compile them from Dynawo's Modelica Model
+Library, or from the user classes of the case.
 
 1. **Model Mapping:** Detect the Dynawo models used in the input case and map
    them.
 2. **Initialization Extraction:** The notebook then runs Dynawo, but only for
    the purposes of dumping all internal initialization information (thanks to
-   the --dumpInit option). Then the notebook extracts all those internal
-   initialzation values and re-writes the user's input case as a fully
+   the `dumpInitValues` option of the jobs file, enabled when the simulation is
+   replayed with the Dynawo command line). Then the notebook extracts all those
+   internal initialization values and re-writes the user's input case as a fully
    initialized `.mo` file.
 
 ## Phase 3 (optional): Simulation & Analysis

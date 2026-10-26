@@ -20,11 +20,15 @@ def _resolve_init_params(component, cls, init_model_by_component):
     spec = INIT_PARAMS[cls]
     if isinstance(spec, dict) and "profiles" in spec:
         if component not in init_model_by_component:
-            raise RuntimeError(f"Missing INIT model selection for component {component} of class {cls}")
+            raise RuntimeError(
+                f"Missing INIT model selection for component {component} of class {cls}"
+            )
         profile_name = init_model_by_component[component]
         profiles = spec["profiles"]
         if profile_name not in profiles:
-            raise RuntimeError(f"Unknown INIT profile {profile_name} for component {component} of class {cls}")
+            raise RuntimeError(
+                f"Unknown INIT profile {profile_name} for component {component} of class {cls}"
+            )
         return profiles[profile_name]
 
     if component in init_model_by_component:
@@ -78,7 +82,7 @@ def _extract_inertial_grid_values(session, result_file, stop_time, component):
     return {
         "P0Pu": -(vre * ire + vim * iim),
         "Q0Pu": vre * iim - vim * ire,
-        "U0Pu": math.sqrt(vre ** 2 + vim ** 2),
+        "U0Pu": math.sqrt(vre**2 + vim**2),
         "UPhase0": math.atan2(vim, vre),
     }
 

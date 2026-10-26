@@ -208,7 +208,7 @@ def parse_modifier_dict(mod_raw):
         eqpos = _find_top_level_equal(p)
         if eqpos is not None:
             lhs = p[:eqpos].strip()
-            rhs = p[eqpos + 1:].strip()
+            rhs = p[eqpos + 1 :].strip()
             if lhs:
                 result[lhs] = rhs
 
@@ -219,7 +219,7 @@ def parse_call_modifier_dict(mod_raw):
     """
     Parse top-level call-style modifiers from OpenModelica raw text.
 
-    Example output entry: `"i0Pu" => "re(fixed = false), im(fixed = false)"`.
+    Example output entry: `"i0Pu": "re(fixed = false), im(fixed = false)"`.
     """
     s = _strip_modelica_comments(_unwrap_code_modifier(mod_raw))
     if not s:

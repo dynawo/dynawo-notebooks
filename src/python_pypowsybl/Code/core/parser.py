@@ -380,7 +380,8 @@ class ModelicaParser:
             # signal connections (e.g. a set point connected to a generator) are ignored
             component, _, pin = terminal.rpartition(".")
             return (
-                component in electrical_components and re.fullmatch(r"terminal\d*", pin) is not None
+                component in electrical_components
+                and re.fullmatch(r"terminal\d*", pin) is not None
             )
 
         adj: Dict[str, List[str]] = {}
@@ -523,7 +524,9 @@ class ModelicaParser:
         return self._component_subset(component, self.flat.finals)
 
     def _computed_parameters(self, component: str) -> List[str]:
-        """Returns the parameters of a component computed by its initial equations (fixed=false)."""
+        """
+        Returns the parameters of a component computed by its initial equations (fixed=false).
+        """
         return self._component_subset(component, self.flat.computed)
 
     @staticmethod

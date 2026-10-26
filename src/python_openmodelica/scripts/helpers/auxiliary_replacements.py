@@ -99,7 +99,7 @@ def apply_replacements(omc, model, aux_model, components, slack_component):
     """
     Apply the configured class replacements to `aux_model`.
 
-    For each mapped `new_param => old_param`, this reuses call-style modifiers
+    For each mapped `new_param: old_param`, this reuses call-style modifiers
     first, then assignment modifiers, then falls back to OpenModelica value lookup.
     """
     for comp_name, c in components.items():
@@ -109,7 +109,9 @@ def apply_replacements(omc, model, aux_model, components, slack_component):
         call_mods = c["call_modifiers"]
 
         if comp_name == slack_component:
-            assignments = _build_slack_replacement_assignments(omc, model, components, comp_name, mods)
+            assignments = _build_slack_replacement_assignments(
+                omc, model, components, comp_name, mods
+            )
             mod_str = _code_modification_from_assignments(assignments)
             omc_call(
                 omc,

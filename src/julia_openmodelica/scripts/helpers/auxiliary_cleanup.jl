@@ -29,7 +29,7 @@ end
 """
     _has_switch_off_signal_equation(omc, aux_model, switch_signal) -> Bool
 
-Return `true` if `switch_signal.value` already appears on either side of an
+Return `true` if `switch_signal` already appears on either side of an
 equation in `aux_model`.
 """
 function _has_switch_off_signal_equation(omc, aux_model::String, switch_signal::String)

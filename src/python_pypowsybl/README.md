@@ -5,7 +5,9 @@ Dynawo Modelica library and return the same case initialized. Each case has two 
 `PyPowSyBl_approach_<case>.ipynb` simulates with the models precompiled in the Dynawo model
 database, and `PyPowSyBl_approach_<case>_compilation.ipynb` adds the optional compilation of
 the Dynawo models of the case (step 8, see [Model compilation](#model-compilation)). Both
-write to the same export directory, `grid_export_<case>`. They rely on the library in
+write to the same export directory, `grid_export_<case>`. Their first cell replaces the
+PyPowSyBl configuration (`~/.itools/config.yml`) with the template
+`om_powsybl_data/config.yml`, after a backup when it differs. They rely on the library in
 [`Code/core/`](Code/core/), which runs the same pipeline for every case:
 
 1. **Parsing** (`parser.py`, `flat_model.py`): the case is flattened by OpenModelica and
@@ -46,6 +48,7 @@ amounts to adding an entry there.
 |---|---|
 | `Buses.Bus`, `Buses.InfiniteBus`, `Buses.InfiniteBusWithVariations` | `Bus`, `InfiniteBus`, `InfiniteBusWithVariations` |
 | `Lines.Line`, `Transformers.TransformerFixedRatio` | `Line`, `TransformerFixedRatio` |
+| `Transformers.TransformersFixedTap.TransformerFixedRatio` (library 1.8 path) | `TransformerFixedRatio` |
 | `Sources.InertialGrid.InertialGrid` | `InertialGrid` |
 | `Machines.SignalN.GeneratorPV`, `Machines.Simplified.GeneratorPVFixed` | `GeneratorPVSignalN`, `GeneratorPVFixed` |
 | `BESS.WECC.BESSCurrentSource`, `BESS.WECC.BESScbCurrentSource` | `BESScbWeccCurrentSource` |
@@ -116,9 +119,6 @@ modifying the distribution: the compiler runs without the libraries of the distr
 libraries, with the `PTHREAD_STACK_MIN` constant that glibc >= 2.34 no longer provides to
 old Boost headers, and with the Boost libraries of the distribution rather than those of
 the system.
-
-The [`compile_example`](../../compile_example/) directory at the root of the repository
-contains a simple case with a user model to compile.
 
 ## Getting Started notebooks
 

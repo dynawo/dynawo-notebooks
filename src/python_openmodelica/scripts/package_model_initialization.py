@@ -53,11 +53,14 @@ def _package_case_paths(source_model, case_name, output_dir):
 
 def _load_empty_package(omc, package_name):
     send_expression(omc, f"deleteClass({package_name})")
-    omc_call(omc, f'loadString("within ; package {package_name} end {package_name};")', parsed=False)
+    omc_call(
+        omc, f'loadString("within ; package {package_name} end {package_name};")', parsed=False
+    )
 
 
-def _build_auxiliary_package(dynamic_omc, model_chain, paths, init_model_by_component,
-                             slack_component):
+def _build_auxiliary_package(
+    dynamic_omc, model_chain, paths, init_model_by_component, slack_component
+):
     """
     Create, transform, save, reload, and check the case-specific auxiliary package.
     """
@@ -74,8 +77,10 @@ def _build_auxiliary_package(dynamic_omc, model_chain, paths, init_model_by_comp
         auxiliary_class_name = auxiliary_class.split(".")[-1]
         components = components_by_model[model]
 
-        omc_call(dynamic_omc,
-                 f'copyClass({model}, "{auxiliary_class_name}", {paths["auxiliary_package"]})')
+        omc_call(
+            dynamic_omc,
+            f'copyClass({model}, "{auxiliary_class_name}", {paths["auxiliary_package"]})',
+        )
         _transform_auxiliary_class(
             dynamic_omc,
             source_model=model,
@@ -104,16 +109,21 @@ def _build_auxiliary_package(dynamic_omc, model_chain, paths, init_model_by_comp
         slack_component,
     )
 
-    send_expression(dynamic_omc, f'deleteClass({paths["auxiliary_package"]})')
+    send_expression(dynamic_omc, f"deleteClass({paths['auxiliary_package']})")
     omc_call(dynamic_omc, f'loadFile("{paths["auxiliary_package_file"]}")')
-    omc_call(dynamic_omc, f'checkModel({paths["auxiliary_model"]})', parsed=False)
+    omc_call(dynamic_omc, f"checkModel({paths['auxiliary_model']})", parsed=False)
 
     return components_by_model
 
 
-def _simulate_auxiliary_package_and_extract_values(paths, model_chain, components_by_model,
-                                                   modelica_package_path, dynawo_package_path,
-                                                   init_model_by_component):
+def _simulate_auxiliary_package_and_extract_values(
+    paths,
+    model_chain,
+    components_by_model,
+    modelica_package_path,
+    dynawo_package_path,
+    init_model_by_component,
+):
     """
     Simulate the auxiliary package and extract initialization values per package
     class in the inheritance chain.
@@ -143,8 +153,14 @@ def _simulate_auxiliary_package_and_extract_values(paths, model_chain, component
     return initializable_by_model, initialization_values_by_model
 
 
-def _build_initialized_package(dynamic_omc, model_chain, paths, initializable_by_model,
-                               initialization_values_by_model, init_model_by_component):
+def _build_initialized_package(
+    dynamic_omc,
+    model_chain,
+    paths,
+    initializable_by_model,
+    initialization_values_by_model,
+    init_model_by_component,
+):
     """
     Create, initialize, save, reload, and check the case-specific initialized
     dynamic package.
@@ -177,16 +193,24 @@ def _build_initialized_package(dynamic_omc, model_chain, paths, initializable_by
         dynamic_omc, model_chain, initialized_map, paths["initialized_dir"]
     )
 
-    send_expression(dynamic_omc, f'deleteClass({paths["initialized_package"]})')
+    send_expression(dynamic_omc, f"deleteClass({paths['initialized_package']})")
     omc_call(dynamic_omc, f'loadFile("{paths["initialized_package_file"]}")')
-    omc_call(dynamic_omc, f'checkModel({paths["initialized_model"]})', parsed=False)
+    omc_call(dynamic_omc, f"checkModel({paths['initialized_model']})", parsed=False)
 
     return initialized_map
 
 
-def initialize_loaded_package_model(dynamic_omc, source_model, model_chain, case_name, output_dir,
-                                    modelica_package_path, dynawo_package_path,
-                                    init_model_by_component=None, slack_component=""):
+def initialize_loaded_package_model(
+    dynamic_omc,
+    source_model,
+    model_chain,
+    case_name,
+    output_dir,
+    modelica_package_path,
+    dynawo_package_path,
+    init_model_by_component=None,
+    slack_component="",
+):
     """
     Initialize a package model that is already loaded in `dynamic_omc`.
 

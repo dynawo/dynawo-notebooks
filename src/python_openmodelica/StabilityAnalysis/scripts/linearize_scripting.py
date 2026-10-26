@@ -1,4 +1,4 @@
-# scripts/linearize_scripting.py
+# StabilityAnalysis/scripts/linearize_scripting.py
 # Linearization of a model through the OpenModelica scripting API.
 
 import os
@@ -41,8 +41,17 @@ def _parse_states(txt, nstates):
     return states
 
 
-def linearize_scripting(omc, model, startTime, stopTime, stepSize, tolerance,
-                        outdir, simflags="", commandLineOptions=""):
+def linearize_scripting(
+    omc,
+    model,
+    startTime,
+    stopTime,
+    stepSize,
+    tolerance,
+    outdir,
+    simflags="",
+    commandLineOptions="",
+):
     """
     Linearize `model` in `outdir` and return its A, B, C and D matrices and its state names.
     """

@@ -7,7 +7,7 @@ values, and applying the compatibility fixes required by the installed Dynawo
 version), and replay the simulation directly with the Dynawo command line interface.
 
 When the models of the case were compiled, the replay reads them from the model database
-of the case (DYNAWO_DDB_DIR), as the PyPowSyBl run.
+of the case (DYNAWO_DDB_DIR), like the PyPowSyBl run.
 """
 
 import glob
@@ -53,7 +53,7 @@ class CLIRunResult:
 class DynawoCLIRunner:
     """
     Handles the external execution of Dynawo simulations by copying
-    the PyPowSyBl working files, dynamically tweaking the .jobs configuration,
+    the PyPowSyBl working files, adapting the .jobs and .dyd files,
     and invoking the Dynawo shell executable.
     """
 
@@ -312,12 +312,14 @@ class DynawoCLIRunner:
             in the meantime.
         :return: The outcome of the execution, or None if no working directory was found.
         """
+        dynamic_dir = os.path.join(export_folder, "dynamic_files")
         source = working_dir or DynawoCLIRunner._find_latest_temp_dir()
         if not source:
+            # The replay of a previous run must not be taken for the one of this run
+            shutil.rmtree(dynamic_dir, ignore_errors=True)
             logger.critical("Could not find any Dynawo temporary directory.")
             return None
 
-        dynamic_dir = os.path.join(export_folder, "dynamic_files")
         jobs_file = DynawoCLIRunner.prepare_replay(source, dynamic_dir, dynawo_sys_path)
         result = DynawoCLIRunner.run(jobs_file, dynawo_sys_path)
         if result.success:

@@ -842,7 +842,8 @@ class DynawoModelCompiler:
                     results[definition.lib] = future.result()
                 except ModelCompilationError as error:
                     errors.append(str(error))
-        # The build directories of the successful compilations are removed
+        # The build directory is removed once empty (each successful compilation removes its
+        # own sub-directory)
         build = self.output_dir / "build"
         if build.is_dir() and not any(build.iterdir()):
             build.rmdir()

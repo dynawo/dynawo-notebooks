@@ -4,7 +4,8 @@ Modelica Initialization Generator Module.
 This module creates the initialized version of a Modelica case from the initial
 values computed by Dynawo (dumped after its global initialization).
 
-For every component simulated with a Dynawo model, the generated model sets:
+For every generator, load and shunt simulated with a Dynawo model, the generated model
+sets:
 
 - the initial parameters that have no value in the original model (for instance the
   start values of an uninitialized load), which are required to simulate it;
@@ -451,7 +452,7 @@ class ModelicaInitGenerator:
             logger.error(f"Initial values dump not found at {dump_dir}")
             return None
 
-        # 1. Initial values of every component simulated with a Dynawo model
+        # 1. Initial values of the injections (generators, loads, shunts) with a Dynawo model
         values: Dict[str, Dict[str, str]] = {}
         read_only_cache: Dict[str, List[str]] = {}
         for link in setup.links:

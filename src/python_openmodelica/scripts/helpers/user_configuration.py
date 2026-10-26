@@ -33,7 +33,8 @@ def check_user_configuration_single(
 ):
     """
     Validate the configuration of a single-file model in an already-loaded session.
-    Errors with a clear message when the model or a configured component is missing.
+    Raises a RuntimeError with a clear message when the model, a configured component
+    or the swept parameter is missing.
     """
     if init_model_by_component is None:
         init_model_by_component = {}
@@ -79,7 +80,8 @@ def check_user_configuration_package(
 ):
     """
     Validate the configuration of a package model in an already-loaded session.
-    Errors with a clear message when the model or a configured component is missing,
+    Raises a RuntimeError with a clear message when the model, a configured component
+    or the swept parameter is missing,
     and returns the inheritance chain and the class that carries the swept component.
     """
     if init_model_by_component is None:

@@ -1,3 +1,9 @@
+# StabilityAnalysis/scripts/linearize_scripting.jl
+# Linearization of a model through the OpenModelica scripting API.
+
+"""
+Read the `name` matrix of `nrows` by `ncols` from the linearized model text.
+"""
 function _parse_matrix(txt, name, nrows, ncols)
     if nrows == 0 || ncols == 0
         return zeros(Float64, nrows, ncols)
@@ -15,6 +21,9 @@ function _parse_matrix(txt, name, nrows, ncols)
     return A
 end
 
+"""
+Read the names of the `nstates` linear states from the linearized model text.
+"""
 function _parse_states(txt, nstates)
     states = Vector{String}(undef, nstates)
     for hit in eachmatch(r"Real '([^']*)' = x\[(\d+)\];", txt)
@@ -28,6 +37,12 @@ function _parse_states(txt, nstates)
     return states
 end
 
+"""
+    linearize_scripting(omc, model; startTime, stopTime, stepSize, tolerance,
+                        simflags = "", commandLineOptions = "", outdir)
+
+Linearize `model` in `outdir` and return its A, B, C and D matrices and its state names.
+"""
 function linearize_scripting(omc, model; startTime, stopTime, stepSize, tolerance,
                              simflags = "", commandLineOptions = "", outdir)
     mkpath(outdir)

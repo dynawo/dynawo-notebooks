@@ -1,5 +1,5 @@
 # helpers/package_workflow.py
-# Package-level orchestration helpers for the auxiliary-model workflow.
+# Package-level orchestration helpers for the full initialization workflow.
 
 import os
 import re
@@ -70,10 +70,7 @@ def package_name_map(chain, package_name, suffix):
     """
     Map each source class in an inheritance chain to a generated package class.
     """
-    return {
-        model: package_name + "." + model.split(".")[-1] + suffix
-        for model in chain
-    }
+    return {model: package_name + "." + model.split(".")[-1] + suffix for model in chain}
 
 
 def auxiliary_name_map(chain, aux_package):
@@ -128,10 +125,12 @@ def collect_package_component_contexts(omc, chain):
     }
 
 
-def save_auxiliary_package_classes(omc, chain, aux_name_map, aux_dir, patch_components_by_model, slack_component):
+def save_auxiliary_package_classes(
+    omc, chain, aux_name_map, aux_dir, patch_components_by_model, slack_component
+):
     """
-    Save generated auxiliary classes, rewrite inherited parents to auxiliary
-    parents, and clean the auxiliary equations.
+    Clean the auxiliary equations, rewrite inherited parents to auxiliary
+    parents, and save the generated auxiliary classes.
     """
     os.makedirs(aux_dir, exist_ok=True)
 

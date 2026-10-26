@@ -40,7 +40,7 @@ initialization**. It offers tools for both Python and Julia users.
 - [Python](https://www.python.org/) (v3.12+) /
   [PyPowSyBl](https://pypowsybl.readthedocs.io/)
 - [OpenModelica Compiler (omc)](https://openmodelica.org/) (v1.27)
-- [Dynawo](https://dynawo.github.io/) (v1.7 / v1.8)
+- [Dynawo](https://dynawo.github.io/) (simulator v1.7, Modelica library v1.8)
 - [JupyterLab](https://jupyter.org/)
 
 ______________________________________________________________________
@@ -127,11 +127,13 @@ mechanism:
 
 This route B ended up being considerably more involved than route A, but we
 wanted to explore how far we could go in exploiting PowSyBl+Dynawo for this
-purpose. Note that route B currently works only with Dynawo models that are
+purpose. Note that route B uses by default the Dynawo models that are
 available under Dynawo's internal folder (ddb) -- the ones that are precompiled
 and ready to use from Dynawo. Note that Dynawo's model library contains many
 more Modelica models in a sort of "raw" form, which need compiling (also
-referred to as "pre-assembling") for Dynawo to use them.
+referred to as "pre-assembling") for Dynawo to use them: the `_compilation`
+notebooks of route B do this for the models of the case (see
+`src/python_pypowsybl/README.md`).
 
 ______________________________________________________________________
 
@@ -146,8 +148,9 @@ ______________________________________________________________________
 - **`src/python_openmodelica/`** — Route A in Python. The same five folders as
   the Julia family, with the same notebooks and the same results, driven through
   `OMPython` instead of `OMJulia`.
-- **`src/python_pypowsybl/Notebooks/`** — Route B. The three
-  `PyPowSyBl_Dynawo_Getting_Started` notebooks are only an entry point, showing
+- **`src/python_pypowsybl/Notebooks/`** — Route B. The four
+  `PyPowSyBl_Dynawo_Getting_Started` notebooks (I to IV, each with a
+  `_compilation` copy) are only an entry point, showing
   how to build up small cases from scratch, not from a given Modelica network
   case. The `PyPowSyBl_approach_*` notebooks contain the full workflow described
   as Route B above, i.e., starting from a given network case written in
@@ -165,8 +168,8 @@ The following software must be installed globally (requires administrator
 rights):
 
 - **OpenModelica 1.27** (with the `omc` compiler available on your `PATH`).
-- **Python 3.12+** (required for Route B; the Route A Python installer installs
-  it if needed).
+- **Python 3** (the Python installers create their environments with Python
+  3.12, which `uv` downloads if the system one is older).
 - **Java Runtime** (strictly required for Route B / PyPowSyBl).
 
 You also need standard utilities: `git`, `wget`, `curl`, `tar`, and `xz`. The
@@ -181,9 +184,10 @@ Everything else is set up locally by the installers, inside your user account:
 - **Route A, Python:** a `.venv-python-om` environment with Python 3.12,
   JupyterLab, `OMPython`, `pandas`, `numpy` and `matplotlib`, the Modelica
   Standard Library 3.2.3 and the Dynawo Modelica library 1.8.0.
-- **Route B:** a `.venv` environment with `pypowsybl`, JupyterLab and the other
-  pinned dependencies, plus Dynawo 1.7 downloaded into `~/dynawo` and linked
-  through `~/.itools/config.yml`.
+- **Route B:** a `.venv` environment with Python 3.12, `pypowsybl`, JupyterLab
+  and the other pinned dependencies, the Modelica Standard Library 3.2.3, plus
+  Dynawo 1.7 downloaded into `~/dynawo` and linked through
+  `~/.itools/config.yml`.
 
 ______________________________________________________________________
 

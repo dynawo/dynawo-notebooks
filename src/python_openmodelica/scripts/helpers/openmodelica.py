@@ -36,7 +36,11 @@ def omc_call(omc, expression, parsed=True):
     """
     result = omc.sendExpression(expression, parsed=parsed)
 
-    if result is False or result is None or (isinstance(result, str) and result.strip() == "false"):
+    if (
+        result is False
+        or result is None
+        or (isinstance(result, str) and result.strip() == "false")
+    ):
         raise RuntimeError(
             "OpenModelica call failed without reporting an error.\n\n"
             f"Expression:\n{expression}\n\n"
@@ -69,7 +73,8 @@ def resolve_load_ref_value(omc, model, comp, field, equations):
     loadPQ1.PRefPu = PrefPu_load_01.setPoint;
     PrefPu_load_01.setPoint = loadPQ1.PRefPu;
 
-    If the right-hand side is `X.setPoint` or `X.step`, this returns `X.Value0`.
+    If the other side of the equation is `X.setPoint` or `X.step`, this returns
+    `X.Value0`.
     Derivative and `when` equations are ignored.
     Returns `""` when no matching equation is found.
     """

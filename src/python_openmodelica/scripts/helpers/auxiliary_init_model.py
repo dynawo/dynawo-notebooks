@@ -29,7 +29,9 @@ def _resolve_init_spec(base_comp, base_class, init_model_by_component):
 
     if "profiles" in class_spec:
         if base_comp not in init_model_by_component:
-            raise RuntimeError(f"Missing INIT model selection for component {base_comp} of class {base_class}")
+            raise RuntimeError(
+                f"Missing INIT model selection for component {base_comp} of class {base_class}"
+            )
 
         profile_name = init_model_by_component[base_comp]
         profiles = class_spec["profiles"]
@@ -89,7 +91,9 @@ def _apply_component_modifiers(omc, aux_model, aux_components, base_comp, replac
     if not extra_raw:
         return None
     if base_comp not in aux_components:
-        raise RuntimeError(f"Component {base_comp} not found in {aux_model} while applying modifiers")
+        raise RuntimeError(
+            f"Component {base_comp} not found in {aux_model} while applying modifiers"
+        )
 
     aux_component = aux_components[base_comp]
     current_aux_class = aux_component["class"]
@@ -164,7 +168,9 @@ def add_init_models(omc, model, aux_model, components, init_model_by_component, 
         init_class = spec["init_class"]
         write_map = spec["write_modifiers"]
         extra_raw = spec["extra_modifiers_raw"] if "extra_modifiers_raw" in spec else []
-        write_from_model = spec["write_modifiers_from_model"] if "write_modifiers_from_model" in spec else []
+        write_from_model = (
+            spec["write_modifiers_from_model"] if "write_modifiers_from_model" in spec else []
+        )
         is_slack = base_comp == slack_component
 
         assignments = []
@@ -194,10 +200,12 @@ def add_init_models(omc, model, aux_model, components, init_model_by_component, 
         if is_slack:
             _, uphase = _get_slack_voltage_expressions(omc, model, components, base_comp, {})
             assignments.append(f"UPhase0 = {uphase}")
-            assignments.extend([
-                "P0Pu(fixed = false)",
-                "Q0Pu(fixed = false)",
-            ])
+            assignments.extend(
+                [
+                    "P0Pu(fixed = false)",
+                    "Q0Pu(fixed = false)",
+                ]
+            )
         else:
             assignments.extend(extra_raw)
 
@@ -245,7 +253,9 @@ def apply_LF_modifiers(omc, model, aux_model, components):
         aux_components = get_all_components(omc, aux_model)
 
 
-def add_init_equations(omc, model, aux_model, components, init_model_by_component, slack_component):
+def add_init_equations(
+    omc, model, aux_model, components, init_model_by_component, slack_component
+):
     """
     Build and inject the initial equations that connect each INIT companion
     component to its dynamic component.
@@ -282,7 +292,11 @@ def add_init_equations(omc, model, aux_model, components, init_model_by_componen
             for init_var, base_var in equation_map.items():
                 should_flip_sign = base_var.startswith("-")
                 source_var = base_var[1:] if should_flip_sign else base_var
-                rhs = f"-({base_name}.{source_var})" if should_flip_sign else f"{base_name}.{source_var}"
+                rhs = (
+                    f"-({base_name}.{source_var})"
+                    if should_flip_sign
+                    else f"{base_name}.{source_var}"
+                )
                 eqs.append(f"{init_name}.{init_var} = {rhs}")
 
         if "init_equations_raw" in spec:

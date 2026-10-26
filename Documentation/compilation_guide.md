@@ -10,9 +10,7 @@ libraries (`.so` or `.dll`) for the Dynawo simulator.
 > Windows notes were not. The PyPowSyBl code in this repository implements this
 > pipeline in
 > [`model_compiler.py`](../src/python_pypowsybl/Code/core/model_compiler.py)
-> (see its [README](../src/python_pypowsybl/README.md#model-compilation)), and
-> [`compile_example`](../compile_example/) is a complete example with a user
-> model.
+> (see its [README](../src/python_pypowsybl/README.md#model-compilation)).
 
 ______________________________________________________________________
 

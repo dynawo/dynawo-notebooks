@@ -24,11 +24,11 @@ class PowerFlowRunner:
     @staticmethod
     def load_slack_mapping(filename: str = "slack_bus_mapping.json") -> List[str]:
         """
-        Loads the valid slack bus identifiers from an external JSON file.
+        Loads the generator identifier fragments that designate the slack from a JSON file.
         Provides fallback identifiers if the file cannot be loaded or is missing.
 
         :param filename: The name of the JSON file containing the slack bus rules.
-        :return: A list of strings representing valid slack bus name fragments.
+        :return: A list of lowercase fragments of slack generator identifiers.
         """
         script_dir = Path(__file__).resolve().parent
         filepath = script_dir / filename
@@ -152,7 +152,9 @@ class PowerFlowRunner:
                 logger.warning(f"WARNING: Load flow DID NOT CONVERGE. Status: {status}")
 
                 status_text = (
-                    main_result.status_text if getattr(main_result, "status_text", None) else "None"
+                    main_result.status_text
+                    if getattr(main_result, "status_text", None)
+                    else "None"
                 )
                 iterations = getattr(main_result, "iteration_count", "Unknown")
                 ref_bus = getattr(main_result, "reference_bus_id", "None")

@@ -152,7 +152,9 @@ def plan_links(parsed_data: Dict[str, Any]) -> LinkPlan:
             if spec.dynawo.static_element == "bus":
                 links.append(DynamicLink(name, category, info["bus"], "bus", spec, modelica_class))
             else:
-                links.append(DynamicLink(name, category, name, category[:-1], spec, modelica_class))
+                links.append(
+                    DynamicLink(name, category, name, category[:-1], spec, modelica_class)
+                )
 
     full_dynamic = any(link.spec.dynawo.requires_full_dynamic_network for link in links)
 
@@ -166,7 +168,9 @@ def plan_links(parsed_data: Dict[str, Any]) -> LinkPlan:
                 if spec is None or spec.dynawo is None:
                     unsupported.append(f"{name} ({modelica_class})")
                     continue
-                links.append(DynamicLink(name, category, name, category[:-1], spec, modelica_class))
+                links.append(
+                    DynamicLink(name, category, name, category[:-1], spec, modelica_class)
+                )
         bus_spec = registry.get(BUS_MODEL)
         for name, info in parsed_data.get("buses", {}).items():
             if name not in buses_with_model:
@@ -207,7 +211,7 @@ def link_models(
             f"model: {', '.join(plan.unsupported)}"
         )
 
-    # Models compiled for the case replace the models of the Dynawo model database
+    # 1. Models compiled for the case replace the models of the Dynawo model database
     for link in links:
         compiled = compiled_models.model_of(link.component) if compiled_models else None
         if compiled is not None:
@@ -222,7 +226,7 @@ def link_models(
                 "of the case (mode 'case') to simulate its own equations."
             )
 
-    # 3. Network to simulate: the generators standing for infinite buses are removed
+    # 2. Network to simulate: the generators standing for infinite buses are removed
     removed = [
         link.component
         for link in links
@@ -234,7 +238,7 @@ def link_models(
         simulated_network.remove_elements(removed)
         logger.info(f"Infinite bus stand-ins removed from the simulated network: {removed}")
 
-    # 4. PyPowSyBl mapping, grouped by dynamic model category
+    # 3. PyPowSyBl mapping, grouped by dynamic model category
     mapping = pp.dynamic.ModelMapping()
     rows: Dict[str, List[Dict[str, Any]]] = {}
     for link in links:
@@ -250,7 +254,7 @@ def link_models(
         mapping.add_dynamic_model(category_name=category, df=df)
         logger.info(f"Linked {len(df)} elements to the {category} dynamic models.")
 
-    # 5. Registry of the linked models, for display
+    # 4. Registry of the linked models, for display
     linked_dataframes: Dict[str, pd.DataFrame] = {}
     for category, display_name in DISPLAY_NAMES.items():
         category_links = [link for link in links if link.category == category]

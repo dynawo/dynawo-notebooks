@@ -1,5 +1,5 @@
 # scripts/helpers/__init__.py
-# Public helper API for the auxiliary-model workflow.
+# Public helper API for the full initialization workflow.
 
 from .openmodelica import (
     get_all_components,
