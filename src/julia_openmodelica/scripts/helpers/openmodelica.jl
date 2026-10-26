@@ -59,7 +59,7 @@ function get_equation_items(omc, model::String)
 end
 
 """
-    resolve_load_ref_value(omc, model::String, comp::String, field::String) -> String
+    resolve_load_ref_value(omc, model::String, comp::String, field::String, equations) -> String
 
 For loads: get numeric value assigned via plain equations like
 loadPQ1.PRefPu = PrefPu_load_01.setPoint;

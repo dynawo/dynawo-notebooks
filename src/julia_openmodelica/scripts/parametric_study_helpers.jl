@@ -1,3 +1,4 @@
+# scripts/parametric_study_helpers.jl
 # Shared helpers for parametric-study initialization workflows.
 
 module ParametricStudyHelpers

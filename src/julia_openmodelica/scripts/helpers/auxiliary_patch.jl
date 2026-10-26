@@ -1,5 +1,5 @@
 # helpers/auxiliary_patch.jl
-# Text rewrite and post-save patch helpers
+# Text rewrite and equation cleanup helpers for the auxiliary model.
 
 # ------------------------------------------------------------
 # Regex Helper
@@ -81,7 +81,7 @@ function _statement_uses_disallowed_ref(statement::String, allowed_refs_by_compo
     stripped_statement = strip(statement)
     isempty(stripped_statement) && return false
 
-    # Connections are already cleaned up earlier in the notebook workflow.
+    # Connections are already cleaned up earlier in the build workflow (delete_connections!).
     startswith(stripped_statement, "connect(") && return false
 
     # Delete the full statement if any tracked component is referenced through a dead path.

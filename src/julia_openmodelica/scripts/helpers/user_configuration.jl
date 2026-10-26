@@ -18,10 +18,12 @@ function _all_parameter_names(omc, cls)
 end
 
 """
-    check_user_configuration_single(omc; model, sweep_component = "", slack_component = "")
+    check_user_configuration_single(omc; model, sweep_component = "", sweep_parameter = "",
+                                    slack_component = "", init_model_by_component = Dict{String, String}())
 
 Validate the configuration of a single-file model in an already-loaded session.
-Errors with a clear message when the model or a configured component is missing.
+Errors with a clear message when the model, a configured component or the swept
+parameter is missing.
 """
 function check_user_configuration_single(
     omc;
@@ -65,10 +67,12 @@ function check_user_configuration_single(
 end
 
 """
-    check_user_configuration_package(omc; model, sweep_component = "", slack_component = "")
+    check_user_configuration_package(omc; model, sweep_component = "", sweep_parameter = "",
+                                     slack_component = "", init_model_by_component = Dict{String, String}())
 
 Validate the configuration of a package model in an already-loaded session.
-Errors with a clear message when the model or a configured component is missing,
+Errors with a clear message when the model, a configured component or the swept
+parameter is missing,
 and returns the inheritance chain and the class that carries the swept component.
 """
 function check_user_configuration_package(

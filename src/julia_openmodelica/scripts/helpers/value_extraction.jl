@@ -55,9 +55,9 @@ function get_initializable_components(components, init_model_by_component = Dict
 end
 
 """
-    _read_result_value(aux_session, full_name::AbstractString) -> Float64
+    _read_result_value(session, result_file, stop_time, full_name::AbstractString) -> Float64
 
-Read the final simulated value of `full_name` from the auxiliary result file.
+Read the value of `full_name` at `stop_time` from the result file `result_file`.
 """
 function _read_result_value(session, result_file, stop_time, full_name::AbstractString)
     value = sendExpression(session, "val($full_name, $stop_time, \"$result_file\")")

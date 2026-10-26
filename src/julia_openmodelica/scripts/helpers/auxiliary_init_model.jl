@@ -235,7 +235,8 @@ end
 """
     apply_LF_modifiers!(omc, model, aux_model, components)
 
-Apply optional load-flow modifiers to components in the auxiliary model,
+Apply the load-flow modifiers to the auxiliary model: start values from P and Q
+for every load, and the optional `LF_modifiers_raw` of other INIT classes,
 preserving changes already made during replacement.
 """
 function apply_LF_modifiers!(

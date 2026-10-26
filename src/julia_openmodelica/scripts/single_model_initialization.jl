@@ -1,3 +1,4 @@
+# scripts/single_model_initialization.jl
 # High-level initialization helper for parametric studies of single-file models.
 
 module ModelInitialization

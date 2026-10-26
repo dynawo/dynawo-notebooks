@@ -8,6 +8,7 @@ This folder contains notebooks for small-signal stability analysis of OpenModeli
 - `StabilityAnalysis_Nordic.ipynb`: stability sweep for a Demo_Nordic package model.
 - `scripts/`: linearization helper used by both notebooks.
 - `models/`: input single-file model and example package.
+- `ODE_vs_DAE_and_the_Linearization_Problem.docx`: background note on why the linearization needs the models compiled in ODE mode rather than DAE mode.
 
 ## Configuration
 
@@ -17,4 +18,4 @@ Set `REINITIALIZE_EACH_CASE = true` to recalculate initialization values after e
 
 Both notebooks support `INIT_MODEL_BY_COMPONENT` and `SLACK_COMPONENT` for models that require component-specific INIT profiles or slack handling. The Nordic notebook also sets `LINEARIZATION_SIMFLAGS` and `LINEARIZATION_MAXSIZE` to help the linearization succeed on larger models.
 
-Run the cells in order. Each case is initialized and linearized, its eigenvalues are analyzed, and the modes that become unstable across the sweep are tracked in the complex plane. Generated Modelica cases and per-case linearization builds are stored under `outputs/<study>`.
+Run the cells in order. Each case is linearized (after being reinitialized when `REINITIALIZE_EACH_CASE = true`), its eigenvalues are analyzed, and the modes that become unstable across the sweep are tracked in the complex plane. Generated Modelica cases and per-case linearization builds are stored under `outputs/<study>`.
