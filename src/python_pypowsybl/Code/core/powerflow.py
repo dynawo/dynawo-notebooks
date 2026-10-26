@@ -152,7 +152,9 @@ class PowerFlowRunner:
                 logger.warning(f"WARNING: Load flow DID NOT CONVERGE. Status: {status}")
 
                 status_text = (
-                    main_result.status_text if getattr(main_result, "status_text", None) else "None"
+                    main_result.status_text
+                    if getattr(main_result, "status_text", None)
+                    else "None"
                 )
                 iterations = getattr(main_result, "iteration_count", "Unknown")
                 ref_bus = getattr(main_result, "reference_bus_id", "None")

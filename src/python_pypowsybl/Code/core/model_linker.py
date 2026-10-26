@@ -152,7 +152,9 @@ def plan_links(parsed_data: Dict[str, Any]) -> LinkPlan:
             if spec.dynawo.static_element == "bus":
                 links.append(DynamicLink(name, category, info["bus"], "bus", spec, modelica_class))
             else:
-                links.append(DynamicLink(name, category, name, category[:-1], spec, modelica_class))
+                links.append(
+                    DynamicLink(name, category, name, category[:-1], spec, modelica_class)
+                )
 
     full_dynamic = any(link.spec.dynawo.requires_full_dynamic_network for link in links)
 
@@ -166,7 +168,9 @@ def plan_links(parsed_data: Dict[str, Any]) -> LinkPlan:
                 if spec is None or spec.dynawo is None:
                     unsupported.append(f"{name} ({modelica_class})")
                     continue
-                links.append(DynamicLink(name, category, name, category[:-1], spec, modelica_class))
+                links.append(
+                    DynamicLink(name, category, name, category[:-1], spec, modelica_class)
+                )
         bus_spec = registry.get(BUS_MODEL)
         for name, info in parsed_data.get("buses", {}).items():
             if name not in buses_with_model:

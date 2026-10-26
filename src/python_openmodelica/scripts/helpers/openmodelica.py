@@ -36,7 +36,11 @@ def omc_call(omc, expression, parsed=True):
     """
     result = omc.sendExpression(expression, parsed=parsed)
 
-    if result is False or result is None or (isinstance(result, str) and result.strip() == "false"):
+    if (
+        result is False
+        or result is None
+        or (isinstance(result, str) and result.strip() == "false")
+    ):
         raise RuntimeError(
             "OpenModelica call failed without reporting an error.\n\n"
             f"Expression:\n{expression}\n\n"

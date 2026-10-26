@@ -49,8 +49,9 @@ def build_modifier_assignments(info, param_pairs, values):
     return assignments
 
 
-def apply_initialization_modifiers(omc, target_model, initializable_components, values_by_component,
-                                   init_model_by_component=None):
+def apply_initialization_modifiers(
+    omc, target_model, initializable_components, values_by_component, init_model_by_component=None
+):
     """
     Update each initializable component in `target_model` with values extracted
     from the auxiliary simulation.
@@ -81,6 +82,8 @@ def rewrite_initialized_extends(text, initialized_name_map):
     """
     rewritten = text
     for original_parent, initialized_parent in initialized_name_map.items():
-        pattern = re.compile(r"(\bextends\s+)" + re.escape(original_parent) + r"(\s*[;(])", flags=re.MULTILINE)
+        pattern = re.compile(
+            r"(\bextends\s+)" + re.escape(original_parent) + r"(\s*[;(])", flags=re.MULTILINE
+        )
         rewritten = pattern.sub(lambda m: m.group(1) + initialized_parent + m.group(2), rewritten)
     return rewritten

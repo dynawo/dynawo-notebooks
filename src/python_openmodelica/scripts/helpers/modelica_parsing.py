@@ -208,7 +208,7 @@ def parse_modifier_dict(mod_raw):
         eqpos = _find_top_level_equal(p)
         if eqpos is not None:
             lhs = p[:eqpos].strip()
-            rhs = p[eqpos + 1:].strip()
+            rhs = p[eqpos + 1 :].strip()
             if lhs:
                 result[lhs] = rhs
 

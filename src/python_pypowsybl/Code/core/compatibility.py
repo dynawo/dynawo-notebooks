@@ -224,7 +224,9 @@ class DynawoLibraryCompatibility:
         for adapter in self.active_adapters:
             source, changes = adapter.rewrite(source)
             if changes:
-                logger.info(f"{file_name}: {changes} statement(s) adapted ({adapter.description}).")
+                logger.info(
+                    f"{file_name}: {changes} statement(s) adapted ({adapter.description})."
+                )
         return source
 
 

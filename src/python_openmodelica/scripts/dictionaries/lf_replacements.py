@@ -9,7 +9,6 @@ REPLACEMENTS = {
             "U0Pu": "U0Pu",
         },
     },
-
     "Dynawo.Electrical.Photovoltaics.WECC.PVCurrentSource": {
         "new_class": "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers": {
@@ -17,7 +16,6 @@ REPLACEMENTS = {
             "U0Pu": "U0Pu",
         },
     },
-
     "Dynawo.Electrical.Buses.InfiniteBusWithVariations": {
         "new_class": "Dynawo.Electrical.Buses.InfiniteBus",
         "write_modifiers": {
@@ -25,14 +23,12 @@ REPLACEMENTS = {
             "UPhase": "UPhase",
         },
     },
-
     "Dynawo.Electrical.Controls.Basics.Step": {
         "new_class": "Dynawo.Electrical.Controls.Basics.SetPoint",
         "write_modifiers": {
             "Value0": "Value0",
         },
     },
-
     "Dynawo.Electrical.Sources.InertialGrid.InertialGrid": {
         "new_class": "Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta",
         "write_modifiers": {
@@ -47,7 +43,6 @@ REPLACEMENTS = {
             "i0Pu = Modelica.ComplexMath.conj(Complex({component}.PGen0Pu, {component}.QGen0Pu) / {component}.u0Pu)",
         ],
     },
-
     "Dynawo.Electrical.Machines.OmegaRef.GeneratorSynchronous": {
         "new_class": "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers": {
@@ -55,7 +50,6 @@ REPLACEMENTS = {
             "U0Pu": "U0Pu",
         },
     },
-
     "Dynawo.Electrical.Machines.SignalN.GeneratorPV": {
         "new_class": "Dynawo.Electrical.Machines.Simplified.GeneratorPVFixed",
         "write_modifiers": {
@@ -63,7 +57,6 @@ REPLACEMENTS = {
             "U0Pu": "U0Pu",
         },
     },
-
     "Dynawo.Electrical.Loads.LoadAlphaBeta": {
         "new_class": "Dynawo.Electrical.Loads.LoadPQ",
         "extra_modifiers_raw": [
@@ -72,7 +65,6 @@ REPLACEMENTS = {
             "u0Pu(re(fixed = false), im(fixed = false))",
         ],
     },
-
     "Dynawo.Electrical.Loads.LoadAlphaBetaRestorative": {
         "new_class": "Dynawo.Electrical.Loads.LoadPQ",
         "extra_modifiers_raw": [
@@ -81,7 +73,6 @@ REPLACEMENTS = {
             "u0Pu(re(fixed = false), im(fixed = false))",
         ],
     },
-
     "Dynawo.Electrical.Loads.LoadZIP": {
         "new_class": "Dynawo.Electrical.Loads.LoadPQ",
         "extra_modifiers_raw": [
@@ -111,7 +102,6 @@ AUX_ALLOWED_REFS = {
         ".UPu",
         ".UPhase",
     ],
-
     "Dynawo.Electrical.Machines.Simplified.GeneratorAlphaBeta": [
         ".terminal",
         ".running",
@@ -131,7 +121,6 @@ AUX_ALLOWED_REFS = {
         ".Alpha",
         ".Beta",
     ],
-
     "Dynawo.Electrical.Buses.InfiniteBus": [
         ".terminal",
         ".UPu",
@@ -141,7 +130,6 @@ AUX_ALLOWED_REFS = {
         ".UPhaseVar",
         ".U",
     ],
-
     "Dynawo.Electrical.Controls.Basics.SetPoint": [
         ".Value0",
         ".setPoint",

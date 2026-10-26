@@ -380,7 +380,8 @@ class ModelicaParser:
             # signal connections (e.g. a set point connected to a generator) are ignored
             component, _, pin = terminal.rpartition(".")
             return (
-                component in electrical_components and re.fullmatch(r"terminal\d*", pin) is not None
+                component in electrical_components
+                and re.fullmatch(r"terminal\d*", pin) is not None
             )
 
         adj: Dict[str, List[str]] = {}
