@@ -55,8 +55,8 @@ If you open models in the OMEdit graphical interface:
 ## Step 3: Verifying the Connection
 
 Launch JupyterLab and open a notebook to test the connection: for Julia,
-`OMJulia_Dynawo_Getting_Started.ipynb`; for Python,
-`BuildAux/BuildAux_single.ipynb`.
+`src/julia_openmodelica/OMJulia_Dynawo_Getting_Started.ipynb`; for Python,
+`src/python_openmodelica/BuildAux/BuildAux_single.ipynb`.
 
 ```bash
 source .venv-julia/bin/activate    # .venv-python-om for the Python notebooks

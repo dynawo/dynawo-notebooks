@@ -15,7 +15,8 @@ or to clone the remote repository.
   available, and installs the `uv` package manager if it is missing.
 - Creates the `.venv` Python environment using `uv`, installs the pinned Python packages
   from this repository's release, and installs the project itself in editable mode.
-- Downloads the full Dynawo package (`Dynawo_Linux_1_7.tar.xz`) into `~/dynawo`.
+- Uses an existing Dynawo in `/opt/dynawo`, `/usr/local/dynawo` or `~/dynawo`, or else
+  downloads the full Dynawo package (`Dynawo_Linux_1_7.tar.xz`) into `~/dynawo`.
 - Writes `~/.itools/config.yml` pointing at it, which is how PyPowSyBl finds the 
   Dynawo simulator.
 
@@ -43,11 +44,11 @@ or to clone the remote repository.
   notebooks expect it to be.
 - Installs the Modelica Standard Library 3.2.3 with the OpenModelica package manager.
 - Uses Julia's package manager to install `OMJulia`, `DataFrames`, `CSV`, `Plots`, and 
-  `IJulia`, and registers the `Julia (clean)` Jupyter kernel.
+  `IJulia`, and registers the `Julia (clean) 1.10` Jupyter kernel.
 
 ## Running the notebooks
 
-Open them with whichever viewer you prefer. The Julia notebooks use the `Julia (clean)` 
+Open them with whichever viewer you prefer. The Julia notebooks use the `Julia (clean) 1.10` 
 kernel, and the Python ones the interpreter of their own environment.
 
 For JupyterLab, activate the environment first.

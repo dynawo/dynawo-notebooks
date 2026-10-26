@@ -48,14 +48,14 @@ another route to solve the same problem.
 The project provides two distinct routes to achieve steady-state initialization,
 depending on your preferred language and tools.
 
-### ROUTE A: Julia & OpenModelica
+### ROUTE A: OpenModelica, from Julia or Python
 
-Using Julia and `OMJulia`, this route performs initialization using only
-OpenModelica:
+Using Julia and `OMJulia`, or Python and `OMPython`, this route performs
+initialization using only OpenModelica:
 
 - **1. Aux case:** The code automatically builds a loadflow-oriented auxiliary
   twin of the Modelica network case, stripping out events and controls, plus
-  applying loadflow-equivalent replacements from `dictionaries.jl` (e.g.,
+  applying loadflow-equivalent replacements from the dictionaries in `scripts/` (e.g.,
   swapping `BESSCurrentSource` for `GeneratorPVFixed`, etc.).
 
 - **2. INIT injection:** It adds the `_INIT` companions that correspond to the
@@ -90,8 +90,10 @@ mechanism:
 
 This route B ended up being considerably more involved than route A, but we
 wanted to explore how far we could go in exploiting PowSyBl+Dynawo for this
-purpose. Note that route B currently works only with Dynawo models that are
+purpose. Note that route B uses by default the Dynawo models that are
 available under Dynawo's internal folder (ddb) -- the ones that are precompiled
 and ready to use from Dynawo. Note that Dynawo's model library contains many
 more Modelica models in a sort of "raw" form, which need compiling (also
-referred to as "pre-assembling") for Dynawo to use them.
+referred to as "pre-assembling") for Dynawo to use them: the `_compilation`
+notebooks of route B do this for the models of the case (see
+`src/python_pypowsybl/README.md`).

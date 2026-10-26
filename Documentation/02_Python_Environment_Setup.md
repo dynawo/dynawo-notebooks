@@ -22,8 +22,8 @@ This script will:
 - Install `uv` if missing.
 - Create a `.venv` environment and install all pinned dependencies (including
   `pypowsybl`, `scipy`, `OMPython`).
-- Automatically download Dynawo (v1.7) into `~/dynawo` and configure
-  `~/.itools/config.yml`.
+- Use an existing Dynawo installation, or download Dynawo (v1.7) into
+  `~/dynawo`, and configure `~/.itools/config.yml`.
 
 ## Step 2: Activation and Validation
 
