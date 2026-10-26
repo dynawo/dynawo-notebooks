@@ -2,9 +2,13 @@
 
 ## Prerequisites
 
-1. **Python 3.12+:** Required by the updated ecosystem.
+1. **Python 3:** The environment itself is created with Python 3.12, which `uv`
+   downloads if the system one is older.
 2. **Java (JDK 17+):** The backend of PyPowSyBl is Java-based.
-3. **Standard Utilities:** `git`, `curl`, `wget`, `tar`, `xz`.
+3. **OpenModelica 1.27:** The `omc` compiler on your `PATH`, which the
+   `PyPowSyBl_approach` notebooks use to parse their Modelica cases and to
+   validate their initialization.
+4. **Standard Utilities:** `git`, `curl`, `wget`, `tar`, `xz`.
 
 ## Step 1: Automated Environment Setup
 
@@ -18,12 +22,14 @@ installations.
 
 This script will:
 
-- Check for Python 3.12+ and Java.
+- Check for Java and OpenModelica.
 - Install `uv` if missing.
-- Create a `.venv` environment and install all pinned dependencies (including
-  `pypowsybl`, `scipy`, `OMPython`).
+- Create a `.venv` environment with Python 3.12 and install all pinned
+  dependencies (including `pypowsybl`, `scipy`, `OMPython`).
 - Use an existing Dynawo installation, or download Dynawo (v1.7) into
-  `~/dynawo`, and configure `~/.itools/config.yml`.
+  `~/dynawo`.
+- Install the Modelica Standard Library 3.2.3.
+- Configure `~/.itools/config.yml`.
 
 ## Step 2: Activation and Validation
 

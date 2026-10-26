@@ -168,8 +168,8 @@ The following software must be installed globally (requires administrator
 rights):
 
 - **OpenModelica 1.27** (with the `omc` compiler available on your `PATH`).
-- **Python 3.12+** (required for Route B; the Route A Python installer installs
-  it if needed).
+- **Python 3** (the Python installers create their environments with Python
+  3.12, which `uv` downloads if the system one is older).
 - **Java Runtime** (strictly required for Route B / PyPowSyBl).
 
 You also need standard utilities: `git`, `wget`, `curl`, `tar`, and `xz`. The
@@ -184,9 +184,10 @@ Everything else is set up locally by the installers, inside your user account:
 - **Route A, Python:** a `.venv-python-om` environment with Python 3.12,
   JupyterLab, `OMPython`, `pandas`, `numpy` and `matplotlib`, the Modelica
   Standard Library 3.2.3 and the Dynawo Modelica library 1.8.0.
-- **Route B:** a `.venv` environment with `pypowsybl`, JupyterLab and the other
-  pinned dependencies, plus Dynawo 1.7 downloaded into `~/dynawo` and linked
-  through `~/.itools/config.yml`.
+- **Route B:** a `.venv` environment with Python 3.12, `pypowsybl`, JupyterLab
+  and the other pinned dependencies, the Modelica Standard Library 3.2.3, plus
+  Dynawo 1.7 downloaded into `~/dynawo` and linked through
+  `~/.itools/config.yml`.
 
 ______________________________________________________________________
 
