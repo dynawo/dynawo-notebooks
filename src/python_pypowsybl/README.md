@@ -118,9 +118,6 @@ libraries, with the `PTHREAD_STACK_MIN` constant that glibc >= 2.34 no longer pr
 old Boost headers, and with the Boost libraries of the distribution rather than those of
 the system.
 
-The [`compile_example`](../../compile_example/) directory at the root of the repository
-contains a simple case with a user model to compile.
-
 ## Getting Started notebooks
 
 The `PyPowSyBl_Dynawo_Getting_Started_<N>.ipynb` notebooks are self-contained tutorials of
