@@ -123,12 +123,11 @@ if curl -f -s -L "$REQ_URL" -o req_frozen.txt; then
     uv pip install -r req_frozen.txt --quiet
     rm req_frozen.txt
 else
-    echo -e "${YELLOW}  [!] Falling back to latest packages...${NC}"
-    uv pip install pypowsybl pyyaml jupyter jupyterlab scipy ipywidgets OMPython --quiet
+    echo -e "${YELLOW}  [!] Release requirements not found, keeping the versions of uv.lock.${NC}"
 fi
 
 echo -e "  Installing local project in editable mode..."
-uv pip install --upgrade -e . 
+uv pip install -e .
 echo -e "${GREEN}  [OK] Python project installed.${NC}"
 
 # ==============================================================================
