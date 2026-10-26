@@ -7,7 +7,7 @@ values, and applying the compatibility fixes required by the installed Dynawo
 version), and replay the simulation directly with the Dynawo command line interface.
 
 When the models of the case were compiled, the replay reads them from the model database
-of the case (DYNAWO_DDB_DIR), as the PyPowSyBl run.
+of the case (DYNAWO_DDB_DIR), like the PyPowSyBl run.
 """
 
 import glob
@@ -53,7 +53,7 @@ class CLIRunResult:
 class DynawoCLIRunner:
     """
     Handles the external execution of Dynawo simulations by copying
-    the PyPowSyBl working files, dynamically tweaking the .jobs configuration,
+    the PyPowSyBl working files, adapting the .jobs and .dyd files,
     and invoking the Dynawo shell executable.
     """
 

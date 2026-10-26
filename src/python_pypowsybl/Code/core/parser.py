@@ -524,7 +524,9 @@ class ModelicaParser:
         return self._component_subset(component, self.flat.finals)
 
     def _computed_parameters(self, component: str) -> List[str]:
-        """Returns the parameters of a component computed by its initial equations (fixed=false)."""
+        """
+        Returns the parameters of a component computed by its initial equations (fixed=false).
+        """
         return self._component_subset(component, self.flat.computed)
 
     @staticmethod

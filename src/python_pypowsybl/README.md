@@ -46,6 +46,7 @@ amounts to adding an entry there.
 |---|---|
 | `Buses.Bus`, `Buses.InfiniteBus`, `Buses.InfiniteBusWithVariations` | `Bus`, `InfiniteBus`, `InfiniteBusWithVariations` |
 | `Lines.Line`, `Transformers.TransformerFixedRatio` | `Line`, `TransformerFixedRatio` |
+| `Transformers.TransformersFixedTap.TransformerFixedRatio` (library 1.8 path) | `TransformerFixedRatio` |
 | `Sources.InertialGrid.InertialGrid` | `InertialGrid` |
 | `Machines.SignalN.GeneratorPV`, `Machines.Simplified.GeneratorPVFixed` | `GeneratorPVSignalN`, `GeneratorPVFixed` |
 | `BESS.WECC.BESSCurrentSource`, `BESS.WECC.BESScbCurrentSource` | `BESScbWeccCurrentSource` |

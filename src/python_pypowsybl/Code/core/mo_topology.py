@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class MoTopologyToolkit:
     """
     Expert-level toolkit for extracting electrical topology from Modelica files
-    and converting it to PyPowSybl networks.
+    and converting it to PyPowSyBl networks.
     """
 
     def __init__(
@@ -66,10 +66,10 @@ class MoTopologyToolkit:
 
     def build_powsybl_network(self, data: Dict[str, Any]) -> pp.network.Network:
         """
-        Converts the parsed dictionary into a PyPowSybl Network object.
+        Converts the parsed dictionary into a PyPowSyBl Network object.
 
         :param data: The dictionary containing the parsed electrical topology.
-        :return: A PyPowSybl Network instance representing the extracted topology.
+        :return: A PyPowSyBl Network instance representing the extracted topology.
         """
         logger.info(">>> STEP 2: CONVERTING TO POWSYBL")
         return PowsyblConverter.build_network(data)
