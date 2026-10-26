@@ -1,4 +1,4 @@
-# scripts/linearize_scripting.py
+# StabilityAnalysis/scripts/linearize_scripting.py
 # Linearization of a model through the OpenModelica scripting API.
 
 import os

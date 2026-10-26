@@ -30,7 +30,7 @@ def collect_cleanup_component_names(components):
 
 def _has_switch_off_signal_equation(omc, aux_model, switch_signal):
     """
-    Return `True` if `switch_signal.value` already appears on either side of an
+    Return `True` if `switch_signal` already appears on either side of an
     equation in `aux_model`.
     """
     target = switch_signal

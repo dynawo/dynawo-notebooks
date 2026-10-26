@@ -73,7 +73,8 @@ def resolve_load_ref_value(omc, model, comp, field, equations):
     loadPQ1.PRefPu = PrefPu_load_01.setPoint;
     PrefPu_load_01.setPoint = loadPQ1.PRefPu;
 
-    If the right-hand side is `X.setPoint` or `X.step`, this returns `X.Value0`.
+    If the other side of the equation is `X.setPoint` or `X.step`, this returns
+    `X.Value0`.
     Derivative and `when` equations are ignored.
     Returns `""` when no matching equation is found.
     """

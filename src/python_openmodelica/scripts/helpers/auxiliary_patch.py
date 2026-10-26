@@ -1,5 +1,5 @@
 # helpers/auxiliary_patch.py
-# Text rewrite and post-save patch helpers
+# Text rewrite and equation cleanup helpers for the auxiliary model.
 
 import re
 
@@ -89,7 +89,7 @@ def _statement_uses_disallowed_ref(statement, allowed_refs_by_component):
     if not stripped_statement:
         return False
 
-    # Connections are already cleaned up earlier in the notebook workflow.
+    # Connections are already cleaned up earlier in the build workflow (delete_connections).
     if stripped_statement.startswith("connect("):
         return False
 

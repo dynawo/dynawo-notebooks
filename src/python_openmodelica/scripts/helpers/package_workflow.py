@@ -1,5 +1,5 @@
 # helpers/package_workflow.py
-# Package-level orchestration helpers for the auxiliary-model workflow.
+# Package-level orchestration helpers for the full initialization workflow.
 
 import os
 import re
@@ -129,8 +129,8 @@ def save_auxiliary_package_classes(
     omc, chain, aux_name_map, aux_dir, patch_components_by_model, slack_component
 ):
     """
-    Save generated auxiliary classes, rewrite inherited parents to auxiliary
-    parents, and clean the auxiliary equations.
+    Clean the auxiliary equations, rewrite inherited parents to auxiliary
+    parents, and save the generated auxiliary classes.
     """
     os.makedirs(aux_dir, exist_ok=True)
 
