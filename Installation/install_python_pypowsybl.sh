@@ -7,7 +7,7 @@
 set -e
 
 # --- Configuration ---
-VERSION_TAG="v0.9"
+VERSION_TAG="v1.0"
 VENV_NAME=".venv"
 DEFAULT_DYNAWO_PATHS=("/opt/dynawo" "/usr/local/dynawo" "$HOME/dynawo")
 

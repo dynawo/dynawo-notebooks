@@ -7,7 +7,7 @@
 set -e
 
 # --- Configuration ---
-VERSION_TAG="v0.9"
+VERSION_TAG="v1.0"
 VENV_NAME=".venv-python-om"
 PYTHON_VER="3.12"
 MSL_VER="3.2.3"                           # The Modelica Standard Library the models use
