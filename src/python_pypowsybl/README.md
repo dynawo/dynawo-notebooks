@@ -5,7 +5,9 @@ Dynawo Modelica library and return the same case initialized. Each case has two 
 `PyPowSyBl_approach_<case>.ipynb` simulates with the models precompiled in the Dynawo model
 database, and `PyPowSyBl_approach_<case>_compilation.ipynb` adds the optional compilation of
 the Dynawo models of the case (step 8, see [Model compilation](#model-compilation)). Both
-write to the same export directory, `grid_export_<case>`. They rely on the library in
+write to the same export directory, `grid_export_<case>`. Their first cell replaces the
+PyPowSyBl configuration (`~/.itools/config.yml`) with the template
+`om_powsybl_data/config.yml`, after a backup when it differs. They rely on the library in
 [`Code/core/`](Code/core/), which runs the same pipeline for every case:
 
 1. **Parsing** (`parser.py`, `flat_model.py`): the case is flattened by OpenModelica and
