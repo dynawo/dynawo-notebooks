@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "dynawo-notebooks"
 version = "0.1.0"
 description = "Tools and API for Dynawo and OpenModelica integration, extracted from dynawo-notebooks."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 
 classifiers = [
