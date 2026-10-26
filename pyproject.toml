@@ -21,9 +21,6 @@ dependencies = [
     "matplotlib>=3.7.0",
 ]
 
-[project.scripts]
-dynawo-xml-parser = "python_pypowsybl.Code.utils.get_init_dict:main"
-
 [project.optional-dependencies]
 dev = [
     "pytest",
